@@ -7,6 +7,7 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     steps:
       - name: Deploy to ECS
         env:
@@ -16,7 +17,10 @@ jobs:
           echo "$SSH_PRIVATE_KEY" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
           ssh-keyscan -H 8.130.214.67 >> ~/.ssh/known_hosts
-          ssh -i ~/.ssh/deploy_key root@8.130.214.67 << 'ENDSSH'
+          ssh -i ~/.ssh/deploy_key \
+              -o ServerAliveInterval=30 \
+              -o ServerAliveCountMax=60 \
+              root@8.130.214.67 << 'ENDSSH'
             set -e
             cd /root/blog-studio-web-src
             git pull

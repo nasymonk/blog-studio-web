@@ -1,5 +1,6 @@
 FROM node:22-alpine AS web
 WORKDIR /src/web
+RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.aliyun.com/g' /etc/apk/repositories
 COPY web/package*.json ./
 RUN npm ci
 COPY web/ ./
@@ -7,7 +8,8 @@ RUN npm run build
 
 FROM golang:1.23-alpine AS go-builder
 WORKDIR /src
-RUN apk add --no-cache git
+RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.aliyun.com/g' /etc/apk/repositories \
+  && apk add --no-cache git
 COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
@@ -17,7 +19,8 @@ RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /out/blog-st
 FROM alpine:3.20
 ARG HUGO_VERSION=0.147.0
 ARG TARGETARCH
-RUN apk add --no-cache ca-certificates wget tar libc6-compat libstdc++ libgcc \
+RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.aliyun.com/g' /etc/apk/repositories \
+  && apk add --no-cache ca-certificates wget tar libc6-compat libstdc++ libgcc \
   && case "${TARGETARCH}" in amd64) HUGO_ARCH=amd64 ;; arm64) HUGO_ARCH=arm64 ;; *) echo "unsupported arch: ${TARGETARCH}" && exit 1 ;; esac \
   && wget -O /tmp/hugo.tar.gz "https://github.com/gohugoio/hugo/releases/download/v${HUGO_VERSION}/hugo_extended_${HUGO_VERSION}_linux-${HUGO_ARCH}.tar.gz" \
   && tar -xzf /tmp/hugo.tar.gz -C /usr/local/bin hugo \
