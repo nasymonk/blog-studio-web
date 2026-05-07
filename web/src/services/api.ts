@@ -1,0 +1,111 @@
+export type AppError = {
+  code: string
+  message: string
+  technicalDetail: string
+  suggestion: string
+  retryable: boolean
+}
+
+export type PostState = {
+  slug: string
+  title: string
+  date: string
+  draft: boolean
+  tags: string[]
+  categories: string[]
+  syncStatus: string
+  remoteMtime: string
+  cachedRemoteMtime: string
+  latestBackupId: string
+  large: boolean
+}
+
+export type PostDraft = {
+  slug: string
+  frontMatter: {
+    title: string
+    date?: string
+    draft: boolean
+    tags: string[]
+    categories: string[]
+    description?: string
+    image?: string
+    math?: boolean
+  }
+  body: string
+  assets: Array<{ name: string; size: number }>
+  large?: boolean
+}
+
+export type PublishResult = {
+  target: string
+  status: string
+  backupId?: string
+  conflicts?: Array<{ message: string; remoteMtime: string; cachedRemoteMtime: string }>
+  auditId: string
+  buildResult?: { success: boolean; exitCode: number; stdout: string; stderr: string }
+  channelResult?: unknown
+  error?: AppError
+}
+
+export type PreviewResult = {
+  previewId: string
+  url: string
+  expiresAt: string
+  buildResult: { success: boolean; exitCode: number; stderr: string }
+  error?: AppError
+}
+
+export type Config = {
+  basePath: string
+  site: {
+    id: string
+    name: string
+    theme: string
+    blogRoot: string
+    contentRoot: string
+    postSection: string
+    postRoot: string
+    buildCommand: string
+    publicRoot: string
+  }
+  preview: { ttlMinutes: number }
+  wechat: { enabled: boolean; appId?: string }
+  comments: { enabled: boolean; twikooUrl: string; adminUrl: string; dataPath?: string }
+  maxUploadBytes: number
+}
+
+let csrfToken = ''
+const base = `${window.location.pathname.split('/').filter(Boolean)[0] ? '/' + window.location.pathname.split('/').filter(Boolean)[0] : ''}/api`
+
+async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
+  const headers = new Headers(options.headers)
+  if (!(options.body instanceof FormData)) headers.set('Content-Type', 'application/json')
+  if (csrfToken && options.method && options.method !== 'GET') headers.set('X-CSRF-Token', csrfToken)
+  const response = await fetch(`${base}${path}`, { credentials: 'same-origin', ...options, headers })
+  const payload = await response.json().catch(() => ({ ok: false, error: { message: response.statusText } }))
+  if (!response.ok || !payload.ok) {
+    throw payload.error || new Error(response.statusText)
+  }
+  return payload.data as T
+}
+
+export const api = {
+  setCSRF: (value: string) => { csrfToken = value },
+  session: () => request<{ authenticated: boolean; csrfToken?: string }>('/session'),
+  login: (password: string) => request<{ authenticated: boolean; csrfToken: string }>('/auth/login', { method: 'POST', body: JSON.stringify({ password }) }),
+  logout: () => request<{ authenticated: boolean }>('/auth/logout', { method: 'POST' }),
+  posts: () => request<PostState[]>('/posts'),
+  post: (slug: string) => request<PostDraft>(`/posts/${encodeURIComponent(slug)}`),
+  saveDraft: (draft: PostDraft) => request<{ saved: boolean }>(`/posts/${encodeURIComponent(draft.slug)}/draft`, { method: 'PUT', body: JSON.stringify(draft) }),
+  publishBlog: (draft: PostDraft, confirmOverwrite = false) => request<PublishResult>(`/posts/${encodeURIComponent(draft.slug)}/publish/blog`, { method: 'POST', body: JSON.stringify({ slug: draft.slug, draft, confirmOverwrite }) }),
+  publishWechat: (draft: PostDraft) => request<PublishResult>(`/posts/${encodeURIComponent(draft.slug)}/publish/wechat-draft`, { method: 'POST', body: JSON.stringify(draft) }),
+  preview: (draft: PostDraft) => request<PreviewResult>(`/posts/${encodeURIComponent(draft.slug)}/preview`, { method: 'POST', body: JSON.stringify(draft) }),
+  rollback: (slug: string) => request<PublishResult>(`/posts/${encodeURIComponent(slug)}/rollback`, { method: 'POST' }),
+  commentsRecent: () => request<{ adminUrl: string; items: Array<{ id: string; url: string; nick: string; comment: string; created: string }> }>('/comments/recent'),
+  commentsSummary: () => request<{ adminUrl: string; items: Array<{ url: string; count: number; latestAt: string }> }>('/comments/summary'),
+  health: () => request<{ status: string; checks: Array<{ name: string; status: string; message: string; technicalDetail: string; suggestion: string }> }>('/health'),
+  audit: () => request<unknown[]>('/audit'),
+  config: () => request<Config>('/config'),
+  saveConfig: (config: Config) => request<Config>('/config', { method: 'PUT', body: JSON.stringify(config) })
+}

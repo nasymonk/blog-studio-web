@@ -1,0 +1,144 @@
+:root {
+  --theme: #fdfcf8;
+  --entry: #fffefa;
+  --primary: #2c2c2c;
+  --secondary: #6e6e6e;
+  --tertiary: #a7a7a7;
+  --border: rgba(0, 0, 0, 0.08);
+  --link: #5b778c;
+  --hover: rgba(91, 119, 140, 0.08);
+  --radius: 8px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: var(--primary);
+  background: var(--theme);
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; min-width: 1100px; background: var(--theme); }
+button, input { font: inherit; }
+button {
+  height: 36px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--entry);
+  color: var(--secondary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 13px;
+  cursor: pointer;
+}
+button:hover { color: var(--primary); border-color: rgba(91, 119, 140, 0.28); background: var(--hover); }
+button:disabled { opacity: .45; cursor: not-allowed; }
+.primary { color: var(--link); border-color: rgba(91, 119, 140, .35); background: rgba(91, 119, 140, .08); }
+input {
+  width: 100%;
+  height: 38px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: rgba(255,255,255,.55);
+  color: var(--primary);
+  padding: 0 12px;
+}
+pre { white-space: pre-wrap; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+
+.login-page { width: 100vw; height: 100vh; display: grid; place-items: center; }
+.login-card {
+  width: 380px;
+  display: grid;
+  gap: 16px;
+  padding: 34px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--entry);
+  box-shadow: 0 18px 60px rgba(0,0,0,.06);
+}
+.logo {
+  width: 68px;
+  height: 68px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  color: var(--link);
+  font: 38px "STZhongsong", "华文中宋", serif;
+}
+h1, h2 { font-family: "STZhongsong", "华文中宋", Georgia, serif; letter-spacing: 0; }
+.login-card h1 { margin: 0; }
+.login-card p { margin: 0; color: var(--secondary); line-height: 1.7; }
+
+.app-shell {
+  width: 100vw;
+  height: 100vh;
+  display: grid;
+  grid-template-columns: 246px 1fr;
+}
+.side {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  gap: 24px;
+  padding: 28px 16px;
+  border-right: 1px solid var(--border);
+  background: linear-gradient(180deg, #fffefa, #f7f5ef);
+}
+.brand { display: grid; justify-items: center; gap: 12px; font-family: "STZhongsong", "华文中宋", serif; }
+nav { display: grid; align-content: start; gap: 8px; margin-top: 20px; }
+nav button { width: 100%; height: 50px; justify-content: flex-start; border-color: transparent; background: transparent; font-size: 16px; }
+nav button span { margin-left: auto; color: var(--tertiary); }
+nav button.active { color: var(--primary); background: var(--hover); }
+.side-actions { display: grid; gap: 10px; padding: 0 10px; }
+
+.stage { min-width: 0; display: grid; grid-template-rows: 64px auto 1fr 54px; }
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--border);
+  padding: 0 34px;
+  background: rgba(253,252,248,.9);
+}
+.topbar h1 { margin: 0; font-size: 23px; }
+.topbar p { margin: 2px 0 0; color: var(--secondary); font-size: 13px; }
+.actions { display: flex; gap: 8px; }
+.health { display: flex; align-items: center; gap: 8px; padding: 10px 34px; color: #9f4b28; background: #fff3e8; border-bottom: 1px solid var(--border); }
+
+.posts-page, .editor-page, .comments-page, .settings-page { overflow: auto; padding: 28px 34px; }
+.stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 20px; }
+.stats div { height: 72px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--entry); display: flex; align-items: center; justify-content: space-between; padding: 0 22px; }
+.stats span { color: var(--secondary); }
+.stats strong { font-size: 28px; color: var(--tertiary); }
+.new-row { display: grid; grid-template-columns: 1fr auto; gap: 10px; margin-bottom: 16px; }
+.post-card {
+  width: 100%;
+  min-height: 86px;
+  justify-content: space-between;
+  text-align: left;
+  padding: 18px 22px;
+  margin-bottom: 14px;
+  background: var(--entry);
+}
+.post-card span { display: grid; gap: 8px; }
+.post-card strong { font: 20px "STZhongsong", "华文中宋", serif; color: var(--primary); }
+.post-card em { color: var(--secondary); font-style: normal; font-size: 13px; }
+.post-card i { color: var(--link); font-style: normal; }
+
+.title-input { height: 54px; border-color: transparent; font: 30px "STZhongsong", "华文中宋", serif; background: transparent; padding: 0; margin-bottom: 16px; }
+.meta-grid { display: grid; grid-template-columns: repeat(4, 1fr) 120px 140px; gap: 10px; align-items: end; margin-bottom: 18px; }
+.meta-grid label, .settings-grid label { color: var(--secondary); font-size: 13px; display: grid; gap: 6px; }
+.meta-grid .check { display: flex; align-items: center; gap: 8px; height: 38px; }
+.check input { width: auto; height: auto; }
+.editor { min-height: 520px; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; background: white; }
+.danger-row { margin-top: 12px; }
+.preview-page { padding: 0; overflow: hidden; }
+.preview-page iframe { width: 100%; height: 100%; border: 0; background: white; }
+.link-button { text-decoration: none; height: 36px; display: inline-flex; align-items: center; padding: 0 14px; border-radius: var(--radius); margin-bottom: 18px; }
+.comment-card { border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 18px; margin-bottom: 12px; background: var(--entry); }
+.comment-card span { display: block; color: var(--secondary); font-size: 12px; margin-top: 4px; }
+.comment-card p { margin-bottom: 0; line-height: 1.7; }
+.settings-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-bottom: 18px; }
+.audit-list { margin-top: 18px; border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; background: #fff; max-height: 320px; overflow: auto; }
+footer { border-top: 1px solid var(--border); padding: 8px 34px; color: var(--tertiary); font-size: 12px; overflow: hidden; }
+footer pre { margin: 0; }
+.spin { animation: spin 1s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }

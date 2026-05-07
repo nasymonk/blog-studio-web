@@ -1,0 +1,14 @@
+services:
+  blog-studio-web:
+    image: ghcr.io/your-name/blog-studio-web:latest
+    container_name: blog-studio-web
+    restart: unless-stopped
+    env_file:
+      - path: .env
+        required: false
+    expose:
+      - "8080"
+    volumes:
+      - /root/blog:/blog
+      - /root/blog-studio-data:/data
+      - /root/twikoo-data/db.json:/twikoo/db.json:ro
