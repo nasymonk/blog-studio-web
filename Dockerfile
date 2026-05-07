@@ -8,6 +8,7 @@ RUN npm run build
 
 FROM golang:1.23-alpine AS go-builder
 WORKDIR /src
+ENV GOPROXY=https://goproxy.cn,direct
 RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.aliyun.com/g' /etc/apk/repositories \
   && apk add --no-cache git
 COPY go.mod go.sum ./
