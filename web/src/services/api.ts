@@ -75,6 +75,11 @@ export type Config = {
   maxUploadBytes: number
 }
 
+export type SiteInfo = {
+  description: string
+  profileImage: string
+}
+
 let csrfToken = ''
 const base = `${window.location.pathname.split('/').filter(Boolean)[0] ? '/' + window.location.pathname.split('/').filter(Boolean)[0] : ''}/api`
 
@@ -95,6 +100,7 @@ export const api = {
   session: () => request<{ authenticated: boolean; csrfToken?: string }>('/session'),
   login: (password: string) => request<{ authenticated: boolean; csrfToken: string }>('/auth/login', { method: 'POST', body: JSON.stringify({ password }) }),
   logout: () => request<{ authenticated: boolean }>('/auth/logout', { method: 'POST' }),
+  changePassword: (currentPassword: string, newPassword: string) => request<{ changed: boolean }>('/auth/password', { method: 'POST', body: JSON.stringify({ currentPassword, newPassword }) }),
   posts: () => request<PostState[]>('/posts'),
   post: (slug: string) => request<PostDraft>(`/posts/${encodeURIComponent(slug)}`),
   saveDraft: (draft: PostDraft) => request<{ saved: boolean }>(`/posts/${encodeURIComponent(draft.slug)}/draft`, { method: 'PUT', body: JSON.stringify(draft) }),
@@ -102,8 +108,15 @@ export const api = {
   publishWechat: (draft: PostDraft) => request<PublishResult>(`/posts/${encodeURIComponent(draft.slug)}/publish/wechat-draft`, { method: 'POST', body: JSON.stringify(draft) }),
   preview: (draft: PostDraft) => request<PreviewResult>(`/posts/${encodeURIComponent(draft.slug)}/preview`, { method: 'POST', body: JSON.stringify(draft) }),
   rollback: (slug: string) => request<PublishResult>(`/posts/${encodeURIComponent(slug)}/rollback`, { method: 'POST' }),
-  commentsRecent: () => request<{ adminUrl: string; items: Array<{ id: string; url: string; nick: string; comment: string; created: string }> }>('/comments/recent'),
-  commentsSummary: () => request<{ adminUrl: string; items: Array<{ url: string; count: number; latestAt: string }> }>('/comments/summary'),
+  getSite: () => request<SiteInfo>('/site'),
+  saveSite: (info: SiteInfo) => request<SiteInfo>('/site', { method: 'PUT', body: JSON.stringify(info) }),
+  uploadAvatar: (file: File) => {
+    const form = new FormData()
+    form.append('file', file)
+    return request<{ path: string }>('/site/avatar', { method: 'POST', body: form })
+  },
+  getNowPage: () => request<{ raw: string }>('/pages/now'),
+  saveNowPage: (raw: string) => request<{ saved: boolean }>('/pages/now', { method: 'PUT', body: JSON.stringify({ raw }) }),
   health: () => request<{ status: string; checks: Array<{ name: string; status: string; message: string; technicalDetail: string; suggestion: string }> }>('/health'),
   audit: () => request<unknown[]>('/audit'),
   config: () => request<Config>('/config'),

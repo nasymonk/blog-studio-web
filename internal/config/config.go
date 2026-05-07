@@ -12,15 +12,16 @@ import (
 )
 
 type Paths struct {
-	BlogRoot string
-	DataRoot string
-	Config   string
-	Cache    string
-	Backups  string
-	Logs     string
-	Diffs    string
-	Preview  string
-	Static   string
+	BlogRoot  string
+	DataRoot  string
+	Config    string
+	Cache     string
+	Backups   string
+	Logs      string
+	Diffs     string
+	Preview   string
+	Static    string
+	AdminHash string
 }
 
 type Config struct {
@@ -64,15 +65,16 @@ func DefaultPaths() Paths {
 	blogRoot := env("BLOG_STUDIO_BLOG_ROOT", "/blog")
 	dataRoot := env("BLOG_STUDIO_DATA_ROOT", "/data")
 	return Paths{
-		BlogRoot: blogRoot,
-		DataRoot: dataRoot,
-		Config:   filepath.Join(dataRoot, "config.json"),
-		Cache:    filepath.Join(dataRoot, "cache"),
-		Backups:  filepath.Join(dataRoot, "backups"),
-		Logs:     filepath.Join(dataRoot, "logs"),
-		Diffs:    filepath.Join(dataRoot, "logs", "diffs"),
-		Preview:  filepath.Join(dataRoot, "preview"),
-		Static:   env("BLOG_STUDIO_STATIC_DIR", "./web/dist"),
+		BlogRoot:  blogRoot,
+		DataRoot:  dataRoot,
+		Config:    filepath.Join(dataRoot, "config.json"),
+		Cache:     filepath.Join(dataRoot, "cache"),
+		Backups:   filepath.Join(dataRoot, "backups"),
+		Logs:      filepath.Join(dataRoot, "logs"),
+		Diffs:     filepath.Join(dataRoot, "logs", "diffs"),
+		Preview:   filepath.Join(dataRoot, "preview"),
+		Static:    env("BLOG_STUDIO_STATIC_DIR", "./web/dist"),
+		AdminHash: filepath.Join(dataRoot, "admin-password.hash"),
 	}
 }
 

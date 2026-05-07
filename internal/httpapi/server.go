@@ -3,11 +3,11 @@ package httpapi
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"io"
 	"net/http"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -16,7 +16,6 @@ import (
 	"blog-studio-web/internal/audit"
 	"blog-studio-web/internal/auth"
 	"blog-studio-web/internal/backup"
-	"blog-studio-web/internal/comments"
 	"blog-studio-web/internal/config"
 	"blog-studio-web/internal/content"
 	"blog-studio-web/internal/preview"
@@ -38,10 +37,10 @@ type Server struct {
 	adminHash    string
 	sessions     *auth.Store
 	audit        *audit.Logger
+	backupStore  *backup.Store
 	publisher    *publish.Service
 	preview      *preview.Service
 	wechat       *wechat.Service
-	comments     *comments.Service
 	staticPrefix string
 }
 
@@ -49,16 +48,16 @@ func New(paths config.Paths, cfg config.Config, cfgStore *config.Store, adminHas
 	auditLogger := audit.NewLogger(paths)
 	backupStore := backup.NewStore(paths, 5)
 	return &Server{
-		paths:     paths,
-		cfgStore:  cfgStore,
-		cfg:       cfg,
-		adminHash: adminHash,
-		sessions:  sessions,
-		audit:     auditLogger,
-		publisher: publish.NewService(paths, cfg, backupStore, auditLogger),
-		preview:   preview.NewService(paths, cfg),
-		wechat:    wechat.NewService(paths, cfg, auditLogger),
-		comments:  comments.NewService(commentDataPath(cfg), cfg.Comments.AdminURL),
+		paths:       paths,
+		cfgStore:    cfgStore,
+		cfg:         cfg,
+		adminHash:   adminHash,
+		sessions:    sessions,
+		audit:       auditLogger,
+		backupStore: backupStore,
+		publisher:   publish.NewService(paths, cfg, backupStore, auditLogger),
+		preview:     preview.NewService(paths, cfg),
+		wechat:      wechat.NewService(paths, cfg, auditLogger),
 	}
 }
 
@@ -67,13 +66,17 @@ func (s *Server) Handler() http.Handler {
 	api := http.NewServeMux()
 	api.HandleFunc("POST /auth/login", s.login)
 	api.HandleFunc("POST /auth/logout", s.withAuth(s.logout))
+	api.HandleFunc("POST /auth/password", s.withWriteAuth(s.changePassword))
 	api.HandleFunc("GET /session", s.session)
 	api.HandleFunc("GET /posts", s.withAuth(s.listPosts))
 	api.HandleFunc("GET /posts/", s.withAuth(s.postRouter))
 	api.HandleFunc("PUT /posts/", s.withWriteAuth(s.postRouter))
 	api.HandleFunc("POST /posts/", s.withWriteAuth(s.postRouter))
-	api.HandleFunc("GET /comments/summary", s.withAuth(s.commentSummary))
-	api.HandleFunc("GET /comments/recent", s.withAuth(s.commentRecent))
+	api.HandleFunc("GET /site", s.withAuth(s.getSite))
+	api.HandleFunc("PUT /site", s.withWriteAuth(s.putSite))
+	api.HandleFunc("POST /site/avatar", s.withWriteAuth(s.uploadAvatar))
+	api.HandleFunc("GET /pages/now", s.withAuth(s.getNowPage))
+	api.HandleFunc("PUT /pages/now", s.withWriteAuth(s.putNowPage))
 	api.HandleFunc("GET /health", s.withAuth(s.health))
 	api.HandleFunc("GET /audit", s.withAuth(s.auditRecent))
 	api.HandleFunc("GET /config", s.withAuth(s.getConfig))
@@ -110,6 +113,32 @@ func (s *Server) login(w http.ResponseWriter, r *http.Request) {
 func (s *Server) logout(w http.ResponseWriter, r *http.Request) {
 	s.sessions.Destroy(w, r)
 	writeOK(w, map[string]bool{"authenticated": false})
+}
+
+func (s *Server) changePassword(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		CurrentPassword string `json:"currentPassword"`
+		NewPassword     string `json:"newPassword"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, apperror.Wrap("BAD_REQUEST", "请求格式无效。", err, "重新提交密码表单。", false))
+		return
+	}
+	if !auth.VerifyPassword(req.CurrentPassword, s.adminHash) {
+		writeError(w, http.StatusUnauthorized, apperror.New("PASSWORD_CURRENT_INVALID", "当前密码不正确。", "invalid current password", "重新输入当前管理员密码。", false))
+		return
+	}
+	hash, err := auth.HashPassword(req.NewPassword)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, apperror.Wrap("PASSWORD_WEAK", "新密码不够安全。", err, "请使用至少 12 个字符的密码。", false))
+		return
+	}
+	if err := os.WriteFile(s.paths.AdminHash, []byte(hash+"\n"), 0600); err != nil {
+		writeError(w, http.StatusInternalServerError, apperror.Wrap("PASSWORD_WRITE_FAILED", "无法保存新密码。", err, "检查数据目录写入权限。", true))
+		return
+	}
+	s.adminHash = hash
+	writeOK(w, map[string]bool{"changed": true})
 }
 
 func (s *Server) session(w http.ResponseWriter, r *http.Request) {
@@ -275,22 +304,114 @@ func (s *Server) rollback(w http.ResponseWriter, r *http.Request, slug string) {
 	writeOK(w, s.publisher.Rollback(ctx, slug))
 }
 
-func (s *Server) commentSummary(w http.ResponseWriter, r *http.Request) {
-	data, err := s.comments.Summary()
+func (s *Server) getSite(w http.ResponseWriter, r *http.Request) {
+	data, err := os.ReadFile(filepath.Join(s.cfg.Site.BlogRoot, "hugo.toml"))
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, err)
+		writeError(w, http.StatusInternalServerError, apperror.Wrap("SITE_READ_FAILED", "读取站点配置失败。", err, "检查博客目录。", true))
 		return
 	}
-	writeOK(w, map[string]interface{}{"adminUrl": s.comments.AdminURL(), "items": data})
+	toml := string(data)
+	writeOK(w, map[string]string{
+		"description":  readHugoParam(toml, "description"),
+		"profileImage": readHugoParam(toml, "profileImage"),
+	})
 }
 
-func (s *Server) commentRecent(w http.ResponseWriter, r *http.Request) {
-	data, err := s.comments.Recent(20)
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, err)
+func (s *Server) putSite(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Description  string `json:"description"`
+		ProfileImage string `json:"profileImage"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, apperror.Wrap("BAD_REQUEST", "请求格式无效。", err, "重新提交。", false))
 		return
 	}
-	writeOK(w, map[string]interface{}{"adminUrl": s.comments.AdminURL(), "items": data})
+	hugoPath := filepath.Join(s.cfg.Site.BlogRoot, "hugo.toml")
+	data, err := os.ReadFile(hugoPath)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, apperror.Wrap("SITE_READ_FAILED", "读取站点配置失败。", err, "检查博客目录。", true))
+		return
+	}
+	toml := string(data)
+	if req.Description != "" {
+		toml = setHugoParam(toml, "description", req.Description)
+	}
+	if req.ProfileImage != "" {
+		toml = setHugoParam(toml, "profileImage", req.ProfileImage)
+	}
+	if err := storage.AtomicWriteFile(hugoPath, []byte(toml), 0644); err != nil {
+		writeError(w, http.StatusInternalServerError, apperror.Wrap("SITE_WRITE_FAILED", "保存站点配置失败。", err, "检查文件权限。", true))
+		return
+	}
+	writeOK(w, map[string]string{"description": req.Description, "profileImage": req.ProfileImage})
+}
+
+func (s *Server) uploadAvatar(w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseMultipartForm(s.cfg.MaxUploadBytes); err != nil {
+		writeError(w, http.StatusBadRequest, apperror.Wrap("UPLOAD_INVALID", "上传请求无效。", err, "检查文件大小。", false))
+		return
+	}
+	file, header, err := r.FormFile("file")
+	if err != nil {
+		writeError(w, http.StatusBadRequest, apperror.Wrap("UPLOAD_FILE_MISSING", "缺少上传文件。", err, "使用 file 字段上传图片。", false))
+		return
+	}
+	defer file.Close()
+	if !allowedUpload(header.Filename) {
+		writeError(w, http.StatusBadRequest, apperror.New("UPLOAD_TYPE_INVALID", "不支持的文件类型。", header.Filename, "仅上传 jpg、png、gif、webp。", false))
+		return
+	}
+	ext := strings.ToLower(filepath.Ext(header.Filename))
+	staticDir := filepath.Join(s.cfg.Site.BlogRoot, "static")
+	if err := os.MkdirAll(staticDir, 0755); err != nil {
+		writeError(w, http.StatusInternalServerError, apperror.Wrap("AVATAR_DIR_FAILED", "无法创建 static 目录。", err, "检查文件权限。", true))
+		return
+	}
+	for _, e := range []string{".jpg", ".jpeg", ".png", ".gif", ".webp"} {
+		_ = os.Remove(filepath.Join(staticDir, "avatar"+e))
+	}
+	data, _ := io.ReadAll(io.LimitReader(file, s.cfg.MaxUploadBytes+1))
+	avatarPath := filepath.Join(staticDir, "avatar"+ext)
+	if err := storage.AtomicWriteFile(avatarPath, data, 0644); err != nil {
+		writeError(w, http.StatusInternalServerError, apperror.Wrap("AVATAR_WRITE_FAILED", "保存头像失败。", err, "检查文件权限。", true))
+		return
+	}
+	imagePath := "/avatar" + ext
+	hugoPath := filepath.Join(s.cfg.Site.BlogRoot, "hugo.toml")
+	if tomlData, err := os.ReadFile(hugoPath); err == nil {
+		_ = storage.AtomicWriteFile(hugoPath, []byte(setHugoParam(string(tomlData), "profileImage", imagePath)), 0644)
+	}
+	writeOK(w, map[string]string{"path": imagePath})
+}
+
+func (s *Server) getNowPage(w http.ResponseWriter, r *http.Request) {
+	path := filepath.Join(s.cfg.Site.BlogRoot, "content", "now.md")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			writeOK(w, map[string]string{"raw": "---\ntitle: \"Now\"\nurl: \"/now/\"\nlayout: \"single\"\nShowToc: false\nShowReadingTime: false\n---\n\n## 此刻在做\n"})
+			return
+		}
+		writeError(w, http.StatusInternalServerError, apperror.Wrap("NOW_READ_FAILED", "读取 Now 页面失败。", err, "检查博客目录。", true))
+		return
+	}
+	writeOK(w, map[string]string{"raw": string(data)})
+}
+
+func (s *Server) putNowPage(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Raw string `json:"raw"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, apperror.Wrap("BAD_REQUEST", "请求格式无效。", err, "重新提交。", false))
+		return
+	}
+	path := filepath.Join(s.cfg.Site.BlogRoot, "content", "now.md")
+	if err := storage.AtomicWriteFile(path, []byte(req.Raw), 0644); err != nil {
+		writeError(w, http.StatusInternalServerError, apperror.Wrap("NOW_WRITE_FAILED", "保存 Now 页面失败。", err, "检查文件权限。", true))
+		return
+	}
+	writeOK(w, map[string]bool{"saved": true})
 }
 
 func (s *Server) health(w http.ResponseWriter, r *http.Request) {
@@ -348,8 +469,20 @@ func (s *Server) putConfig(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, err)
 		return
 	}
+	saved, err := s.cfgStore.Load()
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
+	s.reloadConfig(saved)
+	writeOK(w, saved)
+}
+
+func (s *Server) reloadConfig(cfg config.Config) {
 	s.cfg = cfg
-	writeOK(w, cfg)
+	s.publisher = publish.NewService(s.paths, cfg, s.backupStore, s.audit)
+	s.preview = preview.NewService(s.paths, cfg)
+	s.wechat = wechat.NewService(s.paths, cfg, s.audit)
 }
 
 func (s *Server) spaHandler(base string) http.Handler {
@@ -422,14 +555,21 @@ func allowedUpload(name string) bool {
 	}
 }
 
-func commentDataPath(cfg config.Config) string {
-	if cfg.Comments.DataPath != "" {
-		return cfg.Comments.DataPath
+func readHugoParam(toml, key string) string {
+	re := regexp.MustCompile(`(?m)^\s+` + regexp.QuoteMeta(key) + `\s*=\s*"([^"]*)"`)
+	m := re.FindStringSubmatch(toml)
+	if len(m) < 2 {
+		return ""
 	}
-	if value := os.Getenv("TWIKOO_DATA_PATH"); value != "" {
-		return value
-	}
-	return ""
+	return m[1]
 }
 
-var _ = errors.New
+func setHugoParam(toml, key, value string) string {
+	escaped := strings.ReplaceAll(value, `"`, `\"`)
+	re := regexp.MustCompile(`(?m)^(\s+)` + regexp.QuoteMeta(key) + `(\s*=\s*)"[^"]*"`)
+	if re.MatchString(toml) {
+		return re.ReplaceAllString(toml, "${1}"+key+"${2}\""+escaped+"\"")
+	}
+	paramsRe := regexp.MustCompile(`(?m)^\[params\]`)
+	return paramsRe.ReplaceAllString(toml, "[params]\n  "+key+` = "`+escaped+`"`)
+}

@@ -28,6 +28,9 @@ func main() {
 		log.Fatal("BLOG_STUDIO_ADMIN_PASSWORD_HASH and BLOG_STUDIO_SESSION_SECRET (32+ chars) are required")
 	}
 	paths := config.DefaultPaths()
+	if data, err := os.ReadFile(paths.AdminHash); err == nil && strings.TrimSpace(string(data)) != "" {
+		adminHash = strings.TrimSpace(string(data))
+	}
 	store := config.NewStore(paths)
 	cfg, cfgErr := store.Load()
 	if cfgErr != nil {
