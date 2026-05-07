@@ -1,0 +1,26 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to ECS
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.BLOG_SSH_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$SSH_PRIVATE_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H 8.130.214.67 >> ~/.ssh/known_hosts
+          ssh -i ~/.ssh/deploy_key root@8.130.214.67 << 'ENDSSH'
+            set -e
+            cd /root/blog-studio-web-src
+            git pull
+            docker build -t blog-studio-web:ecs .
+            cd /root/blog-nginx
+            docker compose up -d --no-deps blog-studio-web
+          ENDSSH
