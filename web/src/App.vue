@@ -683,7 +683,7 @@ function setError(error: unknown) {
             <h2><Shield :size="18" />{{ t.security }}</h2>
             <label>{{ t.currentPassword }}<input v-model="currentPassword" type="password" autocomplete="current-password" /></label>
             <label>{{ t.newPassword }}<input v-model="newAdminPassword" type="password" autocomplete="new-password" /></label>
-            <button :disabled="!currentPassword || newAdminPassword.length < 12" @click="changePassword">{{ t.changePassword }}</button>
+            <button :disabled="!currentPassword || newAdminPassword.length < 6" @click="changePassword">{{ t.changePassword }}</button>
           </article>
         </div>
 
