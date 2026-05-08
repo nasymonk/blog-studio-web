@@ -118,3 +118,116 @@ go run ./cmd/server
 ```
 
 Open `http://localhost:8080/studio/`.
+
+---
+
+## OPERATIONS
+
+### Environment Variables
+
+| Variable | Required | Default | Description |
+|---|---|---|---|
+| `BLOG_STUDIO_ADMIN_PASSWORD_HASH` | **Yes** | — | bcrypt hash of the admin password. Generate with `go run ./cmd/server hash-password 'pw'`. |
+| `BLOG_STUDIO_SESSION_SECRET` | **Yes** | — | Random string ≥32 chars, used to sign session tokens. |
+| `BLOG_STUDIO_BLOG_ROOT` | **Yes** | `/blog` | Path to the Hugo site root (must contain `hugo.toml`). |
+| `BLOG_STUDIO_DATA_ROOT` | **Yes** | `/data` | Path where Blog Studio writes backups, logs, previews, and session state. |
+| `BLOG_STUDIO_STATIC_DIR` | **Yes** | `/app/web/dist` | Path to the built frontend assets. |
+| `PORT` | No | `8080` | HTTP listen port. |
+| `APP_ENV` | No | `development` | Set to `production` for JSON structured logs; anything else for human-readable text logs. |
+| `BLOG_STUDIO_COOKIE_INSECURE` | No | — | Set to `1` to allow session cookies over HTTP (dev only). |
+| `WECHAT_APP_ID` | No | — | WeChat Official Account App ID. |
+| `WECHAT_APP_SECRET` | No | — | WeChat Official Account App Secret. |
+| `BASE_PATH` | No | `/studio` | URL path prefix (must match Nginx location). |
+
+### Data Directory Structure
+
+```
+/data/
+├── backups/          # Per-slug backup snapshots (up to 5 per slug)
+│   └── <siteId>/<slug>/<timestamp>/
+├── logs/
+│   ├── audit.log     # Append-only JSONL audit trail (auto-rotated to 5000 lines)
+│   └── diffs/        # Per-operation diff files (pruned when audit entry is rotated)
+├── preview/
+│   ├── public/       # Served preview sites (expire after TTL minutes)
+│   └── work/         # Hugo work trees for preview builds
+├── sessions.json     # Persisted session store (survives restart)
+├── metadata.json     # Site metadata cache
+└── admin.hash        # Optional: admin password hash file (overrides env var)
+```
+
+### Backup & Restore
+
+**Restore a single article from backup:**
+
+```bash
+# 1. Find the backup directory
+ls /data/backups/<siteId>/<slug>/
+
+# 2. Copy the desired snapshot back to the blog
+cp -r /data/backups/<siteId>/<slug>/<timestamp>/ /blog/content/post/<slug>/
+
+# 3. Or use the rollback API (recommended)
+curl -b cookies.txt -X POST \
+  http://localhost:8080/studio/api/posts/<slug>/rollback \
+  -H "Content-Type: application/json" \
+  -d '{"backupId":"<backupId>","csrfToken":"<token>"}'
+```
+
+**Full data backup:**
+
+```bash
+tar -czf blog-studio-data-$(date +%Y%m%d).tar.gz /data
+```
+
+### Emergency Procedures
+
+**Service won't start:**
+- Check stdout / `docker logs blog-studio-web` — missing env vars are printed before exit.
+- Verify `BLOG_STUDIO_ADMIN_PASSWORD_HASH` and `BLOG_STUDIO_SESSION_SECRET` are set and ≥32 chars respectively.
+
+**Hugo build permanently failing:**
+- Use the rollback API to revert the last publish to a known-good backup.
+- Check Hugo is installed at `/usr/local/bin/hugo` in the container.
+
+**Disk filling up:**
+```bash
+du -sh /data/*
+# Clean old previews manually if background worker hasn't run yet:
+rm -rf /data/preview/public/* /data/preview/work/*
+# Trigger audit rotation (restarts the process to pick up startup worker):
+docker restart blog-studio-web
+```
+
+**Lost admin password:**
+```bash
+# Generate a new hash and update the env var or admin.hash file:
+go run ./cmd/server hash-password 'new-password'
+echo '<hash>' > /data/admin.hash
+docker restart blog-studio-web
+```
+
+### Observability
+
+**Metrics endpoint** (requires authentication):
+```
+GET /studio/api/metrics
+```
+Returns Prometheus text format. Key metrics:
+
+| Metric | Description |
+|---|---|
+| `http_requests_total{method,path,status}` | Request count by method, normalized path, and status code |
+| `http_request_duration_seconds{method,path}` | Request latency histogram |
+| `hugo_build_duration_seconds{target,success}` | Hugo build duration (`target=publish\|preview`) |
+| `login_attempts_total{result}` | Login outcomes (`result=ok\|fail\|limited`) |
+| `preview_active` | Number of live preview directories |
+
+**Recommended Grafana panels:** request rate, p99 latency, Hugo build duration, login failure rate.
+
+### Rate Limiting & Security
+
+- **Login rate limit:** 5 attempts per 15 minutes per IP. Excess returns HTTP 429.
+- **Session cookies:** `HttpOnly`, `SameSite=Strict`, `Secure` (set `BLOG_STUDIO_COOKIE_INSECURE=1` for local HTTP dev).
+- **CSP / HSTS / COOP / Permissions-Policy** headers are set on all responses. HSTS is only sent when `X-Forwarded-Proto: https` is detected.
+- **Audit log:** every publish, rollback, config change, and password change is recorded in `/data/logs/audit.log` with full diffs.

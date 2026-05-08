@@ -3,13 +3,13 @@ package httpapi
 import (
 	"context"
 	"encoding/json"
-	"io"
+	"log/slog"
 	"net/http"
 	"os"
 	"path/filepath"
 	"regexp"
-	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"blog-studio-web/internal/apperror"
@@ -18,9 +18,12 @@ import (
 	"blog-studio-web/internal/backup"
 	"blog-studio-web/internal/config"
 	"blog-studio-web/internal/content"
+	"blog-studio-web/internal/hugobuild"
+	"blog-studio-web/internal/metrics"
 	"blog-studio-web/internal/preview"
 	"blog-studio-web/internal/publish"
 	"blog-studio-web/internal/storage"
+	"blog-studio-web/internal/trash"
 	"blog-studio-web/internal/wechat"
 )
 
@@ -31,6 +34,7 @@ type APIResponse struct {
 }
 
 type Server struct {
+	mu           sync.RWMutex
 	paths        config.Paths
 	cfgStore     *config.Store
 	cfg          config.Config
@@ -38,33 +42,56 @@ type Server struct {
 	sessions     *auth.Store
 	audit        *audit.Logger
 	backupStore  *backup.Store
-	publisher    *publish.Service
-	preview      *preview.Service
-	wechat       *wechat.Service
+	trashStore   *trash.Store
+	pub          *publish.Service
+	prev         *preview.Service
+	wec          *wechat.Service
+	runner       *hugobuild.Runner
+	logger       *slog.Logger
+	loginLimiter *auth.LoginLimiter
 	staticPrefix string
 }
 
-func New(paths config.Paths, cfg config.Config, cfgStore *config.Store, adminHash string, sessions *auth.Store) *Server {
-	auditLogger := audit.NewLogger(paths)
+func New(paths config.Paths, cfg config.Config, cfgStore *config.Store, adminHash string, sessions *auth.Store, logger *slog.Logger) *Server {
+	return NewWithAudit(paths, cfg, cfgStore, adminHash, sessions, audit.NewLogger(paths), logger)
+}
+
+func NewWithAudit(paths config.Paths, cfg config.Config, cfgStore *config.Store, adminHash string, sessions *auth.Store, auditLogger *audit.Logger, logger *slog.Logger) *Server {
 	backupStore := backup.NewStore(paths, 5)
+	runner := hugobuild.NewRunner(logger)
 	return &Server{
-		paths:       paths,
-		cfgStore:    cfgStore,
-		cfg:         cfg,
-		adminHash:   adminHash,
-		sessions:    sessions,
-		audit:       auditLogger,
-		backupStore: backupStore,
-		publisher:   publish.NewService(paths, cfg, backupStore, auditLogger),
-		preview:     preview.NewService(paths, cfg),
-		wechat:      wechat.NewService(paths, cfg, auditLogger),
+		paths:        paths,
+		cfgStore:     cfgStore,
+		cfg:          cfg,
+		adminHash:    adminHash,
+		sessions:     sessions,
+		audit:        auditLogger,
+		backupStore:  backupStore,
+		trashStore:   trash.NewStore(paths),
+		runner:       runner,
+		logger:       logger,
+		loginLimiter: auth.NewLoginLimiter(),
+		pub:          publish.NewService(paths, cfg, backupStore, auditLogger, runner),
+		prev:         preview.NewService(paths, cfg, runner),
+		wec:          wechat.NewService(paths, cfg, auditLogger),
 	}
 }
+
+func (s *Server) PreviewService() *preview.Service {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.prev
+}
+
+func (s *Server) TrashStore() *trash.Store {
+	return s.trashStore
+}
+
 
 func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
 	api := http.NewServeMux()
-	api.HandleFunc("POST /auth/login", s.login)
+	api.HandleFunc("POST /auth/login", s.withLoginLimit(s.login))
 	api.HandleFunc("POST /auth/logout", s.withAuth(s.logout))
 	api.HandleFunc("POST /auth/password", s.withWriteAuth(s.changePassword))
 	api.HandleFunc("GET /session", s.session)
@@ -72,15 +99,23 @@ func (s *Server) Handler() http.Handler {
 	api.HandleFunc("GET /posts/", s.withAuth(s.postRouter))
 	api.HandleFunc("PUT /posts/", s.withWriteAuth(s.postRouter))
 	api.HandleFunc("POST /posts/", s.withWriteAuth(s.postRouter))
+	api.HandleFunc("DELETE /posts/", s.withWriteAuth(s.postRouter))
 	api.HandleFunc("GET /site", s.withAuth(s.getSite))
 	api.HandleFunc("PUT /site", s.withWriteAuth(s.putSite))
 	api.HandleFunc("POST /site/avatar", s.withWriteAuth(s.uploadAvatar))
 	api.HandleFunc("GET /pages/now", s.withAuth(s.getNowPage))
 	api.HandleFunc("PUT /pages/now", s.withWriteAuth(s.putNowPage))
-	api.HandleFunc("GET /health", s.withAuth(s.health))
+	api.HandleFunc("GET /health", s.healthPublic)
+	api.HandleFunc("GET /health/full", s.withAuth(s.health))
 	api.HandleFunc("GET /audit", s.withAuth(s.auditRecent))
 	api.HandleFunc("GET /config", s.withAuth(s.getConfig))
 	api.HandleFunc("PUT /config", s.withWriteAuth(s.putConfig))
+	api.HandleFunc("GET /trash", s.withAuth(s.listTrash))
+	api.HandleFunc("POST /trash/", s.withWriteAuth(s.trashRouter))
+	api.HandleFunc("DELETE /trash/", s.withWriteAuth(s.trashRouter))
+	api.Handle("GET /metrics", s.withAuth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		metrics.Handler().ServeHTTP(w, r)
+	})))
 
 	base := strings.TrimRight(s.cfg.BasePath, "/")
 	mux.Handle(base+"/api/", http.StripPrefix(base+"/api", api))
@@ -91,21 +126,30 @@ func (s *Server) Handler() http.Handler {
 			http.Redirect(w, r, base+"/", http.StatusMovedPermanently)
 		})
 	}
-	return secureHeaders(mux)
+	chain := recoverer(s.logger)(
+		requestID(
+			accessLog(s.logger)(
+				secureHeaders(mux),
+			),
+		),
+	)
+	return chain
 }
 
 func (s *Server) login(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		Password string `json:"password"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, apperror.Wrap("BAD_REQUEST", "请求格式无效。", err, "重新提交登录表单。", false))
+	if err := decodeJSON(r, &req); err != nil {
+		writeError(w, http.StatusBadRequest, err)
 		return
 	}
-	if !auth.VerifyPassword(req.Password, s.adminHash) {
+	if !auth.VerifyPassword(req.Password, s.snap().adminHash) {
+		metrics.LoginAttempts.WithLabelValues("fail").Inc()
 		writeError(w, http.StatusUnauthorized, apperror.New("LOGIN_FAILED", "密码错误。", "invalid admin password", "检查管理员密码。", false))
 		return
 	}
+	metrics.LoginAttempts.WithLabelValues("ok").Inc()
 	session := s.sessions.Create(w)
 	writeOK(w, map[string]interface{}{"authenticated": true, "csrfToken": session.CSRF})
 }
@@ -120,24 +164,26 @@ func (s *Server) changePassword(w http.ResponseWriter, r *http.Request) {
 		CurrentPassword string `json:"currentPassword"`
 		NewPassword     string `json:"newPassword"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, apperror.Wrap("BAD_REQUEST", "请求格式无效。", err, "重新提交密码表单。", false))
+	if err := decodeJSON(r, &req); err != nil {
+		writeError(w, http.StatusBadRequest, err)
 		return
 	}
-	if !auth.VerifyPassword(req.CurrentPassword, s.adminHash) {
+	if !auth.VerifyPassword(req.CurrentPassword, s.snap().adminHash) {
 		writeError(w, http.StatusUnauthorized, apperror.New("PASSWORD_CURRENT_INVALID", "当前密码不正确。", "invalid current password", "重新输入当前管理员密码。", false))
 		return
 	}
-	hash, err := auth.HashPassword(req.NewPassword)
+	newHash, err := auth.HashPassword(req.NewPassword)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, apperror.Wrap("PASSWORD_WEAK", "新密码不够安全。", err, "请使用至少 12 个字符的密码。", false))
+		writeError(w, http.StatusBadRequest, apperror.Wrap("PASSWORD_WEAK", "新密码不够安全。", err, "请使用至少 6 个字符的密码。", false))
 		return
 	}
-	if err := os.WriteFile(s.paths.AdminHash, []byte(hash+"\n"), 0600); err != nil {
+	if err := os.WriteFile(s.paths.AdminHash, []byte(newHash+"\n"), 0600); err != nil {
 		writeError(w, http.StatusInternalServerError, apperror.Wrap("PASSWORD_WRITE_FAILED", "无法保存新密码。", err, "检查数据目录写入权限。", true))
 		return
 	}
-	s.adminHash = hash
+	s.mu.Lock()
+	s.adminHash = newHash
+	s.mu.Unlock()
 	writeOK(w, map[string]bool{"changed": true})
 }
 
@@ -149,8 +195,26 @@ func (s *Server) session(w http.ResponseWriter, r *http.Request) {
 	writeOK(w, map[string]bool{"authenticated": false})
 }
 
+func (s *Server) publisher() *publish.Service {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.pub
+}
+
+func (s *Server) previewSvc() *preview.Service {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.prev
+}
+
+func (s *Server) wechatSvc() *wechat.Service {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.wec
+}
+
 func (s *Server) listPosts(w http.ResponseWriter, r *http.Request) {
-	posts, err := s.publisher.ListPosts()
+	posts, err := s.publisher().ListPosts()
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
@@ -168,6 +232,10 @@ func (s *Server) postRouter(w http.ResponseWriter, r *http.Request) {
 	slug := parts[0]
 	if len(parts) == 1 && r.Method == http.MethodGet {
 		s.loadPost(w, r, slug)
+		return
+	}
+	if len(parts) == 1 && r.Method == http.MethodDelete {
+		s.deletePost(w, r, slug)
 		return
 	}
 	if len(parts) == 2 {
@@ -200,7 +268,7 @@ func (s *Server) postRouter(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) loadPost(w http.ResponseWriter, r *http.Request, slug string) {
-	post, err := s.publisher.LoadPost(slug)
+	post, err := s.publisher().LoadPost(slug)
 	if err != nil {
 		writeError(w, http.StatusNotFound, err)
 		return
@@ -208,14 +276,84 @@ func (s *Server) loadPost(w http.ResponseWriter, r *http.Request, slug string) {
 	writeOK(w, post)
 }
 
+func (s *Server) deletePost(w http.ResponseWriter, r *http.Request, slug string) {
+	sn := s.snap()
+	postDir, err := storage.SafeJoin(sn.cfg.Site.BlogRoot, "content", sn.cfg.Site.PostSection, slug)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+	if _, statErr := os.Stat(postDir); os.IsNotExist(statErr) {
+		writeError(w, http.StatusNotFound, apperror.New("POST_NOT_FOUND", "文章不存在。", slug, "检查 slug。", false))
+		return
+	}
+	trashID, trashErr := s.trashStore.Move(sn.cfg.Site.ID, slug, postDir)
+	if trashErr != nil {
+		writeError(w, http.StatusInternalServerError, trashErr)
+		return
+	}
+	_ = s.audit.Append(audit.Entry{
+		AuditID: audit.NewID("audit"), Actor: "admin", SiteID: sn.cfg.Site.ID,
+		Slug: slug, Operation: "delete", Target: "trash", Result: "ok", BackupID: trashID,
+	})
+	writeOK(w, map[string]string{"trashId": trashID})
+}
+
+func (s *Server) listTrash(w http.ResponseWriter, r *http.Request) {
+	sn := s.snap()
+	items, err := s.trashStore.List(sn.cfg.Site.ID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
+	writeOK(w, items)
+}
+
+func (s *Server) trashRouter(w http.ResponseWriter, r *http.Request) {
+	trimmed := strings.TrimPrefix(r.URL.Path, "/trash/")
+	parts := strings.Split(strings.Trim(trimmed, "/"), "/")
+	if len(parts) < 1 || parts[0] == "" {
+		writeError(w, http.StatusNotFound, apperror.New("NOT_FOUND", "接口不存在。", r.URL.Path, "检查 API 路径。", false))
+		return
+	}
+	id := parts[0]
+	sn := s.snap()
+	if r.Method == http.MethodDelete {
+		if err := s.trashStore.Purge(sn.cfg.Site.ID, id); err != nil {
+			writeError(w, http.StatusInternalServerError, err)
+			return
+		}
+		writeOK(w, map[string]bool{"purged": true})
+		return
+	}
+	if r.Method == http.MethodPost && len(parts) == 2 && parts[1] == "restore" {
+		postSection, safeErr := storage.SafeJoin(sn.cfg.Site.BlogRoot, "content", sn.cfg.Site.PostSection)
+		if safeErr != nil {
+			writeError(w, http.StatusBadRequest, safeErr)
+			return
+		}
+		if err := s.trashStore.Restore(sn.cfg.Site.ID, id, postSection); err != nil {
+			writeError(w, http.StatusConflict, err)
+			return
+		}
+		_ = s.audit.Append(audit.Entry{
+			AuditID: audit.NewID("audit"), Actor: "admin", SiteID: sn.cfg.Site.ID,
+			Slug: id, Operation: "restore", Target: "trash", Result: "ok",
+		})
+		writeOK(w, map[string]bool{"restored": true})
+		return
+	}
+	writeError(w, http.StatusNotFound, apperror.New("NOT_FOUND", "接口不存在。", r.URL.Path, "检查 API 路径。", false))
+}
+
 func (s *Server) saveDraft(w http.ResponseWriter, r *http.Request, slug string) {
 	var draft content.PostDraft
-	if err := json.NewDecoder(r.Body).Decode(&draft); err != nil {
-		writeError(w, http.StatusBadRequest, apperror.Wrap("BAD_REQUEST", "请求格式无效。", err, "重新提交草稿。", false))
+	if err := decodeJSON(r, &draft); err != nil {
+		writeError(w, http.StatusBadRequest, err)
 		return
 	}
 	draft.Slug = slug
-	if err := s.publisher.SaveDraft(draft); err != nil {
+	if err := s.publisher().SaveDraft(draft); err != nil {
 		writeError(w, http.StatusBadRequest, err)
 		return
 	}
@@ -223,18 +361,9 @@ func (s *Server) saveDraft(w http.ResponseWriter, r *http.Request, slug string) 
 }
 
 func (s *Server) uploadAsset(w http.ResponseWriter, r *http.Request, slug string) {
-	if err := r.ParseMultipartForm(s.cfg.MaxUploadBytes); err != nil {
-		writeError(w, http.StatusBadRequest, apperror.Wrap("UPLOAD_INVALID", "上传请求无效。", err, "检查文件大小和表单字段。", false))
-		return
-	}
-	file, header, err := r.FormFile("file")
-	if err != nil {
-		writeError(w, http.StatusBadRequest, apperror.Wrap("UPLOAD_FILE_MISSING", "缺少上传文件。", err, "使用 file 字段上传图片。", false))
-		return
-	}
-	defer file.Close()
-	if header.Size > s.cfg.MaxUploadBytes {
-		writeError(w, http.StatusRequestEntityTooLarge, apperror.New("UPLOAD_TOO_LARGE", "上传文件过大。", strconv.FormatInt(header.Size, 10), "压缩图片或调整上传上限。", false))
+	data, name, appErr := parseUploadedFile(r, s.cfg.MaxUploadBytes)
+	if appErr != nil {
+		writeError(w, http.StatusBadRequest, appErr)
 		return
 	}
 	postDir, appErr := storage.PostDir(s.cfg.Site.PostRoot, slug)
@@ -242,12 +371,11 @@ func (s *Server) uploadAsset(w http.ResponseWriter, r *http.Request, slug string
 		writeError(w, http.StatusBadRequest, appErr)
 		return
 	}
-	if !allowedUpload(header.Filename) {
-		writeError(w, http.StatusBadRequest, apperror.New("UPLOAD_TYPE_INVALID", "不支持的文件类型。", header.Filename, "仅上传 jpg、png、gif、webp、svg。", false))
+	if !allowedUpload(name) {
+		writeError(w, http.StatusBadRequest, apperror.New("UPLOAD_TYPE_INVALID", "不支持的文件类型。", name, "仅上传 jpg、png、gif、webp、svg。", false))
 		return
 	}
-	data, _ := io.ReadAll(io.LimitReader(file, s.cfg.MaxUploadBytes+1))
-	target, safeErr := storage.SafeJoin(postDir, filepath.Base(header.Filename))
+	target, safeErr := storage.SafeJoin(postDir, name)
 	if safeErr != nil {
 		writeError(w, http.StatusBadRequest, safeErr)
 		return
@@ -256,52 +384,53 @@ func (s *Server) uploadAsset(w http.ResponseWriter, r *http.Request, slug string
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
-	writeOK(w, content.Asset{Name: filepath.Base(header.Filename), Size: int64(len(data))})
+	writeOK(w, content.Asset{Name: name, Size: int64(len(data))})
 }
 
 func (s *Server) publishBlog(w http.ResponseWriter, r *http.Request, slug string) {
 	var req publish.BlogPublishRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, apperror.Wrap("BAD_REQUEST", "请求格式无效。", err, "重新提交发布请求。", false))
+	if err := decodeJSON(r, &req); err != nil {
+		writeError(w, http.StatusBadRequest, err)
 		return
 	}
 	req.Slug = slug
 	req.Draft.Slug = slug
 	ctx, cancel := context.WithTimeout(r.Context(), 2*time.Minute)
 	defer cancel()
-	result := s.publisher.PublishBlog(ctx, req)
+	result := s.publisher().PublishBlog(ctx, req)
 	writeOK(w, result)
 }
 
 func (s *Server) publishWechatDraft(w http.ResponseWriter, r *http.Request, slug string) {
 	var draft content.PostDraft
-	if err := json.NewDecoder(r.Body).Decode(&draft); err != nil {
-		writeError(w, http.StatusBadRequest, apperror.Wrap("BAD_REQUEST", "请求格式无效。", err, "重新提交公众号发布请求。", false))
+	if err := decodeJSON(r, &draft); err != nil {
+		writeError(w, http.StatusBadRequest, err)
 		return
 	}
 	draft.Slug = slug
 	ctx, cancel := context.WithTimeout(r.Context(), 1*time.Minute)
 	defer cancel()
-	writeOK(w, s.wechat.PublishDraft(ctx, draft))
+	writeOK(w, s.wechatSvc().PublishDraft(ctx, draft))
 }
 
 func (s *Server) createPreview(w http.ResponseWriter, r *http.Request, slug string) {
 	var draft content.PostDraft
-	if err := json.NewDecoder(r.Body).Decode(&draft); err != nil {
-		writeError(w, http.StatusBadRequest, apperror.Wrap("BAD_REQUEST", "请求格式无效。", err, "重新提交预览请求。", false))
+	if err := decodeJSON(r, &draft); err != nil {
+		writeError(w, http.StatusBadRequest, err)
 		return
 	}
 	draft.Slug = slug
 	ctx, cancel := context.WithTimeout(r.Context(), 2*time.Minute)
 	defer cancel()
-	_ = s.preview.Cleanup()
-	writeOK(w, s.preview.Create(ctx, draft))
+	prev := s.previewSvc()
+	_ = prev.Cleanup()
+	writeOK(w, prev.Create(ctx, draft))
 }
 
 func (s *Server) rollback(w http.ResponseWriter, r *http.Request, slug string) {
 	ctx, cancel := context.WithTimeout(r.Context(), 2*time.Minute)
 	defer cancel()
-	writeOK(w, s.publisher.Rollback(ctx, slug))
+	writeOK(w, s.publisher().Rollback(ctx, slug))
 }
 
 func (s *Server) getSite(w http.ResponseWriter, r *http.Request) {
@@ -322,8 +451,8 @@ func (s *Server) putSite(w http.ResponseWriter, r *http.Request) {
 		Description  string `json:"description"`
 		ProfileImage string `json:"profileImage"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, apperror.Wrap("BAD_REQUEST", "请求格式无效。", err, "重新提交。", false))
+	if err := decodeJSON(r, &req); err != nil {
+		writeError(w, http.StatusBadRequest, err)
 		return
 	}
 	hugoPath := filepath.Join(s.cfg.Site.BlogRoot, "hugo.toml")
@@ -347,21 +476,16 @@ func (s *Server) putSite(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) uploadAvatar(w http.ResponseWriter, r *http.Request) {
-	if err := r.ParseMultipartForm(s.cfg.MaxUploadBytes); err != nil {
-		writeError(w, http.StatusBadRequest, apperror.Wrap("UPLOAD_INVALID", "上传请求无效。", err, "检查文件大小。", false))
+	data, name, appErr := parseUploadedFile(r, s.cfg.MaxUploadBytes)
+	if appErr != nil {
+		writeError(w, http.StatusBadRequest, appErr)
 		return
 	}
-	file, header, err := r.FormFile("file")
-	if err != nil {
-		writeError(w, http.StatusBadRequest, apperror.Wrap("UPLOAD_FILE_MISSING", "缺少上传文件。", err, "使用 file 字段上传图片。", false))
+	if !allowedUpload(name) {
+		writeError(w, http.StatusBadRequest, apperror.New("UPLOAD_TYPE_INVALID", "不支持的文件类型。", name, "仅上传 jpg、png、gif、webp。", false))
 		return
 	}
-	defer file.Close()
-	if !allowedUpload(header.Filename) {
-		writeError(w, http.StatusBadRequest, apperror.New("UPLOAD_TYPE_INVALID", "不支持的文件类型。", header.Filename, "仅上传 jpg、png、gif、webp。", false))
-		return
-	}
-	ext := strings.ToLower(filepath.Ext(header.Filename))
+	ext := strings.ToLower(filepath.Ext(name))
 	staticDir := filepath.Join(s.cfg.Site.BlogRoot, "static")
 	if err := os.MkdirAll(staticDir, 0755); err != nil {
 		writeError(w, http.StatusInternalServerError, apperror.Wrap("AVATAR_DIR_FAILED", "无法创建 static 目录。", err, "检查文件权限。", true))
@@ -370,7 +494,6 @@ func (s *Server) uploadAvatar(w http.ResponseWriter, r *http.Request) {
 	for _, e := range []string{".jpg", ".jpeg", ".png", ".gif", ".webp"} {
 		_ = os.Remove(filepath.Join(staticDir, "avatar"+e))
 	}
-	data, _ := io.ReadAll(io.LimitReader(file, s.cfg.MaxUploadBytes+1))
 	avatarPath := filepath.Join(staticDir, "avatar"+ext)
 	if err := storage.AtomicWriteFile(avatarPath, data, 0644); err != nil {
 		writeError(w, http.StatusInternalServerError, apperror.Wrap("AVATAR_WRITE_FAILED", "保存头像失败。", err, "检查文件权限。", true))
@@ -402,8 +525,8 @@ func (s *Server) putNowPage(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		Raw string `json:"raw"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, apperror.Wrap("BAD_REQUEST", "请求格式无效。", err, "重新提交。", false))
+	if err := decodeJSON(r, &req); err != nil {
+		writeError(w, http.StatusBadRequest, err)
 		return
 	}
 	path := filepath.Join(s.cfg.Site.BlogRoot, "content", "now.md")
@@ -414,20 +537,32 @@ func (s *Server) putNowPage(w http.ResponseWriter, r *http.Request) {
 	writeOK(w, map[string]bool{"saved": true})
 }
 
+func (s *Server) healthPublic(w http.ResponseWriter, r *http.Request) {
+	blogRoot := s.snap().cfg.Site.BlogRoot
+	status := "ok"
+	if _, err := os.Stat(blogRoot); err != nil {
+		status = "error"
+	}
+	writeOK(w, map[string]string{"status": status})
+}
+
 func (s *Server) health(w http.ResponseWriter, r *http.Request) {
+	s.mu.RLock()
+	cfg := s.cfg
+	s.mu.RUnlock()
 	checks := []map[string]string{}
 	add := func(name, status, message, detail, suggestion string) {
 		checks = append(checks, map[string]string{"name": name, "status": status, "message": message, "technicalDetail": detail, "suggestion": suggestion})
 	}
-	if _, err := os.Stat(s.cfg.Site.BlogRoot); err != nil {
+	if _, err := os.Stat(cfg.Site.BlogRoot); err != nil {
 		add("blog-root", "error", "博客目录不可访问。", err.Error(), "检查 Docker 挂载 /blog。")
 	} else {
-		add("blog-root", "ok", "博客目录可访问。", s.cfg.Site.BlogRoot, "")
+		add("blog-root", "ok", "博客目录可访问。", cfg.Site.BlogRoot, "")
 	}
-	if _, err := os.Stat(s.cfg.Site.PostRoot); err != nil {
+	if _, err := os.Stat(cfg.Site.PostRoot); err != nil {
 		add("post-root", "error", "文章目录不可访问。", err.Error(), "检查 content/post 路径。")
 	} else {
-		add("post-root", "ok", "文章目录可访问。", s.cfg.Site.PostRoot, "")
+		add("post-root", "ok", "文章目录可访问。", cfg.Site.PostRoot, "")
 	}
 	if err := os.MkdirAll(s.paths.DataRoot, 0700); err != nil {
 		add("data-root", "error", "数据目录不可写。", err.Error(), "检查 /data 挂载权限。")
@@ -460,8 +595,8 @@ func (s *Server) getConfig(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) putConfig(w http.ResponseWriter, r *http.Request) {
 	var cfg config.Config
-	if err := json.NewDecoder(r.Body).Decode(&cfg); err != nil {
-		writeError(w, http.StatusBadRequest, apperror.Wrap("BAD_REQUEST", "请求格式无效。", err, "重新提交配置。", false))
+	if err := decodeJSON(r, &cfg); err != nil {
+		writeError(w, http.StatusBadRequest, err)
 		return
 	}
 	cfg.Wechat.AppID = ""
@@ -479,10 +614,15 @@ func (s *Server) putConfig(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) reloadConfig(cfg config.Config) {
+	newPub := publish.NewService(s.paths, cfg, s.backupStore, s.audit, s.runner)
+	newPrev := preview.NewService(s.paths, cfg, s.runner)
+	newWec := wechat.NewService(s.paths, cfg, s.audit)
+	s.mu.Lock()
 	s.cfg = cfg
-	s.publisher = publish.NewService(s.paths, cfg, s.backupStore, s.audit)
-	s.preview = preview.NewService(s.paths, cfg)
-	s.wechat = wechat.NewService(s.paths, cfg, s.audit)
+	s.pub = newPub
+	s.prev = newPrev
+	s.wec = newWec
+	s.mu.Unlock()
 }
 
 func (s *Server) spaHandler(base string) http.Handler {
@@ -498,6 +638,18 @@ func (s *Server) spaHandler(base string) http.Handler {
 		}
 		http.ServeFile(w, r, filepath.Join(s.paths.Static, "index.html"))
 	})
+}
+
+func (s *Server) withLoginLimit(fn http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		ip := auth.RealIP(r)
+		if !s.loginLimiter.Allow(ip) {
+			metrics.LoginAttempts.WithLabelValues("limited").Inc()
+			writeError(w, http.StatusTooManyRequests, apperror.New("LOGIN_RATE_LIMITED", "登录尝试过于频繁。", "rate limit exceeded for "+ip, "请等待 15 分钟后重试。", true))
+			return
+		}
+		fn(w, r)
+	}
 }
 
 func (s *Server) withAuth(fn http.HandlerFunc) http.HandlerFunc {
@@ -541,6 +693,12 @@ func secureHeaders(next http.Handler) http.Handler {
 		w.Header().Set("X-Content-Type-Options", "nosniff")
 		w.Header().Set("X-Frame-Options", "SAMEORIGIN")
 		w.Header().Set("Referrer-Policy", "same-origin")
+		w.Header().Set("Content-Security-Policy", "default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; frame-src 'self'; connect-src 'self'; base-uri 'none'; form-action 'self'")
+		w.Header().Set("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
+		w.Header().Set("Cross-Origin-Opener-Policy", "same-origin")
+		if r.Header.Get("X-Forwarded-Proto") == "https" {
+			w.Header().Set("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+		}
 		next.ServeHTTP(w, r)
 	})
 }

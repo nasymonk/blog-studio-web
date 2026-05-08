@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"blog-studio-web/internal/apperror"
@@ -11,6 +12,8 @@ import (
 	"blog-studio-web/internal/sanitize"
 	"github.com/google/uuid"
 )
+
+const MaxAuditLines = 5000
 
 type Entry struct {
 	AuditID       string      `json:"auditId"`
@@ -95,6 +98,63 @@ func (l *Logger) Recent(limit int) ([]Entry, *apperror.AppError) {
 		}
 	}
 	return out, nil
+}
+
+func (l *Logger) Rotate(maxLines int) *apperror.AppError {
+	logPath := filepath.Join(l.paths.Logs, "audit.log")
+	data, err := os.ReadFile(logPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return apperror.Wrap("AUDIT_ROTATE_READ", "无法读取审计日志。", err, "检查 /data/logs 权限。", true)
+	}
+	lines := splitLines(string(data))
+	if len(lines) <= maxLines {
+		return nil
+	}
+	kept := lines[len(lines)-maxLines:]
+	content := strings.Join(kept, "\n") + "\n"
+	tmp := logPath + ".tmp"
+	if err := os.WriteFile(tmp, []byte(content), 0600); err != nil {
+		return apperror.Wrap("AUDIT_ROTATE_WRITE", "无法写入轮转后日志。", err, "检查磁盘空间。", true)
+	}
+	if err := os.Rename(tmp, logPath); err != nil {
+		_ = os.Remove(tmp)
+		return apperror.Wrap("AUDIT_ROTATE_RENAME", "无法替换审计日志。", err, "检查文件权限。", true)
+	}
+	return nil
+}
+
+func (l *Logger) PruneDiffs() *apperror.AppError {
+	logPath := filepath.Join(l.paths.Logs, "audit.log")
+	data, err := os.ReadFile(logPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return apperror.Wrap("AUDIT_PRUNE_READ", "无法读取审计日志。", err, "检查权限。", true)
+	}
+	referenced := map[string]struct{}{}
+	for _, line := range splitLines(string(data)) {
+		var entry Entry
+		if json.Unmarshal([]byte(line), &entry) == nil && entry.DiffPath != "" {
+			referenced[filepath.Base(entry.DiffPath)] = struct{}{}
+		}
+	}
+	entries, err := os.ReadDir(l.paths.Diffs)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return apperror.Wrap("AUDIT_PRUNE_DIR", "无法读取 diffs 目录。", err, "检查权限。", true)
+	}
+	for _, entry := range entries {
+		if _, keep := referenced[entry.Name()]; !keep {
+			_ = os.Remove(filepath.Join(l.paths.Diffs, entry.Name()))
+		}
+	}
+	return nil
 }
 
 func splitLines(text string) []string {

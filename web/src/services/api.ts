@@ -80,14 +80,42 @@ export type SiteInfo = {
   profileImage: string
 }
 
+export type TrashItem = {
+  id: string
+  slug: string
+  siteId: string
+  deletedAt: string
+  size: number
+}
+
+export type AuditEntry = {
+  auditId: string
+  timestamp: string
+  actor: string
+  siteId: string
+  slug: string
+  operation: string
+  target: string
+  result: string
+  backupId: string
+  diffPath: string
+  errorCode: string
+  errorBrief: string
+  buildResult: { success: boolean; exitCode: number; stdout: string; stderr: string }
+}
+
 let csrfToken = ''
 const base = `${window.location.pathname.split('/').filter(Boolean)[0] ? '/' + window.location.pathname.split('/').filter(Boolean)[0] : ''}/api`
 
-async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
+async function request<T>(path: string, options: RequestInit = {}, signal?: AbortSignal): Promise<T> {
   const headers = new Headers(options.headers)
   if (!(options.body instanceof FormData)) headers.set('Content-Type', 'application/json')
   if (csrfToken && options.method && options.method !== 'GET') headers.set('X-CSRF-Token', csrfToken)
-  const response = await fetch(`${base}${path}`, { credentials: 'same-origin', ...options, headers })
+  const response = await fetch(`${base}${path}`, { credentials: 'same-origin', signal, ...options, headers })
+  if (response.status === 401 && path !== '/auth/login' && path !== '/session') {
+    window.location.href = '/studio/#/login'
+    throw new Error('unauthenticated')
+  }
   const payload = await response.json().catch(() => ({ ok: false, error: { message: response.statusText } }))
   if (!response.ok || !payload.ok) {
     throw payload.error || new Error(response.statusText)
@@ -104,10 +132,15 @@ export const api = {
   posts: () => request<PostState[]>('/posts'),
   post: (slug: string) => request<PostDraft>(`/posts/${encodeURIComponent(slug)}`),
   saveDraft: (draft: PostDraft) => request<{ saved: boolean }>(`/posts/${encodeURIComponent(draft.slug)}/draft`, { method: 'PUT', body: JSON.stringify(draft) }),
-  publishBlog: (draft: PostDraft, confirmOverwrite = false) => request<PublishResult>(`/posts/${encodeURIComponent(draft.slug)}/publish/blog`, { method: 'POST', body: JSON.stringify({ slug: draft.slug, draft, confirmOverwrite }) }),
-  publishWechat: (draft: PostDraft) => request<PublishResult>(`/posts/${encodeURIComponent(draft.slug)}/publish/wechat-draft`, { method: 'POST', body: JSON.stringify(draft) }),
-  preview: (draft: PostDraft) => request<PreviewResult>(`/posts/${encodeURIComponent(draft.slug)}/preview`, { method: 'POST', body: JSON.stringify(draft) }),
+  publishBlog: (draft: PostDraft, confirmOverwrite = false, signal?: AbortSignal) => request<PublishResult>(`/posts/${encodeURIComponent(draft.slug)}/publish/blog`, { method: 'POST', body: JSON.stringify({ slug: draft.slug, draft, confirmOverwrite }) }, signal),
+  publishWechat: (draft: PostDraft, signal?: AbortSignal) => request<PublishResult>(`/posts/${encodeURIComponent(draft.slug)}/publish/wechat-draft`, { method: 'POST', body: JSON.stringify(draft) }, signal),
+  preview: (draft: PostDraft, signal?: AbortSignal) => request<PreviewResult>(`/posts/${encodeURIComponent(draft.slug)}/preview`, { method: 'POST', body: JSON.stringify(draft) }, signal),
   rollback: (slug: string) => request<PublishResult>(`/posts/${encodeURIComponent(slug)}/rollback`, { method: 'POST' }),
+  uploadAsset: (slug: string, file: File) => {
+    const form = new FormData()
+    form.append('file', file)
+    return request<{ name: string; size: number }>(`/posts/${encodeURIComponent(slug)}/assets`, { method: 'POST', body: form })
+  },
   getSite: () => request<SiteInfo>('/site'),
   saveSite: (info: SiteInfo) => request<SiteInfo>('/site', { method: 'PUT', body: JSON.stringify(info) }),
   uploadAvatar: (file: File) => {
@@ -117,8 +150,12 @@ export const api = {
   },
   getNowPage: () => request<{ raw: string }>('/pages/now'),
   saveNowPage: (raw: string) => request<{ saved: boolean }>('/pages/now', { method: 'PUT', body: JSON.stringify({ raw }) }),
-  health: () => request<{ status: string; checks: Array<{ name: string; status: string; message: string; technicalDetail: string; suggestion: string }> }>('/health'),
-  audit: () => request<unknown[]>('/audit'),
+  health: () => request<{ status: string; checks: Array<{ name: string; status: string; message: string; technicalDetail: string; suggestion: string }> }>('/health/full'),
+  audit: (limit = 50) => request<AuditEntry[]>(`/audit?limit=${limit}`),
   config: () => request<Config>('/config'),
-  saveConfig: (config: Config) => request<Config>('/config', { method: 'PUT', body: JSON.stringify(config) })
+  saveConfig: (config: Config) => request<Config>('/config', { method: 'PUT', body: JSON.stringify(config) }),
+  deletePost: (slug: string) => request<{ trashId: string }>(`/posts/${encodeURIComponent(slug)}`, { method: 'DELETE' }),
+  trash: () => request<TrashItem[]>('/trash'),
+  restoreTrash: (id: string) => request<{ restored: boolean }>(`/trash/${encodeURIComponent(id)}/restore`, { method: 'POST' }),
+  purgeTrash: (id: string) => request<{ purged: boolean }>(`/trash/${encodeURIComponent(id)}`, { method: 'DELETE' }),
 }

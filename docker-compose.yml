@@ -1,0 +1,61 @@
+version: "3.9"
+
+services:
+  studio:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      APP_ENV: production
+      PORT: "8080"
+      BLOG_STUDIO_STATIC_DIR: /app/web/dist
+      BLOG_STUDIO_COOKIE_INSECURE: ""
+    volumes:
+      - blog_data:/blog
+      - studio_data:/data
+    networks:
+      - studio_net
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/studio/api/health"]
+      interval: 30s
+      timeout: 5s
+      start_period: 15s
+      retries: 3
+
+  nginx:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deploy/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./deploy/nginx/studio-location.conf:/etc/nginx/conf.d/studio.conf:ro
+      - blog_data:/blog/public:ro
+      - nginx_logs:/var/log/nginx
+      - ssl_certs:/etc/ssl/certs/studio:ro
+    depends_on:
+      studio:
+        condition: service_healthy
+    networks:
+      - studio_net
+
+volumes:
+  blog_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${BLOG_ROOT_HOST:-/root/blog}
+  studio_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${DATA_ROOT_HOST:-/root/studio-data}
+  nginx_logs:
+  ssl_certs:
+
+networks:
+  studio_net:
+    driver: bridge

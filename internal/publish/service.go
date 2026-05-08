@@ -1,11 +1,9 @@
 package publish
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -16,6 +14,7 @@ import (
 	"blog-studio-web/internal/backup"
 	"blog-studio-web/internal/config"
 	"blog-studio-web/internal/content"
+	"blog-studio-web/internal/hugobuild"
 	"blog-studio-web/internal/storage"
 )
 
@@ -64,14 +63,7 @@ type BlogPublishRequest struct {
 	Files            map[string][]byte `json:"files,omitempty"`
 }
 
-type CommandResult struct {
-	Success    bool   `json:"success"`
-	ExitCode   int    `json:"exitCode"`
-	Stdout     string `json:"stdout"`
-	Stderr     string `json:"stderr"`
-	StartedAt  string `json:"startedAt"`
-	FinishedAt string `json:"finishedAt"`
-}
+type CommandResult = hugobuild.CommandResult
 
 type Result struct {
 	Target        string             `json:"target"`
@@ -92,10 +84,11 @@ type Service struct {
 	content *content.Service
 	backup  *backup.Store
 	audit   *audit.Logger
+	runner  *hugobuild.Runner
 }
 
-func NewService(paths config.Paths, cfg config.Config, backupStore *backup.Store, auditLogger *audit.Logger) *Service {
-	return &Service{paths: paths, cfg: cfg, content: content.NewService(), backup: backupStore, audit: auditLogger}
+func NewService(paths config.Paths, cfg config.Config, backupStore *backup.Store, auditLogger *audit.Logger, runner *hugobuild.Runner) *Service {
+	return &Service{paths: paths, cfg: cfg, content: content.NewService(), backup: backupStore, audit: auditLogger, runner: runner}
 }
 
 func (s *Service) ListPosts() ([]PostState, *apperror.AppError) {
@@ -231,7 +224,7 @@ func (s *Service) PublishBlog(ctx context.Context, req BlogPublishRequest) Resul
 	}
 	diffPath, _ := s.audit.WriteDiff(auditID, s.content.Diff(oldRaw, raw))
 	result.DiffPath = diffPath
-	result.BuildResult = runHugo(ctx, s.cfg.Site.BlogRoot, s.cfg.Site.BuildCommand)
+	result.BuildResult = s.runHugo(ctx)
 	if !result.BuildResult.Success {
 		result.Error = apperror.New("HUGO_BUILD_FAILED", "Hugo 构建失败。", result.BuildResult.Stderr, "检查文章内容、Hugo 配置和主题。", true)
 		s.appendAudit(req.Slug, "publish", result)
@@ -273,7 +266,7 @@ func (s *Service) Rollback(ctx context.Context, slug string) Result {
 		return result
 	}
 	result.BackupID = backupID
-	result.BuildResult = runHugo(ctx, s.cfg.Site.BlogRoot, s.cfg.Site.BuildCommand)
+	result.BuildResult = s.runHugo(ctx)
 	if !result.BuildResult.Success {
 		result.Error = apperror.New("HUGO_BUILD_FAILED", "回滚后 Hugo 构建失败。", result.BuildResult.Stderr, "检查备份内容和 Hugo 配置。", true)
 		s.appendAudit(slug, "rollback", result)
@@ -345,36 +338,12 @@ func (s *Service) appendAudit(slug, op string, result Result) {
 	_ = s.audit.Append(entry)
 }
 
-func runHugo(ctx context.Context, workDir, command string) CommandResult {
-	start := time.Now()
-	result := CommandResult{StartedAt: formatTime(start), ExitCode: -1}
+func (s *Service) runHugo(ctx context.Context) CommandResult {
 	args := []string{}
-	switch command {
-	case "hugo":
-		args = []string{}
-	default:
+	if s.cfg.Site.BuildCommand != "hugo" {
 		args = []string{"--minify"}
 	}
-	cmd := exec.CommandContext(ctx, "hugo", args...)
-	cmd.Dir = workDir
-	var stdout, stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-	err := cmd.Run()
-	result.Stdout = stdout.String()
-	result.Stderr = stderr.String()
-	result.FinishedAt = formatTime(time.Now())
-	if err == nil {
-		result.Success = true
-		result.ExitCode = 0
-		return result
-	}
-	if exitErr, ok := err.(*exec.ExitError); ok {
-		result.ExitCode = exitErr.ExitCode()
-	} else {
-		result.ExitCode = -1
-	}
-	return result
+	return s.runner.RunWithLabel(ctx, "publish", s.cfg.Site.BlogRoot, args...)
 }
 
 func computeStatus(dirty bool, cached time.Time, remoteTime time.Time) SyncStatus {

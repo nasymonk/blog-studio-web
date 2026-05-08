@@ -1,13 +1,52 @@
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
+import { fileURLToPath, URL } from 'node:url'
 
 export default defineConfig({
   plugins: [vue()],
   base: '/studio/',
+  resolve: {
+    alias: {
+      '@': fileURLToPath(new URL('./src', import.meta.url))
+    }
+  },
+  build: {
+    sourcemap: true,
+    chunkSizeWarningLimit: 600,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vendor-codemirror': [
+            '@codemirror/view',
+            '@codemirror/state',
+            '@codemirror/commands',
+            '@codemirror/language',
+            '@codemirror/lang-markdown',
+            '@codemirror/theme-one-dark'
+          ],
+          'vendor-vue': ['vue', 'vue-router'],
+          'vendor-icons': ['lucide-vue-next'],
+          'vendor-marked': ['marked', 'dompurify'],
+          'vendor-toast': ['vue-sonner'],
+        }
+      }
+    }
+  },
   server: {
     proxy: {
       '/studio/api': 'http://localhost:8080',
       '/studio/preview': 'http://localhost:8080'
+    }
+  },
+  test: {
+    environment: 'happy-dom',
+    globals: true,
+    setupFiles: ['./src/__tests__/setup.ts'],
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'html'],
+      include: ['src/store/**', 'src/composables/**', 'src/services/**'],
+      exclude: ['src/__tests__/**'],
     }
   }
 })

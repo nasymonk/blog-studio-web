@@ -22,6 +22,7 @@ type Paths struct {
 	Preview   string
 	Static    string
 	AdminHash string
+	Trash     string
 }
 
 type Config struct {
@@ -75,6 +76,7 @@ func DefaultPaths() Paths {
 		Preview:   filepath.Join(dataRoot, "preview"),
 		Static:    env("BLOG_STUDIO_STATIC_DIR", "./web/dist"),
 		AdminHash: filepath.Join(dataRoot, "admin-password.hash"),
+		Trash:     filepath.Join(dataRoot, "trash"),
 	}
 }
 

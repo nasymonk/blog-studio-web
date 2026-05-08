@@ -1,12 +1,15 @@
 package auth
 
 import (
+	"context"
 	"crypto/hmac"
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
+	"encoding/json"
 	"net/http"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -15,21 +18,49 @@ import (
 )
 
 type Session struct {
-	ID        string
-	CSRF      string
-	ExpiresAt time.Time
+	ID        string    `json:"id"`
+	CSRF      string    `json:"csrf"`
+	ExpiresAt time.Time `json:"expiresAt"`
 }
 
 type Store struct {
-	mu       sync.Mutex
-	secret   []byte
-	sessions map[string]Session
-	ttl      time.Duration
-	basePath string
+	mu          sync.Mutex
+	secret      []byte
+	sessions    map[string]Session
+	ttl         time.Duration
+	basePath    string
+	persistPath string
+	saveCh      chan struct{}
 }
 
 func NewStore(secret string, ttl time.Duration, basePath string) *Store {
-	return &Store{secret: []byte(secret), sessions: map[string]Session{}, ttl: ttl, basePath: basePath}
+	s := &Store{
+		secret:   []byte(secret),
+		sessions: map[string]Session{},
+		ttl:      ttl,
+		basePath: basePath,
+		saveCh:   make(chan struct{}, 1),
+	}
+	return s
+}
+
+func NewStoreWithPersist(secret string, ttl time.Duration, basePath, persistPath string) *Store {
+	s := &Store{
+		secret:      []byte(secret),
+		sessions:    map[string]Session{},
+		ttl:         ttl,
+		basePath:    basePath,
+		persistPath: persistPath,
+		saveCh:      make(chan struct{}, 1),
+	}
+	s.load()
+	go s.reaper()
+	go s.saver()
+	return s
+}
+
+func (s *Store) Close(ctx context.Context) {
+	s.snapshot()
 }
 
 func (s *Store) Create(w http.ResponseWriter) Session {
@@ -37,14 +68,17 @@ func (s *Store) Create(w http.ResponseWriter) Session {
 	s.mu.Lock()
 	s.sessions[session.ID] = session
 	s.mu.Unlock()
+	secure := os.Getenv("BLOG_STUDIO_COOKIE_INSECURE") != "1"
 	http.SetCookie(w, &http.Cookie{
 		Name:     "blog_studio_session",
 		Value:    s.sign(session.ID),
 		Path:     cookiePath(s.basePath),
-		Expires:  session.ExpiresAt,
+		MaxAge:   int(s.ttl.Seconds()),
 		HttpOnly: true,
-		SameSite: http.SameSiteLaxMode,
+		Secure:   secure,
+		SameSite: http.SameSiteStrictMode,
 	})
+	s.triggerSave()
 	return session
 }
 
@@ -54,7 +88,17 @@ func (s *Store) Destroy(w http.ResponseWriter, r *http.Request) {
 		delete(s.sessions, session.ID)
 		s.mu.Unlock()
 	}
-	http.SetCookie(w, &http.Cookie{Name: "blog_studio_session", Value: "", Path: cookiePath(s.basePath), Expires: time.Unix(0, 0), HttpOnly: true, SameSite: http.SameSiteLaxMode})
+	secure := os.Getenv("BLOG_STUDIO_COOKIE_INSECURE") != "1"
+	http.SetCookie(w, &http.Cookie{
+		Name:     "blog_studio_session",
+		Value:    "",
+		Path:     cookiePath(s.basePath),
+		MaxAge:   -1,
+		HttpOnly: true,
+		Secure:   secure,
+		SameSite: http.SameSiteStrictMode,
+	})
+	s.triggerSave()
 }
 
 func (s *Store) FromRequest(r *http.Request) (Session, bool) {
@@ -120,10 +164,84 @@ func (s *Store) verify(value string) (string, bool) {
 	return parts[0], hmac.Equal([]byte(value), []byte(expected))
 }
 
+func (s *Store) triggerSave() {
+	select {
+	case s.saveCh <- struct{}{}:
+	default:
+	}
+}
+
+func (s *Store) reaper() {
+	for range time.Tick(5 * time.Minute) {
+		now := time.Now()
+		s.mu.Lock()
+		for id, sess := range s.sessions {
+			if now.After(sess.ExpiresAt) {
+				delete(s.sessions, id)
+			}
+		}
+		s.mu.Unlock()
+		s.triggerSave()
+	}
+}
+
+func (s *Store) saver() {
+	for range s.saveCh {
+		time.Sleep(500 * time.Millisecond)
+		s.snapshot()
+	}
+}
+
+func (s *Store) snapshot() {
+	if s.persistPath == "" {
+		return
+	}
+	s.mu.Lock()
+	data, err := json.Marshal(s.sessions)
+	s.mu.Unlock()
+	if err != nil {
+		return
+	}
+	_ = os.MkdirAll(strings.TrimSuffix(s.persistPath, "/sessions.json"), 0700)
+	tmp := s.persistPath + ".tmp"
+	if err := os.WriteFile(tmp, data, 0600); err != nil {
+		return
+	}
+	_ = os.Rename(tmp, s.persistPath)
+}
+
+func (s *Store) load() {
+	if s.persistPath == "" {
+		return
+	}
+	data, err := os.ReadFile(s.persistPath)
+	if err != nil {
+		return
+	}
+	var loaded map[string]Session
+	if err := json.Unmarshal(data, &loaded); err != nil {
+		return
+	}
+	now := time.Now()
+	s.mu.Lock()
+	for id, sess := range loaded {
+		if now.Before(sess.ExpiresAt) {
+			s.sessions[id] = sess
+		}
+	}
+	s.mu.Unlock()
+}
+
 func randomToken(size int) string {
 	data := make([]byte, size)
 	_, _ = rand.Read(data)
 	return base64.RawURLEncoding.EncodeToString(data)
+}
+
+func RandHex(size int) string {
+	data := make([]byte, size)
+	_, _ = rand.Read(data)
+	return hex.EncodeToString(data)
 }
 
 func cookiePath(basePath string) string {
