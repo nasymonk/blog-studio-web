@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { PlusIcon, SearchIcon, RefreshCwIcon, EditIcon, EyeIcon, AlertTriangleIcon, FileTextIcon, Trash2Icon, CheckSquareIcon, SquareIcon, SendIcon } from 'lucide-vue-next'
+import { PlusIcon, SearchIcon, RefreshCwIcon, EditIcon, EyeIcon, AlertTriangleIcon, FileTextIcon, Trash2Icon, CheckSquareIcon, SquareIcon, SendIcon, DownloadIcon, UploadIcon } from 'lucide-vue-next'
 import { useDebounceFn } from '@vueuse/core'
 import { useVirtualizer } from '@tanstack/vue-virtual'
 import { api } from '@/services/api'
@@ -196,6 +196,29 @@ async function bulkPublish() {
   } catch (e: any) { notify.error(e) }
 }
 
+async function exportAll() {
+  try {
+    await api.exportAll()
+    notify.success(t.value.exportOk)
+  } catch (e: any) { notify.error(e) }
+}
+
+function importZip() {
+  const input = document.createElement('input')
+  input.type = 'file'
+  input.accept = '.zip'
+  input.onchange = async () => {
+    const file = input.files?.[0]
+    if (!file) return
+    try {
+      const result = await api.importZip(file)
+      notify.success(t.value.importOk(result.imported))
+      await loadPosts()
+    } catch (e: any) { notify.error(e) }
+  }
+  input.click()
+}
+
 onMounted(loadPosts)
 </script>
 
@@ -235,6 +258,13 @@ onMounted(loadPosts)
       </Button>
       <Button variant="ghost" size="icon" class="h-8 w-8 text-muted-foreground" :disabled="store.postsLoading" @click="loadPosts">
         <RefreshCwIcon class="h-4 w-4" :class="{ 'animate-spin': store.postsLoading }" />
+      </Button>
+      <Separator orientation="vertical" class="h-5" />
+      <Button variant="ghost" size="sm" class="text-xs h-8 text-muted-foreground" :title="t.exportAll" @click="exportAll">
+        <DownloadIcon class="h-3.5 w-3.5 mr-1" />{{ t.exportAll }}
+      </Button>
+      <Button variant="ghost" size="sm" class="text-xs h-8 text-muted-foreground" :title="t.importZip" @click="importZip">
+        <UploadIcon class="h-3.5 w-3.5 mr-1" />{{ t.importZip }}
       </Button>
     </div>
 

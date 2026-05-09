@@ -1,9 +1,11 @@
 package httpapi
 
 import (
+	"archive/zip"
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
 	"os"
@@ -156,6 +158,8 @@ func (s *Server) Handler() http.Handler {
 	api.HandleFunc("DELETE /posts/", s.withWriteAuth(s.postRouter))
 	api.HandleFunc("POST /posts/bulk/trash", s.withWriteAuth(s.bulkTrash))
 	api.HandleFunc("POST /posts/bulk/publish", s.withWriteAuth(s.bulkPublish))
+	api.HandleFunc("GET /posts/export", s.withAuth(s.exportPosts))
+	api.HandleFunc("POST /posts/import", s.withWriteAuth(s.importPosts))
 	api.HandleFunc("POST /tags/rename", s.withWriteAuth(s.renameTag))
 	api.HandleFunc("POST /tags/delete", s.withWriteAuth(s.deleteTag))
 	api.HandleFunc("GET /site", s.withAuth(s.getSite))
@@ -525,6 +529,101 @@ func (s *Server) bulkPublish(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	writeOK(w, results)
+}
+
+func (s *Server) exportPosts(w http.ResponseWriter, r *http.Request) {
+	pub := s.publisher()
+	posts, err := pub.ListPosts()
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
+	w.Header().Set("Content-Type", "application/zip")
+	w.Header().Set("Content-Disposition", "attachment; filename=\"blog-posts.zip\"")
+	zw := zip.NewWriter(w)
+	defer zw.Close()
+	for _, p := range posts {
+		draft, loadErr := pub.LoadPost(p.Slug)
+		if loadErr != nil {
+			continue
+		}
+		composed, compErr := (&content.Service{}).Compose(draft)
+		if compErr != nil {
+			continue
+		}
+		f, createErr := zw.Create(p.Slug + ".md")
+		if createErr != nil {
+			continue
+		}
+		_, _ = f.Write(composed)
+	}
+}
+
+func (s *Server) importPosts(w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseMultipartForm(50 << 20); err != nil {
+		writeError(w, http.StatusBadRequest, apperror.Wrap("IMPORT_INVALID", "上传请求无效。", err, "检查文件大小。", false))
+		return
+	}
+	file, header, err := r.FormFile("file")
+	if err != nil {
+		writeError(w, http.StatusBadRequest, apperror.Wrap("IMPORT_FILE_MISSING", "缺少上传文件。", err, "上传 ZIP 文件。", false))
+		return
+	}
+	defer file.Close()
+	if header.Size > 50<<20 {
+		writeError(w, http.StatusBadRequest, apperror.New("IMPORT_TOO_LARGE", "文件过大。", "", "ZIP 文件不超过 50MB。", false))
+		return
+	}
+	data, readErr := io.ReadAll(io.LimitReader(file, 50<<20+1))
+	if readErr != nil {
+		writeError(w, http.StatusBadRequest, apperror.Wrap("IMPORT_READ_FAILED", "读取文件失败。", readErr, "重新上传。", false))
+		return
+	}
+	reader, zipErr := zip.NewReader(strings.NewReader(string(data)), int64(len(data)))
+	if zipErr != nil {
+		writeError(w, http.StatusBadRequest, apperror.Wrap("IMPORT_ZIP_INVALID", "ZIP 文件无效。", zipErr, "上传有效的 ZIP 文件。", false))
+		return
+	}
+	pub := s.publisher()
+	cs := &content.Service{}
+	imported := 0
+	for _, f := range reader.File {
+		if f.FileInfo().IsDir() {
+			continue
+		}
+		name := filepath.Base(f.Name)
+		if filepath.Ext(name) != ".md" {
+			continue
+		}
+		slug := strings.TrimSuffix(name, ".md")
+		if !content.SlugPattern.MatchString(slug) {
+			continue
+		}
+		rc, openErr := f.Open()
+		if openErr != nil {
+			continue
+		}
+		raw, _ := io.ReadAll(io.LimitReader(rc, content.MaxMarkdownBytes+1))
+		rc.Close()
+		if len(raw) > content.MaxMarkdownBytes {
+			continue
+		}
+		fm, body, parseErr := cs.Parse(raw)
+		if parseErr != nil {
+			continue
+		}
+		draft := content.PostDraft{
+			Slug:        slug,
+			FrontMatter: fm,
+			Body:        body,
+		}
+		if saveErr := pub.SaveDraft(draft); saveErr != nil {
+			continue
+		}
+		imported++
+	}
+	pub.InvalidateCache()
+	writeOK(w, map[string]int{"imported": imported})
 }
 
 func (s *Server) renameTag(w http.ResponseWriter, r *http.Request) {
