@@ -14,6 +14,7 @@ import { useTheme } from '@/composables/useTheme'
 import { useNotify } from '@/composables/useNotify'
 import { useEditor } from '@/composables/useEditor'
 import EditorOutline from '@/components/EditorOutline.vue'
+import KeybindingHelp from '@/components/KeybindingHelp.vue'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -35,6 +36,7 @@ const publishing = ref(false)
 const draft = ref<PostDraft | null>(null)
 const showOutline = ref(true)
 const metaExpanded = ref(false)
+const keybindingHelpOpen = ref(false)
 
 const editorContainer = ref<HTMLElement | null>(null)
 const { body, dirty, saving, savedAt, wordCount, mode, mount,
@@ -201,7 +203,7 @@ function onTagKeydown(e: KeyboardEvent) {
 </script>
 
 <template>
-  <div class="flex flex-col h-full max-w-5xl">
+  <div class="flex flex-col h-full max-w-5xl" @keydown="e => { if (e.key === '?' && !e.ctrlKey && !e.metaKey && !(e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement)) { e.preventDefault(); keybindingHelpOpen = true } }">
     <!-- Loading -->
     <div v-if="loading" class="flex items-center justify-center py-20">
       <Loader2Icon class="h-6 w-6 animate-spin text-muted-foreground" />
@@ -332,5 +334,7 @@ function onTagKeydown(e: KeyboardEvent) {
       <p class="font-serif text-muted-foreground">{{ t.postLoadFailed }}</p>
       <Button class="rounded-full px-5" @click="loadPost">{{ t.retry }}</Button>
     </div>
+
+    <KeybindingHelp v-model:open="keybindingHelpOpen" />
   </div>
 </template>
