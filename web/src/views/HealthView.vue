@@ -28,10 +28,10 @@ onMounted(load)
   <div class="max-w-2xl space-y-5">
     <div class="flex items-center gap-2">
       <h2 class="font-serif text-lg font-semibold m-0">{{ t.health }}</h2>
-      <Button variant="ghost" size="icon" class="h-7 w-7 text-muted-foreground" :disabled="loading" @click="load">
+      <Button variant="ghost" size="icon" class="h-7 w-7 text-muted-foreground" aria-label="Refresh health status" :disabled="loading" @click="load">
         <RefreshCwIcon class="h-3.5 w-3.5" :class="{ 'animate-spin': loading }" />
       </Button>
-      <Badge v-if="health" :variant="health.status === 'ok' ? 'default' : 'destructive'" class="text-[10px]">
+      <Badge v-if="health" :variant="health.status === 'ok' ? 'default' : 'destructive'" class="text-[10px]" role="status">
         {{ health.status }}
       </Badge>
     </div>

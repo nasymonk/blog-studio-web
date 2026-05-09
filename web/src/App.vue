@@ -198,11 +198,11 @@ onMounted(async () => {
         <Separator class="mx-4 w-auto" />
 
         <div class="px-3 py-3 space-y-0.5">
-          <Button variant="ghost" class="w-full justify-start gap-2.5 h-8 text-sm px-2.5 text-muted-foreground" :disabled="store.postsLoading" @click="syncPosts">
+          <Button variant="ghost" class="w-full justify-start gap-2.5 h-8 text-sm px-2.5 text-muted-foreground" :aria-label="t.sync" :disabled="store.postsLoading" @click="syncPosts">
             <RefreshCwIcon class="h-4 w-4" :class="{ 'animate-spin': store.postsLoading }" />
             <span>{{ t.sync }}</span>
           </Button>
-          <Button variant="ghost" class="w-full justify-start gap-2.5 h-8 text-sm px-2.5 text-muted-foreground" @click="logout">
+          <Button variant="ghost" class="w-full justify-start gap-2.5 h-8 text-sm px-2.5 text-muted-foreground" :aria-label="t.logout" @click="logout">
             <LogOutIcon class="h-4 w-4" />
             <span>{{ t.logout }}</span>
           </Button>
@@ -220,7 +220,7 @@ onMounted(async () => {
 
             <Separator orientation="vertical" class="h-4 mx-1" />
 
-            <Button variant="ghost" size="sm" class="h-7 px-2 text-xs gap-1 text-muted-foreground" @click="setLang(lang === 'zh' ? 'en' : 'zh')">
+            <Button variant="ghost" size="sm" class="h-7 px-2 text-xs gap-1 text-muted-foreground" :aria-label="lang === 'zh' ? 'Switch to English' : '切换到中文'" @click="setLang(lang === 'zh' ? 'en' : 'zh')">
               <Globe2Icon class="h-3.5 w-3.5" />{{ lang === 'zh' ? 'EN' : '中文' }}
             </Button>
             <Button variant="ghost" size="icon" class="h-7 w-7 text-muted-foreground" :title="t.theme" @click="toggleTheme">

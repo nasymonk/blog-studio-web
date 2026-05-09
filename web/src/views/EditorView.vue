@@ -276,23 +276,23 @@ function onTagKeydown(e: KeyboardEvent) {
 
       <!-- Toolbar -->
       <div class="flex items-center gap-1 py-2">
-        <Button variant="ghost" size="icon" class="h-7 w-7 text-muted-foreground hover:text-foreground" title="加粗 (⌘B)" @click="execBold"><BoldIcon class="h-3.5 w-3.5" /></Button>
-        <Button variant="ghost" size="icon" class="h-7 w-7 text-muted-foreground hover:text-foreground" title="斜体 (⌘I)" @click="execItalic"><ItalicIcon class="h-3.5 w-3.5" /></Button>
-        <Button variant="ghost" size="icon" class="h-7 w-7 text-muted-foreground hover:text-foreground" title="链接 (⌘K)" @click="execLink"><LinkIcon class="h-3.5 w-3.5" /></Button>
-        <Button variant="ghost" size="icon" class="h-7 w-7 text-muted-foreground hover:text-foreground" title="插入图片" @click="handleImageUpload"><ImageIcon class="h-3.5 w-3.5" /></Button>
-        <Button variant="ghost" size="icon" class="h-7 w-7 text-muted-foreground hover:text-foreground" title="行内代码" @click="execCode"><CodeIcon class="h-3.5 w-3.5" /></Button>
-        <Button variant="ghost" size="icon" class="h-7 w-7 text-muted-foreground hover:text-foreground" title="标题" @click="execHeading"><Heading1Icon class="h-3.5 w-3.5" /></Button>
+        <Button variant="ghost" size="icon" class="h-7 w-7 text-muted-foreground hover:text-foreground" aria-label="Bold (⌘B)" title="加粗 (⌘B)" @click="execBold"><BoldIcon class="h-3.5 w-3.5" /></Button>
+        <Button variant="ghost" size="icon" class="h-7 w-7 text-muted-foreground hover:text-foreground" aria-label="Italic (⌘I)" title="斜体 (⌘I)" @click="execItalic"><ItalicIcon class="h-3.5 w-3.5" /></Button>
+        <Button variant="ghost" size="icon" class="h-7 w-7 text-muted-foreground hover:text-foreground" aria-label="Link (⌘K)" title="链接 (⌘K)" @click="execLink"><LinkIcon class="h-3.5 w-3.5" /></Button>
+        <Button variant="ghost" size="icon" class="h-7 w-7 text-muted-foreground hover:text-foreground" aria-label="Insert image" title="插入图片" @click="handleImageUpload"><ImageIcon class="h-3.5 w-3.5" /></Button>
+        <Button variant="ghost" size="icon" class="h-7 w-7 text-muted-foreground hover:text-foreground" aria-label="Inline code" title="行内代码" @click="execCode"><CodeIcon class="h-3.5 w-3.5" /></Button>
+        <Button variant="ghost" size="icon" class="h-7 w-7 text-muted-foreground hover:text-foreground" aria-label="Heading" title="标题" @click="execHeading"><Heading1Icon class="h-3.5 w-3.5" /></Button>
         <Separator orientation="vertical" class="mx-1 h-4" />
-        <Button variant="ghost" size="icon" class="h-7 w-7" :class="mode === 'source' ? 'bg-accent/10 text-accent' : 'text-muted-foreground'" :title="mode === 'wysiwyg' ? '切换源码模式' : '切换所见即所得'" @click="toggleMode">
+        <Button variant="ghost" size="icon" class="h-7 w-7" :class="mode === 'source' ? 'bg-accent/10 text-accent' : 'text-muted-foreground'" :aria-label="mode === 'wysiwyg' ? 'Switch to source mode' : 'Switch to WYSIWYG'" :title="mode === 'wysiwyg' ? '切换源码模式' : '切换所见即所得'" @click="toggleMode">
           <CodeIcon v-if="mode === 'wysiwyg'" class="h-3.5 w-3.5" />
           <PenLineIcon v-else class="h-3.5 w-3.5" />
         </Button>
-        <Button variant="ghost" size="icon" class="h-7 w-7" :class="showOutline ? 'bg-accent/10 text-accent' : 'text-muted-foreground'" title="大纲" @click="showOutline = !showOutline">
+        <Button variant="ghost" size="icon" class="h-7 w-7" :class="showOutline ? 'bg-accent/10 text-accent' : 'text-muted-foreground'" aria-label="Toggle outline" title="大纲" @click="showOutline = !showOutline">
           <ListIcon class="h-3.5 w-3.5" />
         </Button>
         <div class="flex-1" />
         <Separator orientation="vertical" class="mx-1 h-4" />
-        <Button variant="ghost" size="sm" class="text-xs h-7 text-destructive/60 hover:text-destructive" :title="t.rollback" @click="rollback">
+        <Button variant="ghost" size="sm" class="text-xs h-7 text-destructive/60 hover:text-destructive" :aria-label="t.rollback" :title="t.rollback" @click="rollback">
           <RotateCcwIcon class="h-3 w-3 mr-1" />{{ t.rollback }}
         </Button>
       </div>
@@ -313,13 +313,13 @@ function onTagKeydown(e: KeyboardEvent) {
         <span class="text-border/40">·</span>
         <span :class="{ 'text-destructive': dirty, 'text-ok': !dirty }">{{ savedLabel() }}</span>
         <div class="flex-1" />
-        <Button size="sm" variant="ghost" class="h-7 text-xs text-muted-foreground" :disabled="!dirty" @click="saveDraft">
+        <Button size="sm" variant="ghost" class="h-7 text-xs text-muted-foreground" :aria-label="t.saveDraft" :disabled="!dirty" @click="saveDraft">
           <SaveIcon class="h-3 w-3 mr-1" />{{ t.saveDraft }}
         </Button>
-        <Button variant="ghost" size="icon" class="h-7 w-7 text-muted-foreground" :title="t.preview" @click="previewPost">
+        <Button variant="ghost" size="icon" class="h-7 w-7 text-muted-foreground" :aria-label="t.preview" :title="t.preview" @click="previewPost">
           <EyeIcon class="h-3 w-3" />
         </Button>
-        <Button size="sm" class="h-7 text-xs rounded-full px-4" :disabled="publishing" @click="publishBlog()">
+        <Button size="sm" class="h-7 text-xs rounded-full px-4" :aria-label="t.publish" :disabled="publishing" @click="publishBlog()">
           <Loader2Icon v-if="publishing" class="h-3 w-3 animate-spin mr-1" />
           <SendIcon v-else class="h-3 w-3 mr-1" />{{ t.publish }}
         </Button>

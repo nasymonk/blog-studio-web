@@ -101,7 +101,7 @@ async function login() {
               class="h-12 border-0 border-b border-border rounded-none bg-transparent px-0 focus-visible:ring-0 focus-visible:border-accent transition-colors"
               @input="onPasswordInput"
             />
-            <p v-if="error" class="text-xs text-destructive mt-1">{{ error }}</p>
+            <p v-if="error" class="text-xs text-destructive mt-1" role="alert">{{ error }}</p>
           </div>
 
           <!-- Interactive hover button -->
@@ -130,6 +130,7 @@ async function login() {
       <div class="absolute bottom-6 right-6 flex items-center gap-2">
         <button
           class="h-8 w-8 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+          :aria-label="theme === 'dark' ? t.lightMode : t.darkMode"
           :title="theme === 'dark' ? t.lightMode : t.darkMode"
           @click="toggle"
         >
@@ -138,6 +139,7 @@ async function login() {
         </button>
         <button
           class="h-8 px-3 rounded-full text-xs text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+          :aria-label="lang === 'zh' ? 'Switch to English' : '切换到中文'"
           @click="setLang(lang === 'zh' ? 'en' : 'zh')"
         >
           {{ lang === 'zh' ? t.langEn : t.langZh }}
