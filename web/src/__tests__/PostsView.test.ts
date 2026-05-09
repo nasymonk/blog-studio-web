@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
-import { reactive, ref } from 'vue'
+import { reactive, ref, computed } from 'vue'
 import PostsView from '@/views/PostsView.vue'
 import type { PostState } from '@/services/api'
 import type { AppStore } from '@/store'
@@ -57,6 +57,24 @@ vi.mock('lucide-vue-next', () => ({
 vi.mock('@vueuse/core', () => ({
   useDebounceFn: (fn: Function) => fn,
   useStorage: (_key: string, defaultValue: unknown) => ref(defaultValue),
+}))
+
+vi.mock('@tanstack/vue-virtual', () => ({
+  useVirtualizer: (options: any) => {
+    return computed(() => {
+      const o = typeof options === 'object' && options.value ? options.value : options
+      const count = typeof o.count === 'function' ? o.count() : o.count
+      const items = []
+      for (let i = 0; i < count; i++) {
+        items.push({ key: i, index: i, start: i * 72, size: 72, end: (i + 1) * 72 })
+      }
+      return {
+        getVirtualItems: () => items,
+        getTotalSize: () => count * 72,
+        scrollToIndex: () => {},
+      }
+    })
+  },
 }))
 
 vi.mock('@/components/ui/button', () => ({

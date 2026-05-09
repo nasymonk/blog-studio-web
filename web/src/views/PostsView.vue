@@ -3,6 +3,7 @@ import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { PlusIcon, SearchIcon, RefreshCwIcon, EditIcon, EyeIcon, AlertTriangleIcon, FileTextIcon, Trash2Icon } from 'lucide-vue-next'
 import { useDebounceFn } from '@vueuse/core'
+import { useVirtualizer } from '@tanstack/vue-virtual'
 import { api } from '@/services/api'
 import type { PostState } from '@/services/api'
 import { useStore } from '@/store'
@@ -25,10 +26,9 @@ const searchQuery = ref((route.query.q as string) || '')
 const statusFilter = ref((route.query.status as string) || 'all')
 const selectedTags = ref<string[]>((route.query.tags ? (route.query.tags as string).split(',') : []))
 const sortBy = ref((route.query.sort as string) || 'date-desc')
-const page = ref(Number(route.query.page) || 1)
-const PAGE_SIZE = 25
 
 const searchInputRef = ref<HTMLInputElement | null>(null)
+const parentRef = ref<HTMLElement | null>(null)
 const focusedIndex = ref(-1)
 
 function onListKeydown(e: KeyboardEvent) {
@@ -43,14 +43,16 @@ function onListKeydown(e: KeyboardEvent) {
   }
   if (e.key === 'ArrowDown' || e.key === 'j') {
     e.preventDefault()
-    focusedIndex.value = Math.min(focusedIndex.value + 1, paginated.value.length - 1)
+    focusedIndex.value = Math.min(focusedIndex.value + 1, filtered.value.length - 1)
+    rowVirtualizer.value.scrollToIndex(focusedIndex.value, { align: 'auto' })
     focusCard(focusedIndex.value)
   } else if (e.key === 'ArrowUp' || e.key === 'k') {
     e.preventDefault()
     focusedIndex.value = Math.max(focusedIndex.value - 1, 0)
+    rowVirtualizer.value.scrollToIndex(focusedIndex.value, { align: 'auto' })
     focusCard(focusedIndex.value)
   } else if (e.key === 'Enter' && focusedIndex.value >= 0) {
-    const slug = paginated.value[focusedIndex.value]?.slug
+    const slug = filtered.value[focusedIndex.value]?.slug
     if (slug) router.push(`/posts/${encodeURIComponent(slug)}`)
   } else if (e.key === 'Escape' && isInSearch) {
     searchInputRef.value?.blur()
@@ -75,8 +77,14 @@ const filtered = computed(() =>
   filterPosts(store.posts, searchQuery.value, statusFilter.value, selectedTags.value, sortBy.value)
 )
 
-const totalPages = computed(() => Math.max(1, Math.ceil(filtered.value.length / PAGE_SIZE)))
-const paginated = computed(() => filtered.value.slice((page.value - 1) * PAGE_SIZE, page.value * PAGE_SIZE))
+const rowVirtualizer = useVirtualizer(computed(() => ({
+  count: filtered.value.length,
+  getScrollElement: () => parentRef.value,
+  estimateSize: () => 72,
+  overscan: 5,
+})))
+
+const virtualRows = computed(() => rowVirtualizer.value.getVirtualItems())
 
 const syncUrl = useDebounceFn(() => {
   const q: Record<string, string> = {}
@@ -84,12 +92,10 @@ const syncUrl = useDebounceFn(() => {
   if (statusFilter.value !== 'all') q.status = statusFilter.value
   if (selectedTags.value.length) q.tags = selectedTags.value.join(',')
   if (sortBy.value !== 'date-desc') q.sort = sortBy.value
-  if (page.value > 1) q.page = String(page.value)
   router.replace({ query: q })
 }, 300)
 
-watch([searchQuery, statusFilter, selectedTags, sortBy], () => { page.value = 1; syncUrl() }, { deep: true })
-watch(page, syncUrl)
+watch([searchQuery, statusFilter, selectedTags, sortBy], () => { syncUrl() }, { deep: true })
 
 async function loadPosts() {
   store.postsLoading = true
@@ -220,7 +226,7 @@ onMounted(loadPosts)
     </div>
 
     <!-- Empty -->
-    <div v-else-if="paginated.length === 0" class="text-center py-20 text-muted-foreground space-y-3">
+    <div v-else-if="filtered.length === 0" class="text-center py-20 text-muted-foreground space-y-3">
       <FileTextIcon class="h-10 w-10 mx-auto opacity-30" />
       <p class="font-serif font-medium">{{ searchQuery || statusFilter !== 'all' || selectedTags.length ? t.noResults : t.noPosts }}</p>
       <p v-if="!searchQuery && statusFilter === 'all' && !selectedTags.length" class="text-sm">点击「新建文章」创建你的第一篇文章</p>
@@ -229,57 +235,70 @@ onMounted(loadPosts)
       </Button>
     </div>
 
-    <!-- Post list -->
-    <div v-else class="stagger space-y-2">
+    <!-- Post list (virtual scrolling) -->
+    <div
+      v-else
+      ref="parentRef"
+      class="stagger overflow-auto"
+      :style="{ height: 'calc(100vh - 280px)', minHeight: '400px' }"
+    >
       <div
-        v-for="(post, i) in paginated"
-        :key="post.slug"
-        class="post-card group relative flex items-stretch rounded cursor-pointer transition-all duration-200 animate-fade-up hover:-translate-y-px hover:shadow-sm bg-card border border-border/60 focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-1"
-        tabindex="0"
-        role="button"
-        :aria-label="post.title"
-        @click="router.push(`/posts/${encodeURIComponent(post.slug)}`)"
-        @focus="focusedIndex = i"
-        @keydown.enter.prevent="router.push(`/posts/${encodeURIComponent(post.slug)}`)"
+        class="relative w-full"
+        :style="{ height: `${rowVirtualizer.getTotalSize()}px` }"
       >
-        <!-- Status color bar -->
-        <div class="w-[3px] shrink-0 rounded-l" :class="statusColor(post)" />
+        <div
+          v-for="virtualRow in virtualRows"
+          :key="String(virtualRow.key)"
+          class="absolute left-0 right-0"
+          :style="{
+            top: `${virtualRow.start}px`,
+            height: `${virtualRow.size}px`,
+            paddingTop: '4px',
+            paddingBottom: '4px',
+          }"
+        >
+          <div
+            class="post-card group relative flex items-stretch rounded cursor-pointer transition-all duration-200 hover:-translate-y-px hover:shadow-sm bg-card border border-border/60 focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-1 h-full"
+            tabindex="0"
+            role="button"
+            :aria-label="filtered[virtualRow.index]?.title"
+            @click="router.push(`/posts/${encodeURIComponent(filtered[virtualRow.index]!.slug)}`)"
+            @focus="focusedIndex = virtualRow.index"
+            @keydown.enter.prevent="router.push(`/posts/${encodeURIComponent(filtered[virtualRow.index]!.slug)}`)"
+          >
+            <!-- Status color bar -->
+            <div class="w-[3px] shrink-0 rounded-l" :class="statusColor(filtered[virtualRow.index]!)" />
 
-        <div class="flex-1 flex items-center justify-between gap-3 px-4 py-3 min-w-0">
-          <div class="min-w-0 space-y-1">
-            <div class="flex items-center gap-2">
-              <span class="font-serif font-medium text-sm truncate">{{ post.title || post.slug }}</span>
-              <AlertTriangleIcon v-if="post.large" class="h-3 w-3 text-warn shrink-0" :title="t.large" />
-            </div>
-            <div class="flex items-center gap-2">
-              <span class="text-[11px] text-muted-foreground" :title="post.date">{{ relDate(post.date) }}</span>
-              <Badge :variant="statusBadge(post).variant" class="text-[10px] h-4 px-1.5">{{ statusBadge(post).label }}</Badge>
-              <span v-for="tag in (post.tags || []).slice(0, 3)" :key="tag" class="font-deco text-[11px] text-muted-foreground/70"># {{ tag }}</span>
-            </div>
-          </div>
+            <div class="flex-1 flex items-center justify-between gap-3 px-4 py-3 min-w-0">
+              <div class="min-w-0 space-y-1">
+                <div class="flex items-center gap-2">
+                  <span class="font-serif font-medium text-sm truncate">{{ filtered[virtualRow.index]!.title || filtered[virtualRow.index]!.slug }}</span>
+                  <AlertTriangleIcon v-if="filtered[virtualRow.index]!.large" class="h-3 w-3 text-warn shrink-0" :title="t.large" />
+                </div>
+                <div class="flex items-center gap-2">
+                  <span class="text-[11px] text-muted-foreground" :title="filtered[virtualRow.index]!.date">{{ relDate(filtered[virtualRow.index]!.date) }}</span>
+                  <Badge :variant="statusBadge(filtered[virtualRow.index]!).variant" class="text-[10px] h-4 px-1.5">{{ statusBadge(filtered[virtualRow.index]!).label }}</Badge>
+                  <span v-for="tag in (filtered[virtualRow.index]!.tags || []).slice(0, 3)" :key="tag" class="font-deco text-[11px] text-muted-foreground/70"># {{ tag }}</span>
+                </div>
+              </div>
 
-          <!-- Actions (visible on focus/hover) -->
-          <div class="flex gap-0.5 shrink-0 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100"
-            :class="{ 'opacity-100': focusedIndex === i }">
-            <Button variant="ghost" size="icon" class="h-7 w-7 text-muted-foreground" :title="t.edit" @click.stop="router.push(`/posts/${encodeURIComponent(post.slug)}`)">
-              <EditIcon class="h-3.5 w-3.5" />
-            </Button>
-            <Button variant="ghost" size="icon" class="h-7 w-7 text-muted-foreground" :title="t.preview" @click.stop="router.push(`/posts/${encodeURIComponent(post.slug)}/preview`)">
-              <EyeIcon class="h-3.5 w-3.5" />
-            </Button>
-            <Button variant="ghost" size="icon" class="h-7 w-7 text-destructive/60 hover:text-destructive" title="移到回收站" @click.stop="deletePost(post)">
-              <Trash2Icon class="h-3.5 w-3.5" />
-            </Button>
+              <!-- Actions (visible on focus/hover) -->
+              <div class="flex gap-0.5 shrink-0 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100"
+                :class="{ 'opacity-100': focusedIndex === virtualRow.index }">
+                <Button variant="ghost" size="icon" class="h-7 w-7 text-muted-foreground" :title="t.edit" @click.stop="router.push(`/posts/${encodeURIComponent(filtered[virtualRow.index]!.slug)}`)">
+                  <EditIcon class="h-3.5 w-3.5" />
+                </Button>
+                <Button variant="ghost" size="icon" class="h-7 w-7 text-muted-foreground" :title="t.preview" @click.stop="router.push(`/posts/${encodeURIComponent(filtered[virtualRow.index]!.slug)}/preview`)">
+                  <EyeIcon class="h-3.5 w-3.5" />
+                </Button>
+                <Button variant="ghost" size="icon" class="h-7 w-7 text-destructive/60 hover:text-destructive" title="移到回收站" @click.stop="deletePost(filtered[virtualRow.index]!)">
+                  <Trash2Icon class="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
-    </div>
-
-    <!-- Pagination -->
-    <div v-if="totalPages > 1" class="flex items-center justify-between pt-2">
-      <Button variant="ghost" size="sm" class="text-xs text-muted-foreground" :disabled="page === 1" @click="page--">‹ 上一页</Button>
-      <span class="text-xs text-muted-foreground">{{ page }} / {{ totalPages }}</span>
-      <Button variant="ghost" size="sm" class="text-xs text-muted-foreground" :disabled="page === totalPages" @click="page++">下一页 ›</Button>
     </div>
   </div>
 </template>

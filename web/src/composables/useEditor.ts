@@ -5,10 +5,22 @@ import { EditorState, Compartment } from '@codemirror/state'
 import { defaultKeymap, historyKeymap, history, indentWithTab } from '@codemirror/commands'
 import { markdown } from '@codemirror/lang-markdown'
 import { bracketMatching, indentOnInput } from '@codemirror/language'
-import { searchKeymap, openSearchPanel } from '@codemirror/search'
 import { GFM } from '@lezer/markdown'
 import { oneDark } from '@codemirror/theme-one-dark'
-import { wysiwyg, mathExtension } from './useWysiwyg'
+
+// Lazy-loaded modules — resolved once on first use.
+let searchModule: typeof import('@codemirror/search') | null = null
+let wysiwygModule: typeof import('./useWysiwyg') | null = null
+
+async function loadSearch() {
+  if (!searchModule) searchModule = await import('@codemirror/search')
+  return searchModule
+}
+
+async function loadWysiwygModule() {
+  if (!wysiwygModule) wysiwygModule = await import('./useWysiwyg')
+  return wysiwygModule
+}
 
 export type SaveFn = (body: string) => Promise<void>
 export type PasteImageFn = (file: File) => Promise<string>
@@ -69,7 +81,10 @@ export function useEditor(
     return true
   }
 
-  function mount(el: HTMLElement) {
+  async function mount(el: HTMLElement) {
+    // Lazy-load search and wysiwyg extensions on first mount.
+    const [searchMod, wysiwygMod] = await Promise.all([loadSearch(), loadWysiwygModule()])
+
     const updateListener = EditorView.updateListener.of((update) => {
       if (update.docChanged) {
         body.value = update.state.doc.toString()
@@ -107,7 +122,7 @@ export function useEditor(
     const state = EditorState.create({
       doc: body.value || initialBody,
       extensions: [
-        markdown({ extensions: [GFM, mathExtension()] }),
+        markdown({ extensions: [GFM, wysiwygMod.mathExtension()] }),
         history(),
         lineNumbers(),
         bracketMatching(),
@@ -118,7 +133,7 @@ export function useEditor(
         keymap.of([
           ...defaultKeymap,
           ...historyKeymap,
-          ...searchKeymap,
+          ...searchMod.searchKeymap,
           indentWithTab,
           { key: 'Mod-s', run: () => { save(); return true } },
           { key: 'Mod-b', run: (v) => wrapSelection(v, '**', '**') },
@@ -126,7 +141,7 @@ export function useEditor(
           { key: 'Mod-k', run: (v) => wrapSelection(v, '[', '](url)') },
         ]),
         themeCompartment.of(theme.value === 'dark' ? oneDark : []),
-        wysiwygCompartment.of(wysiwyg()),
+        wysiwygCompartment.of(wysiwygMod.wysiwyg()),
         updateListener,
         pasteHandler,
       ]
@@ -146,8 +161,9 @@ export function useEditor(
     if (!view) return
     const newMode = mode.value === 'wysiwyg' ? 'source' : 'wysiwyg'
     mode.value = newMode
+    // wysiwygModule is already loaded by the time mount completes.
     view.dispatch({
-      effects: wysiwygCompartment.reconfigure(newMode === 'wysiwyg' ? wysiwyg() : []),
+      effects: wysiwygCompartment.reconfigure(newMode === 'wysiwyg' && wysiwygModule ? wysiwygModule.wysiwyg() : []),
     })
     view.focus()
   }

@@ -1,6 +1,7 @@
 package httpapi
 
 import (
+	"compress/gzip"
 	"encoding/json"
 	"fmt"
 	"log/slog"
@@ -8,6 +9,7 @@ import (
 	"net/http"
 	"runtime/debug"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -234,5 +236,69 @@ func (s *Server) withWriteRateLimit(next http.Handler) http.Handler {
 			}
 		}
 		next.ServeHTTP(w, r)
+	})
+}
+
+// gzipResponseWriter wraps http.ResponseWriter to compress writes with gzip.
+type gzipResponseWriter struct {
+	http.ResponseWriter
+	gz       *gzip.Writer
+	wroteHdr bool
+}
+
+func (gw *gzipResponseWriter) WriteHeader(code int) {
+	if !gw.wroteHdr {
+		gw.wroteHdr = true
+		// Remove Content-Length since compressed size differs.
+		gw.ResponseWriter.Header().Del("Content-Length")
+		gw.ResponseWriter.Header().Set("Content-Encoding", "gzip")
+		gw.ResponseWriter.Header().Del("Vary")
+		gw.ResponseWriter.Header().Add("Vary", "Accept-Encoding")
+	}
+	gw.ResponseWriter.WriteHeader(code)
+}
+
+func (gw *gzipResponseWriter) Write(b []byte) (int, error) {
+	if !gw.wroteHdr {
+		gw.WriteHeader(http.StatusOK)
+	}
+	return gw.gz.Write(b)
+}
+
+func (gw *gzipResponseWriter) Flush() {
+	if f, ok := gw.ResponseWriter.(http.Flusher); ok {
+		_ = gw.gz.Flush()
+		f.Flush()
+	}
+}
+
+func (gw *gzipResponseWriter) Close() error {
+	return gw.gz.Close()
+}
+
+// withGzip compresses JSON API responses when the client accepts gzip encoding.
+func withGzip(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
+			next.ServeHTTP(w, r)
+			return
+		}
+		// Only compress JSON responses. Content-Type is set after the handler runs,
+		// so we check the path prefix instead: API routes always return JSON.
+		isAPI := strings.HasPrefix(r.URL.Path, "/studio/api") || strings.HasPrefix(r.URL.Path, "/api")
+		if !isAPI {
+			next.ServeHTTP(w, r)
+			return
+		}
+		gz, err := gzip.NewWriterLevel(w, gzip.DefaultCompression)
+		if err != nil {
+			next.ServeHTTP(w, r)
+			return
+		}
+		gw := &gzipResponseWriter{ResponseWriter: w, gz: gz}
+		defer func() {
+			_ = gw.Close()
+		}()
+		next.ServeHTTP(gw, r)
 	})
 }

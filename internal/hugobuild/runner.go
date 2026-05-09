@@ -6,10 +6,12 @@ import (
 	"fmt"
 	"log/slog"
 	"os/exec"
-	"sync"
+	"strings"
 	"time"
 
 	"blog-studio-web/internal/metrics"
+
+	"golang.org/x/sync/singleflight"
 )
 
 type CommandResult struct {
@@ -22,7 +24,7 @@ type CommandResult struct {
 }
 
 type Runner struct {
-	mu     sync.Mutex
+	group  singleflight.Group
 	logger *slog.Logger
 }
 
@@ -42,10 +44,24 @@ func (r *Runner) RunWithLabel(ctx context.Context, target, workDir string, args 
 	return result
 }
 
-func (r *Runner) Run(ctx context.Context, workDir string, args ...string) CommandResult {
-	r.mu.Lock()
-	defer r.mu.Unlock()
+// buildKey returns a deduplication key from workDir and args.
+func buildKey(workDir string, args []string) string {
+	return workDir + "|" + strings.Join(args, " ")
+}
 
+func (r *Runner) Run(ctx context.Context, workDir string, args ...string) CommandResult {
+	key := buildKey(workDir, args)
+	val, err, _ := r.group.Do(key, func() (interface{}, error) {
+		return r.run(ctx, workDir, args), nil
+	})
+	if err != nil {
+		// Should never happen since run always returns a result.
+		return CommandResult{ExitCode: -1}
+	}
+	return val.(CommandResult)
+}
+
+func (r *Runner) run(ctx context.Context, workDir string, args []string) CommandResult {
 	start := time.Now()
 	result := CommandResult{StartedAt: start.Format(time.RFC3339Nano), ExitCode: -1}
 	if r.logger != nil {

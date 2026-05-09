@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"blog-studio-web/internal/apperror"
@@ -78,6 +79,12 @@ type Result struct {
 	Error         *apperror.AppError `json:"error,omitempty"`
 }
 
+type postListCache struct {
+	mu       sync.RWMutex
+	data     []PostState
+	expires  time.Time
+}
+
 type Service struct {
 	paths   config.Paths
 	cfg     config.Config
@@ -85,13 +92,34 @@ type Service struct {
 	backup  *backup.Store
 	audit   *audit.Logger
 	runner  *hugobuild.Runner
+	cache   postListCache
 }
+
+const postListCacheTTL = 30 * time.Second
 
 func NewService(paths config.Paths, cfg config.Config, backupStore *backup.Store, auditLogger *audit.Logger, runner *hugobuild.Runner) *Service {
 	return &Service{paths: paths, cfg: cfg, content: content.NewService(), backup: backupStore, audit: auditLogger, runner: runner}
 }
 
+// InvalidateCache clears the cached post list so the next ListPosts call reads fresh data.
+func (s *Service) InvalidateCache() {
+	s.cache.mu.Lock()
+	s.cache.data = nil
+	s.cache.expires = time.Time{}
+	s.cache.mu.Unlock()
+}
+
 func (s *Service) ListPosts() ([]PostState, *apperror.AppError) {
+	s.cache.mu.RLock()
+	if s.cache.data != nil && time.Now().Before(s.cache.expires) {
+		// Return a copy to prevent mutation of cached data.
+		cached := make([]PostState, len(s.cache.data))
+		copy(cached, s.cache.data)
+		s.cache.mu.RUnlock()
+		return cached, nil
+	}
+	s.cache.mu.RUnlock()
+
 	entries, err := os.ReadDir(s.cfg.Site.PostRoot)
 	if err != nil {
 		return nil, apperror.Wrap("POST_LIST_FAILED", "无法读取文章目录。", err, "检查 /blog/content/post 挂载和权限。", true)
@@ -111,6 +139,13 @@ func (s *Service) ListPosts() ([]PostState, *apperror.AppError) {
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].Date > out[j].Date })
 	_ = s.saveMetadata(meta)
+
+	// Store in cache.
+	s.cache.mu.Lock()
+	s.cache.data = out
+	s.cache.expires = time.Now().Add(postListCacheTTL)
+	s.cache.mu.Unlock()
+
 	return out, nil
 }
 
@@ -154,7 +189,11 @@ func (s *Service) SaveDraft(draft content.PostDraft) *apperror.AppError {
 	state.Dirty = true
 	state.SyncStatus = computeStatus(true, parseTime(state.CachedRemoteMtime), parseTime(state.RemoteMtime))
 	meta.Posts[draft.Slug] = state
-	return s.saveMetadata(meta)
+	if err := s.saveMetadata(meta); err != nil {
+		return err
+	}
+	s.InvalidateCache()
+	return nil
 }
 
 func (s *Service) PublishBlog(ctx context.Context, req BlogPublishRequest) Result {
@@ -240,6 +279,7 @@ func (s *Service) PublishBlog(ctx context.Context, req BlogPublishRequest) Resul
 	state.SyncStatus = SyncClean
 	meta.Posts[req.Slug] = state
 	_ = s.saveMetadata(meta)
+	s.InvalidateCache()
 	result.Status = "success"
 	s.appendAudit(req.Slug, "publish", result)
 	return result
@@ -272,6 +312,7 @@ func (s *Service) Rollback(ctx context.Context, slug string) Result {
 		s.appendAudit(slug, "rollback", result)
 		return result
 	}
+	s.InvalidateCache()
 	result.Status = "success"
 	s.appendAudit(slug, "rollback", result)
 	return result

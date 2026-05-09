@@ -132,8 +132,10 @@ func (s *Server) Handler() http.Handler {
 		requestID(
 			accessLog(s.logger)(
 				secureHeaders(
-					withMaxBytes(
-						s.withWriteRateLimit(mux),
+					withGzip(
+						withMaxBytes(
+							s.withWriteRateLimit(mux),
+						),
 					),
 				),
 			),
@@ -298,6 +300,7 @@ func (s *Server) deletePost(w http.ResponseWriter, r *http.Request, slug string)
 		writeError(w, http.StatusInternalServerError, trashErr)
 		return
 	}
+	s.publisher().InvalidateCache()
 	_ = s.audit.Append(audit.Entry{
 		AuditID: audit.NewID("audit"), Actor: "admin", SiteID: sn.cfg.Site.ID,
 		Slug: slug, Operation: "delete", Target: "trash", Result: "ok", BackupID: trashID,
@@ -342,6 +345,7 @@ func (s *Server) trashRouter(w http.ResponseWriter, r *http.Request) {
 			writeError(w, http.StatusConflict, err)
 			return
 		}
+		s.publisher().InvalidateCache()
 		_ = s.audit.Append(audit.Entry{
 			AuditID: audit.NewID("audit"), Actor: "admin", SiteID: sn.cfg.Site.ID,
 			Slug: id, Operation: "restore", Target: "trash", Result: "ok",
@@ -624,11 +628,14 @@ func (s *Server) reloadConfig(cfg config.Config) {
 	newPrev := preview.NewService(s.paths, cfg, s.runner)
 	newWec := wechat.NewService(s.paths, cfg, s.audit)
 	s.mu.Lock()
+	oldPub := s.pub
 	s.cfg = cfg
 	s.pub = newPub
 	s.prev = newPrev
 	s.wec = newWec
 	s.mu.Unlock()
+	// Invalidate the old service's cache so the new service starts fresh.
+	oldPub.InvalidateCache()
 }
 
 func (s *Server) spaHandler(base string) http.Handler {
