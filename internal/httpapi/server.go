@@ -3,6 +3,7 @@ package httpapi
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
@@ -10,6 +11,7 @@ import (
 	"regexp"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 
 	"blog-studio-web/internal/apperror"
@@ -804,10 +806,35 @@ func (s *Server) health(w http.ResponseWriter, r *http.Request) {
 	} else {
 		add("data-root", "ok", "数据目录可写。", s.paths.DataRoot, "")
 	}
+	// Hugo build test
+	buildStart := time.Now()
+	buildResult := s.runner.Run(context.Background(), cfg.Site.BlogRoot, "--renderToMemory")
+	buildDuration := time.Since(buildStart)
+	if !buildResult.Success {
+		add("hugo-build", "error", "Hugo 构建测试失败。", buildResult.Stderr, "检查 hugo.toml 和主题是否正常。")
+	} else {
+		add("hugo-build", "ok", fmt.Sprintf("Hugo 构建测试通过（%dms）。", buildDuration.Milliseconds()), buildResult.Stdout, "")
+	}
+	// Disk space check
+	var stat syscall.Statfs_t
+	if err := syscall.Statfs(cfg.Site.BlogRoot, &stat); err != nil {
+		add("disk-space", "error", "无法检查磁盘空间。", err.Error(), "检查文件系统挂载。")
+	} else {
+		freeGB := float64(stat.Bavail*uint64(stat.Bsize)) / (1024 * 1024 * 1024)
+		if freeGB < 1.0 {
+			add("disk-space", "warn", fmt.Sprintf("磁盘空间不足：%.1f GB 可用。", freeGB), fmt.Sprintf("%.2f GB free", freeGB), "清理磁盘空间或扩容。")
+		} else {
+			add("disk-space", "ok", fmt.Sprintf("磁盘空间充足：%.1f GB 可用。", freeGB), fmt.Sprintf("%.2f GB free", freeGB), "")
+		}
+	}
 	status := "ok"
 	for _, check := range checks {
 		if check["status"] == "error" {
 			status = "error"
+			break
+		}
+		if check["status"] == "warn" {
+			status = "warn"
 		}
 	}
 	writeOK(w, map[string]interface{}{"status": status, "checks": checks})

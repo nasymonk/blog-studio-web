@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { RefreshCwIcon, CheckCircleIcon, XCircleIcon } from 'lucide-vue-next'
+import { RefreshCwIcon, CheckCircleIcon, XCircleIcon, TriangleAlertIcon } from 'lucide-vue-next'
 import { api } from '@/services/api'
 import { useI18n } from '@/i18n'
 import { useNotify } from '@/composables/useNotify'
@@ -31,7 +31,7 @@ onMounted(load)
       <Button variant="ghost" size="icon" class="h-7 w-7 text-muted-foreground" aria-label="Refresh health status" :disabled="loading" @click="load">
         <RefreshCwIcon class="h-3.5 w-3.5" :class="{ 'animate-spin': loading }" />
       </Button>
-      <Badge v-if="health" :variant="health.status === 'ok' ? 'default' : 'destructive'" class="text-[10px]" role="status">
+      <Badge v-if="health" :variant="health.status === 'ok' ? 'default' : health.status === 'warn' ? 'outline' : 'destructive'" class="text-[10px]" role="status">
         {{ health.status }}
       </Badge>
     </div>
@@ -61,10 +61,11 @@ onMounted(load)
         class="relative flex items-start gap-3 rounded border border-border/60 bg-card px-4 py-3 animate-fade-up"
       >
         <!-- Status bar -->
-        <div class="absolute left-0 top-2 bottom-2 w-0.5 rounded-full" :class="check.status === 'ok' ? 'bg-ok' : 'bg-destructive'" />
+        <div class="absolute left-0 top-2 bottom-2 w-0.5 rounded-full" :class="check.status === 'ok' ? 'bg-ok' : check.status === 'warn' ? 'bg-yellow-500' : 'bg-destructive'" />
         <div class="pl-2 space-y-1 min-w-0">
           <div class="flex items-center gap-2">
             <CheckCircleIcon v-if="check.status === 'ok'" class="h-4 w-4 text-ok shrink-0" />
+            <TriangleAlertIcon v-else-if="check.status === 'warn'" class="h-4 w-4 text-yellow-500 shrink-0" />
             <XCircleIcon v-else class="h-4 w-4 text-destructive shrink-0" />
             <span class="text-sm font-medium">{{ check.name }}</span>
           </div>
