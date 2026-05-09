@@ -72,7 +72,7 @@ async function loadMetrics() {
   try {
     const raw = await api.metrics()
     metrics.value = parsePrometheus(raw)
-  } catch (e: any) {
+  } catch {
     // Metrics endpoint may not be available; silently ignore
     metrics.value = null
   } finally {
