@@ -63,7 +63,10 @@ watch(savedAt, (val) => { store.editor.savedAt = val })
 
 async function loadPost() {
   loading.value = true
-  try { draft.value = await api.post(slug.value) }
+  try {
+    draft.value = await api.post(slug.value)
+    body.value = draft.value.body
+  }
   catch (e: any) { notify.error(e, { onRetry: loadPost }) }
   finally { loading.value = false }
 }
