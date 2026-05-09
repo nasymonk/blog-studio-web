@@ -4,7 +4,8 @@ import { useRoute, useRouter } from 'vue-router'
 import {
   SaveIcon, SendIcon, EyeIcon, Loader2Icon, AlertCircleIcon,
   BoldIcon, ItalicIcon, LinkIcon, ImageIcon, CodeIcon, Heading1Icon,
-  RotateCcwIcon, ListIcon, ChevronDownIcon, ChevronUpIcon, PenLineIcon
+  RotateCcwIcon, ListIcon, ChevronDownIcon, ChevronUpIcon, PenLineIcon,
+  GalleryHorizontalEndIcon
 } from 'lucide-vue-next'
 import { api } from '@/services/api'
 import type { PostDraft, PostStats } from '@/services/api'
@@ -14,6 +15,7 @@ import { useTheme } from '@/composables/useTheme'
 import { useNotify } from '@/composables/useNotify'
 import { useEditor } from '@/composables/useEditor'
 import EditorOutline from '@/components/EditorOutline.vue'
+import ImageGallery from '@/components/ImageGallery.vue'
 import KeybindingHelp from '@/components/KeybindingHelp.vue'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -38,6 +40,7 @@ const showOutline = ref(true)
 const metaExpanded = ref(false)
 const keybindingHelpOpen = ref(false)
 const postStats = ref<PostStats | null>(null)
+const galleryOpen = ref(false)
 
 const editorContainer = ref<HTMLElement | null>(null)
 const { body, dirty, saving, savedAt, wordCount, mode, mount,
@@ -309,6 +312,7 @@ function onRootKeydown(e: KeyboardEvent) {
         <Button variant="ghost" size="icon" class="h-7 w-7 text-muted-foreground hover:text-foreground" aria-label="Italic (⌘I)" title="斜体 (⌘I)" @click="execItalic"><ItalicIcon class="h-3.5 w-3.5" /></Button>
         <Button variant="ghost" size="icon" class="h-7 w-7 text-muted-foreground hover:text-foreground" aria-label="Link (⌘K)" title="链接 (⌘K)" @click="execLink"><LinkIcon class="h-3.5 w-3.5" /></Button>
         <Button variant="ghost" size="icon" class="h-7 w-7 text-muted-foreground hover:text-foreground" aria-label="Insert image" title="插入图片" @click="handleImageUpload"><ImageIcon class="h-3.5 w-3.5" /></Button>
+        <Button variant="ghost" size="icon" class="h-7 w-7 text-muted-foreground hover:text-foreground" aria-label="Image gallery" :title="t.gallery" @click="galleryOpen = true"><GalleryHorizontalEndIcon class="h-3.5 w-3.5" /></Button>
         <Button variant="ghost" size="icon" class="h-7 w-7 text-muted-foreground hover:text-foreground" aria-label="Inline code" title="行内代码" @click="execCode"><CodeIcon class="h-3.5 w-3.5" /></Button>
         <Button variant="ghost" size="icon" class="h-7 w-7 text-muted-foreground hover:text-foreground" aria-label="Heading" title="标题" @click="execHeading"><Heading1Icon class="h-3.5 w-3.5" /></Button>
         <Separator orientation="vertical" class="mx-1 h-4" />
@@ -365,5 +369,13 @@ function onRootKeydown(e: KeyboardEvent) {
     </div>
 
     <KeybindingHelp v-model:open="keybindingHelpOpen" />
+    <ImageGallery
+      v-if="draft"
+      v-model:open="galleryOpen"
+      :slug="slug"
+      :assets="draft.assets"
+      :on-insert="insertText"
+      @uploaded="loadPost"
+    />
   </div>
 </template>
