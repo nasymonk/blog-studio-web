@@ -54,31 +54,33 @@ const pageTitle = computed(() => {
 const editorDirty = computed(() => route.name === 'editor' && store.editor.dirty)
 const editorSaving = computed(() => route.name === 'editor' && store.editor.saving)
 
+const contentNav = [
+  { to: '/posts', icon: FileTextIcon, label: () => t.value.posts, count: () => store.posts.length },
+  { to: '/home', icon: HomeIcon, label: () => t.value.home },
+  { to: '/now', icon: ClockIcon, label: () => t.value.now },
+]
+
+const systemNav = [
+  { to: '/settings', icon: SettingsIcon, label: () => t.value.settings },
+  { to: '/health', icon: HeartPulseIcon, label: () => t.value.health, dot: () => store.health && store.health.status !== 'ok' },
+  { to: '/trash', icon: Trash2Icon, label: () => '回收站' },
+]
+
 async function logout() {
-  try {
-    await api.logout()
-  } catch {
-    // ignore errors on logout
-  }
+  try { await api.logout() } catch { /* ignore */ }
   store.session = { authenticated: false, csrfToken: '' }
   router.push('/login')
 }
 
 async function syncPosts() {
   store.postsLoading = true
-  try {
-    store.posts = await api.posts()
-  } catch (e: any) {
-    notify.error(e)
-  } finally {
-    store.postsLoading = false
-  }
+  try { store.posts = await api.posts() }
+  catch (e: any) { notify.error(e) }
+  finally { store.postsLoading = false }
 }
 
 router.beforeEach((to, from) => {
-  if (to.name !== 'login' && !store.session.authenticated) {
-    return { name: 'login' }
-  }
+  if (to.name !== 'login' && !store.session.authenticated) return { name: 'login' }
   if (from.name === 'editor' && to.name !== 'editor' && store.editor.dirty) {
     if (!window.confirm('文章有未保存的更改，确认离开？')) return false
     store.editor.dirty = false
@@ -96,9 +98,7 @@ onMounted(async () => {
       store.posts = posts
       try { store.health = await api.health() } catch { /* non-critical */ }
     }
-  } catch (e: any) {
-    notify.error(e)
-  }
+  } catch (e: any) { notify.error(e) }
 })
 </script>
 
@@ -107,8 +107,7 @@ onMounted(async () => {
     <Toaster position="top-right" rich-colors :expand="true" />
     <CommandPalette v-model:open="paletteOpen" />
 
-    <!-- Skip navigation link for keyboard users -->
-    <a href="#main-content" class="sr-only focus:not-sr-only focus:absolute focus:z-[9999] focus:top-2 focus:left-2 focus:px-3 focus:py-2 focus:bg-background focus:border focus:border-border focus:rounded-md">跳到主内容</a>
+    <a href="#main-content" class="sr-only focus:not-sr-only focus:absolute focus:z-[9999] focus:top-2 focus:left-2 focus:px-3 focus:py-2 focus:bg-background focus:border focus:border-border focus:rounded">跳到主内容</a>
 
     <div v-if="isLoginPage || !isAuthed" class="min-h-svh">
       <RouterView />
@@ -116,51 +115,80 @@ onMounted(async () => {
 
     <div v-else class="flex min-h-svh">
       <!-- Sidebar -->
-      <aside class="w-[220px] shrink-0 border-r border-border bg-sidebar flex flex-col" aria-label="主导航">
-        <div class="flex items-center gap-2.5 px-4 py-4" aria-label="Blog Studio">
-          <svg class="h-8 w-8 shrink-0" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-            <rect width="32" height="32" rx="8" fill="var(--accent)" />
-            <text x="16" y="22" text-anchor="middle" fill="white" font-size="18" font-weight="700" font-family="serif">B</text>
-          </svg>
-          <span class="font-serif font-semibold text-sm truncate">{{ store.config?.site.name || 'Blog Studio' }}</span>
+      <aside class="w-[240px] shrink-0 border-r border-border bg-sidebar flex flex-col" aria-label="主导航">
+        <!-- Brand -->
+        <div class="flex items-center gap-3 px-5 py-5">
+          <div class="font-display text-3xl text-accent leading-none select-none">博</div>
+          <div class="min-w-0">
+            <div class="font-serif font-semibold text-sm truncate leading-tight">{{ store.config?.site.name || 'Blog Studio' }}</div>
+            <div class="text-[10px] text-muted-foreground tracking-wider">管理后台</div>
+          </div>
         </div>
 
+        <Separator class="mx-4 w-auto" />
+
         <ScrollArea class="flex-1">
-          <nav class="px-2 space-y-0.5" role="navigation" aria-label="主菜单">
-            <Tooltip v-for="item in [
-              { to: '/posts', icon: FileTextIcon, label: t.posts, count: store.posts.length },
-              { to: '/home', icon: HomeIcon, label: t.home },
-              { to: '/now', icon: ClockIcon, label: t.now },
-              { to: '/settings', icon: SettingsIcon, label: t.settings },
-              { to: '/health', icon: HeartPulseIcon, label: t.health, dot: store.health && store.health.status !== 'ok' },
-              { to: '/trash', icon: Trash2Icon, label: '回收站' },
-            ]" :key="item.to">
-              <TooltipTrigger as-child>
-                <RouterLink
-                  :to="item.to"
-                  class="flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-sm text-sidebar-foreground hover:bg-sidebar-accent transition-colors"
-                  active-class="bg-sidebar-accent text-sidebar-accent-foreground font-medium"
-                >
-                  <component :is="item.icon" class="h-4 w-4 shrink-0" aria-hidden="true" />
-                  <span class="flex-1">{{ item.label }}</span>
-                  <Badge v-if="item.count" variant="secondary" class="h-5 min-w-[20px] justify-center px-1.5 text-[10px]">
-                    {{ item.count }}
-                  </Badge>
-                  <span v-if="item.dot" class="h-2 w-2 rounded-full bg-destructive" role="status" aria-label="服务异常" />
-                </RouterLink>
-              </TooltipTrigger>
-              <TooltipContent side="right" :side-offset="8">{{ item.label }}</TooltipContent>
-            </Tooltip>
+          <nav class="px-3 py-3 space-y-4" role="navigation" aria-label="主菜单">
+            <!-- Content group -->
+            <div>
+              <div class="px-2.5 mb-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground/60">内容</div>
+              <div class="space-y-0.5">
+                <Tooltip v-for="item in contentNav" :key="item.to">
+                  <TooltipTrigger as-child>
+                    <RouterLink
+                      :to="item.to"
+                      class="group relative flex items-center gap-2.5 rounded px-2.5 py-1.5 text-sm text-sidebar-foreground transition-all duration-200 hover:translate-x-0.5"
+                      :class="route.path === item.to || route.path.startsWith(item.to + '/') ? 'bg-sidebar-accent text-sidebar-accent-foreground font-medium' : 'hover:bg-sidebar-accent/50'"
+                    >
+                      <!-- Active indicator bar -->
+                      <div v-if="route.path === item.to || route.path.startsWith(item.to + '/')"
+                        class="absolute left-0 top-1 bottom-1 w-0.5 bg-accent rounded-full origin-top animate-fade-in" />
+                      <component :is="item.icon" class="h-4 w-4 shrink-0 opacity-70" aria-hidden="true" />
+                      <span class="flex-1">{{ item.label() }}</span>
+                      <Badge v-if="item.count?.()" variant="secondary" class="h-5 min-w-[20px] justify-center px-1.5 text-[10px]">
+                        {{ item.count() }}
+                      </Badge>
+                    </RouterLink>
+                  </TooltipTrigger>
+                  <TooltipContent side="right" :side-offset="8">{{ item.label() }}</TooltipContent>
+                </Tooltip>
+              </div>
+            </div>
+
+            <!-- System group -->
+            <div>
+              <div class="px-2.5 mb-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground/60">系统</div>
+              <div class="space-y-0.5">
+                <Tooltip v-for="item in systemNav" :key="item.to">
+                  <TooltipTrigger as-child>
+                    <RouterLink
+                      :to="item.to"
+                      class="group relative flex items-center gap-2.5 rounded px-2.5 py-1.5 text-sm text-sidebar-foreground transition-all duration-200 hover:translate-x-0.5"
+                      :class="route.path === item.to || route.path.startsWith(item.to + '/') ? 'bg-sidebar-accent text-sidebar-accent-foreground font-medium' : 'hover:bg-sidebar-accent/50'"
+                    >
+                      <div v-if="route.path === item.to || route.path.startsWith(item.to + '/')"
+                        class="absolute left-0 top-1 bottom-1 w-0.5 bg-accent rounded-full origin-top animate-fade-in" />
+                      <component :is="item.icon" class="h-4 w-4 shrink-0 opacity-70" aria-hidden="true" />
+                      <span class="flex-1">{{ item.label() }}</span>
+                      <span v-if="item.dot?.()" class="h-2 w-2 rounded-full bg-destructive animate-pulse" role="status" aria-label="服务异常" />
+                    </RouterLink>
+                  </TooltipTrigger>
+                  <TooltipContent side="right" :side-offset="8">{{ item.label() }}</TooltipContent>
+                </Tooltip>
+              </div>
+            </div>
           </nav>
         </ScrollArea>
 
-        <div class="px-2 py-2 border-t border-sidebar-border space-y-0.5">
-          <Button variant="ghost" class="w-full justify-start gap-2.5 h-8 text-sm px-2.5" :disabled="store.postsLoading" :aria-label="t.sync" @click="syncPosts">
-            <RefreshCwIcon class="h-4 w-4" :class="{ 'animate-spin': store.postsLoading }" aria-hidden="true" />
+        <Separator class="mx-4 w-auto" />
+
+        <div class="px-3 py-3 space-y-0.5">
+          <Button variant="ghost" class="w-full justify-start gap-2.5 h-8 text-sm px-2.5 text-muted-foreground" :disabled="store.postsLoading" @click="syncPosts">
+            <RefreshCwIcon class="h-4 w-4" :class="{ 'animate-spin': store.postsLoading }" />
             <span>{{ t.sync }}</span>
           </Button>
-          <Button variant="ghost" class="w-full justify-start gap-2.5 h-8 text-sm px-2.5" :aria-label="t.logout" @click="logout">
-            <LogOutIcon class="h-4 w-4" aria-hidden="true" />
+          <Button variant="ghost" class="w-full justify-start gap-2.5 h-8 text-sm px-2.5 text-muted-foreground" @click="logout">
+            <LogOutIcon class="h-4 w-4" />
             <span>{{ t.logout }}</span>
           </Button>
         </div>
@@ -168,34 +196,47 @@ onMounted(async () => {
 
       <!-- Main stage -->
       <div class="flex-1 flex flex-col min-w-0">
-        <header class="flex items-center h-12 px-4 border-b border-border shrink-0" role="banner">
-          <h1 class="font-serif font-semibold text-base">{{ pageTitle }}</h1>
+        <header class="flex items-center h-12 px-6 border-b border-border shrink-0" role="banner">
+          <h1 class="font-serif font-semibold text-base tracking-tight">{{ pageTitle }}</h1>
           <div class="flex items-center gap-2 ml-auto">
             <Badge v-if="editorSaving" variant="secondary" class="text-xs animate-pulse">{{ t.saving }}…</Badge>
             <Badge v-else-if="editorDirty" variant="destructive" class="text-xs">● {{ t.unsaved }}</Badge>
-            <Badge v-else-if="store.editor.savedAt" variant="outline" class="text-xs text-ok">{{ t.saved }}</Badge>
+            <Badge v-else-if="store.editor.savedAt" variant="outline" class="text-xs text-ok border-ok/30">{{ t.saved }}</Badge>
 
-            <Button variant="ghost" size="sm" class="h-7 px-2 text-xs gap-1" :aria-label="`切换语言为 ${lang === 'zh' ? 'English' : '中文'}`" @click="setLang(lang === 'zh' ? 'en' : 'zh')">
-              <Globe2Icon class="h-3.5 w-3.5" aria-hidden="true" />{{ lang === 'zh' ? 'EN' : '中文' }}
+            <Separator orientation="vertical" class="h-4 mx-1" />
+
+            <Button variant="ghost" size="sm" class="h-7 px-2 text-xs gap-1 text-muted-foreground" @click="setLang(lang === 'zh' ? 'en' : 'zh')">
+              <Globe2Icon class="h-3.5 w-3.5" />{{ lang === 'zh' ? 'EN' : '中文' }}
             </Button>
-            <Button variant="ghost" size="icon" class="h-7 w-7" :aria-label="isDark ? t.lightMode : t.darkMode" :title="t.theme" @click="toggleTheme">
-              <MoonIcon v-if="!isDark" class="h-3.5 w-3.5" aria-hidden="true" />
-              <SunIcon v-else class="h-3.5 w-3.5" aria-hidden="true" />
+            <Button variant="ghost" size="icon" class="h-7 w-7 text-muted-foreground" :title="t.theme" @click="toggleTheme">
+              <MoonIcon v-if="!isDark" class="h-3.5 w-3.5" />
+              <SunIcon v-else class="h-3.5 w-3.5" />
             </Button>
           </div>
         </header>
 
-        <div v-if="store.banner" class="flex items-center gap-2 px-4 py-2 bg-warn-bg text-warn text-sm" role="alert">
+        <div v-if="store.banner" class="flex items-center gap-2 px-6 py-2 bg-warn-bg text-warn text-sm" role="alert">
           <span class="flex-1">{{ store.banner.message }}</span>
-          <Button variant="ghost" size="icon" class="h-6 w-6" aria-label="关闭提示" @click="store.banner = null">
+          <Button variant="ghost" size="icon" class="h-6 w-6" @click="store.banner = null">
             <span class="text-xs">✕</span>
           </Button>
         </div>
 
         <main id="main-content" class="flex-1 overflow-auto p-6" tabindex="-1">
-          <RouterView />
+          <transition name="page" mode="out-in">
+            <RouterView :key="route.path" />
+          </transition>
         </main>
       </div>
     </div>
   </TooltipProvider>
 </template>
+
+<style scoped>
+.page-enter-active {
+  animation: fade-up 0.25s ease-out;
+}
+.page-leave-active {
+  animation: fade-in 0.12s ease-in reverse;
+}
+</style>

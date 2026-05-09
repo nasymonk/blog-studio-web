@@ -25,11 +25,8 @@ async function changePassword() {
     notify.success('密码已修改')
     currentPassword.value = ''
     newPassword.value = ''
-  } catch (e: any) {
-    error.value = e?.message || '修改失败'
-  } finally {
-    saving.value = false
-  }
+  } catch (e: any) { error.value = e?.message || '修改失败' }
+  finally { saving.value = false }
 }
 </script>
 
@@ -37,22 +34,22 @@ async function changePassword() {
   <div class="max-w-md space-y-4">
     <Card>
       <CardHeader>
-        <CardTitle class="flex items-center gap-2 font-serif">
-          <LockIcon class="h-4 w-4" /> {{ t.securitySettings }}
+        <CardTitle class="flex items-center gap-2 font-serif text-base">
+          <LockIcon class="h-4 w-4 text-accent" /> {{ t.securitySettings }}
         </CardTitle>
-        <p class="text-sm text-muted-foreground">修改管理员密码。密码至少 6 位。</p>
+        <p class="text-xs text-muted-foreground">修改管理员密码。密码至少 6 位。</p>
       </CardHeader>
       <CardContent class="space-y-4">
         <div class="grid gap-1.5">
-          <Label>{{ t.currentPassword }}</Label>
+          <Label class="text-[10px] uppercase tracking-wider text-muted-foreground/70">{{ t.currentPassword }}</Label>
           <Input v-model="currentPassword" type="password" autocomplete="current-password" />
         </div>
         <div class="grid gap-1.5">
-          <Label>{{ t.newPassword }}</Label>
+          <Label class="text-[10px] uppercase tracking-wider text-muted-foreground/70">{{ t.newPassword }}</Label>
           <Input v-model="newPassword" type="password" autocomplete="new-password" />
           <p v-if="error" class="text-xs text-destructive">{{ error }}</p>
         </div>
-        <Button :disabled="saving || !currentPassword || !newPassword" @click="changePassword">
+        <Button class="rounded-full px-5" :disabled="saving || !currentPassword || !newPassword" @click="changePassword">
           {{ saving ? t.saving : t.changePassword }}
         </Button>
       </CardContent>

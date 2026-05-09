@@ -5,7 +5,6 @@ import { api } from '@/services/api'
 import type { TrashItem } from '@/services/api'
 import { useNotify } from '@/composables/useNotify'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 
 const notify = useNotify()
@@ -14,13 +13,9 @@ const loading = ref(true)
 
 async function load() {
   loading.value = true
-  try {
-    items.value = await api.trash()
-  } catch (e: any) {
-    notify.error(e)
-  } finally {
-    loading.value = false
-  }
+  try { items.value = await api.trash() }
+  catch (e: any) { notify.error(e) }
+  finally { loading.value = false }
 }
 
 async function restore(item: TrashItem) {
@@ -28,9 +23,7 @@ async function restore(item: TrashItem) {
     await api.restoreTrash(item.id)
     notify.success(`已还原《${item.slug}》`)
     await load()
-  } catch (e: any) {
-    notify.error(e)
-  }
+  } catch (e: any) { notify.error(e) }
 }
 
 async function purge(item: TrashItem) {
@@ -39,9 +32,7 @@ async function purge(item: TrashItem) {
     await api.purgeTrash(item.id)
     notify.success(`已永久删除《${item.slug}》`)
     await load()
-  } catch (e: any) {
-    notify.error(e)
-  }
+  } catch (e: any) { notify.error(e) }
 }
 
 function relDate(iso: string) {
@@ -66,49 +57,47 @@ onMounted(load)
 </script>
 
 <template>
-  <div class="max-w-3xl space-y-4">
+  <div class="max-w-3xl space-y-5">
     <div>
       <h1 class="flex items-center gap-2 font-serif text-lg font-semibold"><Trash2Icon class="h-4 w-4" /> 回收站</h1>
-      <p class="text-sm text-muted-foreground">已删除的文章在 30 天后自动清空</p>
+      <p class="text-xs text-muted-foreground mt-0.5">已删除的文章在 30 天后自动清空</p>
     </div>
 
-    <div v-if="loading" class="text-center py-16 text-muted-foreground">加载中…</div>
+    <div v-if="loading" class="text-center py-20 text-muted-foreground text-sm">加载中…</div>
 
-    <div v-else-if="items.length === 0" class="text-center py-16 text-muted-foreground">
-      <Trash2Icon class="h-8 w-8 mx-auto opacity-30 mb-3" />
-      <p>回收站为空</p>
+    <div v-else-if="items.length === 0" class="text-center py-20 text-muted-foreground">
+      <Trash2Icon class="h-8 w-8 mx-auto opacity-20 mb-3" />
+      <p class="font-serif">回收站为空</p>
     </div>
 
-    <Card v-else>
-      <CardContent class="p-0">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>文章</TableHead>
-              <TableHead>删除时间</TableHead>
-              <TableHead>大小</TableHead>
-              <TableHead class="text-right"></TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            <TableRow v-for="item in items" :key="item.id">
-              <TableCell><span class="font-mono text-sm">{{ item.slug }}</span></TableCell>
-              <TableCell :title="item.deletedAt" class="text-sm text-muted-foreground">{{ relDate(item.deletedAt) }}</TableCell>
-              <TableCell class="text-sm">{{ fmtSize(item.size) }}</TableCell>
-              <TableCell class="text-right">
-                <div class="flex gap-1 justify-end">
-                  <Button variant="ghost" size="sm" @click="restore(item)">
-                    <UndoIcon class="h-3.5 w-3.5 mr-1" /> 还原
-                  </Button>
-                  <Button variant="ghost" size="sm" class="text-destructive hover:text-destructive" @click="purge(item)">
-                    <Trash2Icon class="h-3.5 w-3.5 mr-1" /> 永久删除
-                  </Button>
-                </div>
-              </TableCell>
-            </TableRow>
-          </TableBody>
-        </Table>
-      </CardContent>
-    </Card>
+    <div v-else class="rounded border border-border/60 overflow-hidden">
+      <Table>
+        <TableHeader>
+          <TableRow class="hover:bg-transparent">
+            <TableHead class="text-[10px] uppercase tracking-wider text-muted-foreground/60">文章</TableHead>
+            <TableHead class="text-[10px] uppercase tracking-wider text-muted-foreground/60">删除时间</TableHead>
+            <TableHead class="text-[10px] uppercase tracking-wider text-muted-foreground/60">大小</TableHead>
+            <TableHead class="text-right"></TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          <TableRow v-for="item in items" :key="item.id" class="group hover:bg-muted/30">
+            <TableCell><span class="font-mono text-sm">{{ item.slug }}</span></TableCell>
+            <TableCell :title="item.deletedAt" class="text-sm text-muted-foreground">{{ relDate(item.deletedAt) }}</TableCell>
+            <TableCell class="text-sm text-muted-foreground">{{ fmtSize(item.size) }}</TableCell>
+            <TableCell class="text-right">
+              <div class="flex gap-1 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
+                <Button variant="ghost" size="sm" class="text-xs h-7 text-muted-foreground" @click="restore(item)">
+                  <UndoIcon class="h-3 w-3 mr-1" /> 还原
+                </Button>
+                <Button variant="ghost" size="sm" class="text-xs h-7 text-destructive/60 hover:text-destructive" @click="purge(item)">
+                  <Trash2Icon class="h-3 w-3 mr-1" /> 永久删除
+                </Button>
+              </div>
+            </TableCell>
+          </TableRow>
+        </TableBody>
+      </Table>
+    </div>
   </div>
 </template>

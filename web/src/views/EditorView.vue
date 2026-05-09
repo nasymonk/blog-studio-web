@@ -4,7 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import {
   SaveIcon, SendIcon, EyeIcon, SplitSquareHorizontalIcon, Loader2Icon,
   BoldIcon, ItalicIcon, LinkIcon, ImageIcon, CodeIcon, Heading1Icon,
-  RotateCcwIcon, ListIcon
+  RotateCcwIcon, ListIcon, ChevronDownIcon, ChevronUpIcon
 } from 'lucide-vue-next'
 import { api } from '@/services/api'
 import type { PostDraft } from '@/services/api'
@@ -35,8 +35,8 @@ const loading = ref(true)
 const publishing = ref(false)
 const showPreview = ref(false)
 const draft = ref<PostDraft | null>(null)
-
 const showOutline = ref(true)
+const metaExpanded = ref(false)
 
 const editorContainer = ref<HTMLElement | null>(null)
 const { body, dirty, saving, savedAt, wordCount, mount,
@@ -63,20 +63,14 @@ watch(savedAt, (val) => { store.editor.savedAt = val })
 
 async function loadPost() {
   loading.value = true
-  try {
-    draft.value = await api.post(slug.value)
-  } catch (e: any) {
-    notify.error(e, { onRetry: loadPost })
-  } finally {
-    loading.value = false
-  }
+  try { draft.value = await api.post(slug.value) }
+  catch (e: any) { notify.error(e, { onRetry: loadPost }) }
+  finally { loading.value = false }
 }
 
 onMounted(async () => {
   await loadPost()
-  if (editorContainer.value && draft.value) {
-    mount(editorContainer.value)
-  }
+  if (editorContainer.value && draft.value) mount(editorContainer.value)
 })
 
 watch(editorContainer, (el) => {
@@ -91,9 +85,7 @@ async function saveDraft() {
     store.editor.savedAt = new Date()
     store.editor.dirty = false
     notify.success(t.value.saved)
-  } catch (e: any) {
-    notify.error(e, { onRetry: saveDraft })
-  }
+  } catch (e: any) { notify.error(e, { onRetry: saveDraft }) }
 }
 
 async function publishBlog(confirmOverwrite = false) {
@@ -110,11 +102,8 @@ async function publishBlog(confirmOverwrite = false) {
     notify.success(t.value.publishOk)
     store.editor.dirty = false
     await api.posts().then(p => { store.posts = p })
-  } catch (e: any) {
-    notify.error(e, { onRetry: () => publishBlog(confirmOverwrite) })
-  } finally {
-    publishing.value = false
-  }
+  } catch (e: any) { notify.error(e, { onRetry: () => publishBlog(confirmOverwrite) }) }
+  finally { publishing.value = false }
 }
 
 async function previewPost() {
@@ -124,9 +113,7 @@ async function previewPost() {
     const result = await api.preview(draft.value)
     if (result.error) { notify.error(result.error); return }
     router.push(`/posts/${encodeURIComponent(slug.value)}/preview`)
-  } catch (e: any) {
-    notify.error(e, { onRetry: previewPost })
-  }
+  } catch (e: any) { notify.error(e, { onRetry: previewPost }) }
 }
 
 async function rollback() {
@@ -135,9 +122,7 @@ async function rollback() {
     await api.rollback(slug.value)
     notify.success(t.value.rollbackOk)
     await loadPost()
-  } catch (e: any) {
-    notify.error(e)
-  }
+  } catch (e: any) { notify.error(e) }
 }
 
 function addTag(tag: string) {
@@ -165,6 +150,16 @@ function savedLabel(): string {
 
 const readingTime = computed(() => Math.max(1, Math.round(wordCount.value / 300)))
 
+const metaSummary = computed(() => {
+  if (!draft.value) return ''
+  const parts: string[] = []
+  if (draft.value.frontMatter.date) parts.push(draft.value.frontMatter.date)
+  if (draft.value.frontMatter.tags.length) parts.push(`${draft.value.frontMatter.tags.length} 标签`)
+  if (draft.value.frontMatter.draft) parts.push('草稿')
+  if (draft.value.frontMatter.math) parts.push('数学公式')
+  return parts.join(' · ')
+})
+
 function handleImageUpload() {
   const input = document.createElement('input')
   input.type = 'file'
@@ -175,9 +170,7 @@ function handleImageUpload() {
     try {
       const { name } = await api.uploadAsset(slug.value, file)
       insertText(`![](${name})`)
-    } catch (e: any) {
-      notify.error(e)
-    }
+    } catch (e: any) { notify.error(e) }
   }
   input.click()
 }
@@ -193,117 +186,136 @@ function onTagKeydown(e: KeyboardEvent) {
 </script>
 
 <template>
-  <div class="flex flex-col h-full">
-    <!-- Loading state -->
-    <div v-if="loading" class="flex items-center justify-center py-16">
-      <Loader2Icon class="h-7 w-7 animate-spin text-muted-foreground" />
+  <div class="flex flex-col h-full max-w-5xl">
+    <!-- Loading -->
+    <div v-if="loading" class="flex items-center justify-center py-20">
+      <Loader2Icon class="h-6 w-6 animate-spin text-muted-foreground" />
     </div>
 
     <template v-else-if="draft">
-      <!-- Title input -->
-      <Input
+      <!-- Title -->
+      <input
         v-model="draft.frontMatter.title"
-        class="border-0 shadow-none text-xl font-serif font-semibold focus-visible:ring-0 px-0 h-auto py-2"
+        class="w-full bg-transparent border-0 outline-none font-serif text-2xl font-semibold placeholder:text-muted-foreground/40 py-3 px-0 focus:ring-0"
         :placeholder="t.title"
         @input="store.editor.dirty = true"
       />
 
-      <!-- Meta strip -->
-      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 py-3 border-y border-border">
-        <div class="grid gap-1">
-          <Label class="text-xs text-muted-foreground">{{ t.date }}</Label>
-          <Input v-model="draft.frontMatter.date" type="date" class="h-8 text-sm" @change="store.editor.dirty = true" />
-        </div>
-        <div class="grid gap-1">
-          <Label class="text-xs text-muted-foreground">{{ t.description }}</Label>
-          <Input v-model="draft.frontMatter.description" class="h-8 text-sm" @input="store.editor.dirty = true" />
-        </div>
-        <div class="grid gap-1">
-          <Label class="text-xs text-muted-foreground">{{ t.image }}</Label>
-          <Input v-model="draft.frontMatter.image" class="h-8 text-sm" @input="store.editor.dirty = true" />
-        </div>
-        <div class="grid gap-1">
-          <Label class="text-xs text-muted-foreground">{{ t.tags }}</Label>
-          <div class="flex flex-wrap items-center gap-1 min-h-[32px] rounded-md border border-input bg-transparent px-2 py-1 text-sm">
-            <Badge v-for="tag in draft.frontMatter.tags" :key="tag" variant="secondary" class="cursor-pointer gap-0.5" @click="removeTag(tag)">
-              # {{ tag }} ×
-            </Badge>
-            <input class="flex-1 min-w-[60px] bg-transparent outline-none text-sm placeholder:text-muted-foreground" placeholder="添加…" @keydown="onTagKeydown" />
+      <!-- Meta strip: collapsed summary / expanded form -->
+      <div class="border-y border-border/60">
+        <!-- Collapsed view -->
+        <button
+          v-if="!metaExpanded"
+          class="flex items-center gap-2 w-full py-2 text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer text-left"
+          @click="metaExpanded = true"
+        >
+          <span v-if="metaSummary">{{ metaSummary }}</span>
+          <span v-else class="opacity-50">点击编辑元信息…</span>
+          <ChevronDownIcon class="h-3 w-3 ml-auto opacity-40" />
+        </button>
+
+        <!-- Expanded view -->
+        <div v-else class="py-3 space-y-3 animate-fade-in">
+          <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+            <div class="grid gap-1">
+              <Label class="text-[10px] uppercase tracking-wider text-muted-foreground/70">{{ t.date }}</Label>
+              <Input v-model="draft.frontMatter.date" type="date" class="h-8 text-sm" @change="store.editor.dirty = true" />
+            </div>
+            <div class="grid gap-1">
+              <Label class="text-[10px] uppercase tracking-wider text-muted-foreground/70">{{ t.description }}</Label>
+              <Input v-model="draft.frontMatter.description" class="h-8 text-sm" @input="store.editor.dirty = true" />
+            </div>
+            <div class="grid gap-1">
+              <Label class="text-[10px] uppercase tracking-wider text-muted-foreground/70">{{ t.image }}</Label>
+              <Input v-model="draft.frontMatter.image" class="h-8 text-sm" @input="store.editor.dirty = true" />
+            </div>
+            <div class="grid gap-1">
+              <Label class="text-[10px] uppercase tracking-wider text-muted-foreground/70">{{ t.tags }}</Label>
+              <div class="flex flex-wrap items-center gap-1 min-h-[32px] rounded border border-input bg-transparent px-2 py-1 text-sm">
+                <Badge v-for="tag in draft.frontMatter.tags" :key="tag" variant="secondary" class="font-deco text-[11px] cursor-pointer gap-0.5" @click="removeTag(tag)">
+                  # {{ tag }} ×
+                </Badge>
+                <input class="flex-1 min-w-[50px] bg-transparent outline-none text-sm placeholder:text-muted-foreground" placeholder="添加…" @keydown="onTagKeydown" />
+              </div>
+            </div>
+            <div class="grid gap-1">
+              <Label class="text-[10px] uppercase tracking-wider text-muted-foreground/70">Slug</Label>
+              <Input :model-value="draft.slug" disabled class="h-8 text-sm text-muted-foreground" />
+            </div>
+            <div class="flex items-end gap-3 pb-0.5">
+              <label class="flex items-center gap-1.5 text-xs cursor-pointer text-muted-foreground">
+                <Checkbox :checked="draft.frontMatter.draft" @update:checked="(v: boolean) => { draft!.frontMatter.draft = v; store.editor.dirty = true }" />
+                <span>{{ t.draft }}</span>
+              </label>
+              <label class="flex items-center gap-1.5 text-xs cursor-pointer text-muted-foreground">
+                <Checkbox :checked="draft.frontMatter.math" @update:checked="(v: boolean) => { draft!.frontMatter.math = v; store.editor.dirty = true }" />
+                <span>{{ t.math }}</span>
+              </label>
+            </div>
           </div>
-        </div>
-        <div class="grid gap-1">
-          <Label class="text-xs text-muted-foreground">Slug</Label>
-          <Input :model-value="draft.slug" disabled class="h-8 text-sm text-muted-foreground" />
-        </div>
-        <div class="flex items-end gap-3 pb-0.5">
-          <label class="flex items-center gap-1.5 text-sm cursor-pointer">
-            <Checkbox :checked="draft.frontMatter.draft" @update:checked="(v: boolean) => { draft!.frontMatter.draft = v; store.editor.dirty = true }" />
-            <span>{{ t.draft }}</span>
-          </label>
-          <label class="flex items-center gap-1.5 text-sm cursor-pointer">
-            <Checkbox :checked="draft.frontMatter.math" @update:checked="(v: boolean) => { draft!.frontMatter.math = v; store.editor.dirty = true }" />
-            <span>{{ t.math }}</span>
-          </label>
+          <button class="text-[10px] text-muted-foreground/50 hover:text-muted-foreground transition-colors flex items-center gap-1 cursor-pointer" @click="metaExpanded = false">
+            <ChevronUpIcon class="h-3 w-3" /> 收起
+          </button>
         </div>
       </div>
 
-      <!-- Markdown toolbar -->
-      <div class="flex items-center gap-0.5 py-1.5">
-        <Button variant="ghost" size="icon" class="h-7 w-7" title="加粗 (⌘B)" @click="execBold"><BoldIcon class="h-3.5 w-3.5" /></Button>
-        <Button variant="ghost" size="icon" class="h-7 w-7" title="斜体 (⌘I)" @click="execItalic"><ItalicIcon class="h-3.5 w-3.5" /></Button>
-        <Button variant="ghost" size="icon" class="h-7 w-7" title="链接 (⌘K)" @click="execLink"><LinkIcon class="h-3.5 w-3.5" /></Button>
-        <Button variant="ghost" size="icon" class="h-7 w-7" title="插入图片" @click="handleImageUpload"><ImageIcon class="h-3.5 w-3.5" /></Button>
-        <Button variant="ghost" size="icon" class="h-7 w-7" title="行内代码" @click="execCode"><CodeIcon class="h-3.5 w-3.5" /></Button>
-        <Button variant="ghost" size="icon" class="h-7 w-7" title="标题" @click="execHeading"><Heading1Icon class="h-3.5 w-3.5" /></Button>
-        <Separator orientation="vertical" class="mx-1 h-5" />
-        <Button variant="ghost" size="icon" class="h-7 w-7" :class="{ 'bg-muted': showPreview }" :title="t.splitPreview" @click="showPreview = !showPreview">
+      <!-- Toolbar -->
+      <div class="flex items-center gap-1 py-2">
+        <Button variant="ghost" size="icon" class="h-7 w-7 text-muted-foreground hover:text-foreground" title="加粗 (⌘B)" @click="execBold"><BoldIcon class="h-3.5 w-3.5" /></Button>
+        <Button variant="ghost" size="icon" class="h-7 w-7 text-muted-foreground hover:text-foreground" title="斜体 (⌘I)" @click="execItalic"><ItalicIcon class="h-3.5 w-3.5" /></Button>
+        <Button variant="ghost" size="icon" class="h-7 w-7 text-muted-foreground hover:text-foreground" title="链接 (⌘K)" @click="execLink"><LinkIcon class="h-3.5 w-3.5" /></Button>
+        <Button variant="ghost" size="icon" class="h-7 w-7 text-muted-foreground hover:text-foreground" title="插入图片" @click="handleImageUpload"><ImageIcon class="h-3.5 w-3.5" /></Button>
+        <Button variant="ghost" size="icon" class="h-7 w-7 text-muted-foreground hover:text-foreground" title="行内代码" @click="execCode"><CodeIcon class="h-3.5 w-3.5" /></Button>
+        <Button variant="ghost" size="icon" class="h-7 w-7 text-muted-foreground hover:text-foreground" title="标题" @click="execHeading"><Heading1Icon class="h-3.5 w-3.5" /></Button>
+        <Separator orientation="vertical" class="mx-1 h-4" />
+        <Button variant="ghost" size="icon" class="h-7 w-7" :class="showPreview ? 'bg-accent/10 text-accent' : 'text-muted-foreground'" :title="t.splitPreview" @click="showPreview = !showPreview">
           <SplitSquareHorizontalIcon class="h-3.5 w-3.5" />
         </Button>
-        <Button variant="ghost" size="icon" class="h-7 w-7" :class="{ 'bg-muted': showOutline }" title="大纲" @click="showOutline = !showOutline">
+        <Button variant="ghost" size="icon" class="h-7 w-7" :class="showOutline ? 'bg-accent/10 text-accent' : 'text-muted-foreground'" title="大纲" @click="showOutline = !showOutline">
           <ListIcon class="h-3.5 w-3.5" />
         </Button>
         <div class="flex-1" />
-        <Button variant="ghost" size="sm" class="text-destructive hover:text-destructive h-7" :title="t.rollback" @click="rollback">
-          <RotateCcwIcon class="h-3.5 w-3.5 mr-1" />{{ t.rollback }}
+        <Button variant="ghost" size="sm" class="text-xs h-7 text-destructive/60 hover:text-destructive" :title="t.rollback" @click="rollback">
+          <RotateCcwIcon class="h-3 w-3 mr-1" />{{ t.rollback }}
         </Button>
       </div>
 
-      <!-- Editor + preview body -->
-      <div class="flex flex-1 min-h-0 overflow-hidden">
-        <div class="flex-1 overflow-auto">
+      <!-- Editor body -->
+      <div class="flex flex-1 min-h-0 overflow-hidden rounded border border-border/60">
+        <div class="flex-1 overflow-auto p-6">
           <div ref="editorContainer" class="h-full" />
         </div>
-        <div v-if="showPreview" class="flex-1 overflow-auto border-l border-border bg-background">
+        <div v-if="showPreview" class="flex-1 overflow-auto border-l-2 border-accent/30 bg-card p-6">
           <MarkdownPreview :source="body" />
         </div>
         <EditorOutline v-if="showOutline" :body="body" :on-jump="goToLine" />
       </div>
 
       <!-- Status bar -->
-      <div class="flex items-center gap-2 py-1.5 text-xs text-muted-foreground border-t border-border">
+      <div class="flex items-center gap-2 py-2 text-[11px] text-muted-foreground/70">
         <span>{{ wordCount }} {{ t.wordCount }}</span>
-        <span class="text-border">·</span>
+        <span class="text-border/40">·</span>
         <span>{{ readingTime }} {{ t.readingTime }}</span>
-        <span class="text-border">·</span>
+        <span class="text-border/40">·</span>
         <span :class="{ 'text-destructive': dirty, 'text-ok': !dirty }">{{ savedLabel() }}</span>
         <div class="flex-1" />
-        <Button size="sm" variant="outline" class="h-7 text-xs" :disabled="!dirty" @click="saveDraft">
+        <Button size="sm" variant="ghost" class="h-7 text-xs text-muted-foreground" :disabled="!dirty" @click="saveDraft">
           <SaveIcon class="h-3 w-3 mr-1" />{{ t.saveDraft }}
         </Button>
-        <Button variant="ghost" size="sm" class="h-7 text-xs" :title="t.preview" @click="previewPost">
+        <Button variant="ghost" size="icon" class="h-7 w-7 text-muted-foreground" :title="t.preview" @click="previewPost">
           <EyeIcon class="h-3 w-3" />
         </Button>
-        <Button size="sm" class="h-7 text-xs" :disabled="publishing" @click="publishBlog()">
+        <Button size="sm" class="h-7 text-xs rounded-full px-4" :disabled="publishing" @click="publishBlog()">
           <Loader2Icon v-if="publishing" class="h-3 w-3 animate-spin mr-1" />
           <SendIcon v-else class="h-3 w-3 mr-1" />{{ t.publish }}
         </Button>
       </div>
     </template>
 
-    <!-- Error / not found state -->
-    <div v-else class="text-center py-16 space-y-3">
+    <!-- Error -->
+    <div v-else class="text-center py-20 space-y-3">
       <p class="text-muted-foreground">文章加载失败</p>
-      <Button @click="loadPost">{{ t.retry }}</Button>
+      <Button class="rounded-full px-5" @click="loadPost">{{ t.retry }}</Button>
     </div>
   </div>
 </template>

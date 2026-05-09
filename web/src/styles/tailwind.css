@@ -9,7 +9,9 @@
   --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
   --font-serif: "STZhongsong", "华文中宋", Georgia, serif;
   --font-deco: "STKaiti", "华文楷体", Georgia, serif;
+  --font-display: "STXingkai", "华文行楷", "STKaiti", cursive;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --font-heading: var(--font-serif);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -53,11 +55,10 @@
   --color-link: var(--link);
   --color-link-bg: var(--link-bg);
   --color-hover: var(--hover);
-  --font-heading: var(--font-sans);
 }
 
 :root {
-  --radius: 0.625rem;
+  --radius: 0.375rem;
   --background: #fdfcf8;
   --foreground: #1e1c18;
   --card: #fffefa;
@@ -141,12 +142,40 @@
   --hover: rgba(157, 194, 214, 0.09);
 }
 
+/* Animations */
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes ink-breathe {
+  0%, 100% { transform: scale(1); opacity: 0.9; }
+  50% { transform: scale(1.02); opacity: 1; }
+}
+
+@keyframes slide-indicator {
+  from { transform: scaleY(0); }
+  to { transform: scaleY(1); }
+}
+
 @layer base {
   body {
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     @apply bg-background text-foreground;
+    /* Subtle paper texture */
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4'%3E%3Crect width='4' height='4' fill='%23fdfcf8'/%3E%3Crect width='1' height='1' fill='%23f0ede5' opacity='0.3'/%3E%3C/svg%3E");
+    background-size: 4px 4px;
+  }
+
+  .dark body {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4'%3E%3Crect width='4' height='4' fill='%2317181a'/%3E%3Crect width='1' height='1' fill='%23222428' opacity='0.4'/%3E%3C/svg%3E");
   }
 
   h1, h2, h3, h4 {
@@ -172,3 +201,29 @@
     }
   }
 }
+
+/* Utility animation classes */
+.animate-fade-up {
+  animation: fade-up 0.4s ease-out both;
+}
+
+.animate-fade-in {
+  animation: fade-in 0.3s ease-out both;
+}
+
+.animate-ink-breathe {
+  animation: ink-breathe 4s ease-in-out infinite;
+}
+
+/* Stagger delays for list items */
+.stagger > *:nth-child(1) { animation-delay: 0ms; }
+.stagger > *:nth-child(2) { animation-delay: 30ms; }
+.stagger > *:nth-child(3) { animation-delay: 60ms; }
+.stagger > *:nth-child(4) { animation-delay: 90ms; }
+.stagger > *:nth-child(5) { animation-delay: 120ms; }
+.stagger > *:nth-child(6) { animation-delay: 150ms; }
+.stagger > *:nth-child(7) { animation-delay: 180ms; }
+.stagger > *:nth-child(8) { animation-delay: 210ms; }
+.stagger > *:nth-child(9) { animation-delay: 240ms; }
+.stagger > *:nth-child(10) { animation-delay: 270ms; }
+.stagger > *:nth-child(n+11) { animation-delay: 300ms; }

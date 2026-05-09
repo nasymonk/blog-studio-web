@@ -40,20 +40,20 @@ async function save() {
 </script>
 
 <template>
-  <div v-if="cfg" class="max-w-2xl space-y-4">
+  <div v-if="cfg" class="space-y-4">
     <Card>
-      <CardHeader><CardTitle class="font-serif">{{ t.writingSettings }}</CardTitle></CardHeader>
+      <CardHeader><CardTitle class="font-serif text-base">{{ t.writingSettings }}</CardTitle></CardHeader>
       <CardContent class="grid gap-4 sm:grid-cols-2">
         <div class="grid gap-1.5 sm:col-span-2">
-          <Label>{{ t.blogRoot }}</Label>
+          <Label class="text-[10px] uppercase tracking-wider text-muted-foreground/70">{{ t.blogRoot }}</Label>
           <Input v-model="cfg.site.blogRoot" @input="dirty=true" />
         </div>
         <div class="grid gap-1.5">
-          <Label>{{ t.postSection }}</Label>
+          <Label class="text-[10px] uppercase tracking-wider text-muted-foreground/70">{{ t.postSection }}</Label>
           <Input v-model="cfg.site.postSection" @input="dirty=true" />
         </div>
         <div class="grid gap-1.5">
-          <Label>{{ t.buildCommand }}</Label>
+          <Label class="text-[10px] uppercase tracking-wider text-muted-foreground/70">{{ t.buildCommand }}</Label>
           <Select v-model="cfg.site.buildCommand" @update:model-value="dirty=true">
             <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>
@@ -65,10 +65,10 @@ async function save() {
       </CardContent>
     </Card>
     <div>
-      <Button :disabled="saving || !dirty" @click="save">
-        <SaveIcon class="h-4 w-4 mr-1" />{{ saving ? t.saving : t.saveSettings }}
+      <Button class="rounded-full px-5" :disabled="saving || !dirty" @click="save">
+        <SaveIcon class="h-4 w-4 mr-1.5" />{{ saving ? t.saving : t.saveSettings }}
       </Button>
     </div>
   </div>
-  <Skeleton v-else class="h-[200px] max-w-2xl" />
+  <Skeleton v-else class="h-[200px] max-w-3xl" />
 </template>

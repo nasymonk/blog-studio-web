@@ -5,9 +5,7 @@ import { api } from '@/services/api'
 import { useI18n } from '@/i18n'
 import { useNotify } from '@/composables/useNotify'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card'
 
 const { t } = useI18n()
@@ -26,11 +24,8 @@ onMounted(async () => {
     const data = await api.getSite()
     description.value = data.description || ''
     profileImage.value = data.profileImage || ''
-  } catch (e: any) {
-    notify.error(e)
-  } finally {
-    loading.value = false
-  }
+  } catch (e: any) { notify.error(e) }
+  finally { loading.value = false }
 })
 
 async function save() {
@@ -38,11 +33,8 @@ async function save() {
   try {
     await api.saveSite({ description: description.value, profileImage: profileImage.value })
     notify.success(t.value.saveHomepage)
-  } catch (e: any) {
-    notify.error(e)
-  } finally {
-    saving.value = false
-  }
+  } catch (e: any) { notify.error(e) }
+  finally { saving.value = false }
 }
 
 async function onAvatarSelect(e: Event) {
@@ -53,11 +45,8 @@ async function onAvatarSelect(e: Event) {
     const result = await api.uploadAvatar(file)
     profileImage.value = result.path
     notify.success(t.value.uploadAvatar)
-  } catch (e: any) {
-    notify.error(e)
-  } finally {
-    uploadingAvatar.value = false
-  }
+  } catch (e: any) { notify.error(e) }
+  finally { uploadingAvatar.value = false }
 }
 </script>
 
@@ -66,19 +55,19 @@ async function onAvatarSelect(e: Event) {
     <Card>
       <CardHeader><CardTitle class="font-serif">{{ t.avatar }}</CardTitle></CardHeader>
       <CardContent>
-        <div class="flex items-center gap-4">
-          <div class="h-16 w-16 rounded-full bg-muted flex items-center justify-center overflow-hidden shrink-0">
+        <div class="flex items-center gap-5">
+          <div class="h-20 w-20 rounded-full bg-muted flex items-center justify-center overflow-hidden shrink-0 border-2 border-border/40">
             <img v-if="profileImage" :src="profileImage" class="h-full w-full object-cover" alt="avatar" />
-            <span v-else class="text-2xl">🌿</span>
+            <span v-else class="text-3xl">🌿</span>
           </div>
-          <div class="space-y-1">
-            <label class="cursor-pointer">
-              <Input ref="avatarFileInput" type="file" accept="image/*" class="hidden" @change="onAvatarSelect" />
-              <Button variant="outline" size="sm" as-child>
-                <span><UploadIcon class="h-3.5 w-3.5 mr-1" />{{ uploadingAvatar ? t.loading : t.uploadAvatar }}</span>
+          <div class="space-y-1.5">
+            <label class="cursor-pointer inline-block">
+              <input ref="avatarFileInput" type="file" accept="image/*" class="hidden" @change="onAvatarSelect" />
+              <Button variant="outline" size="sm" class="rounded-full" as-child>
+                <span><UploadIcon class="h-3.5 w-3.5 mr-1.5" />{{ uploadingAvatar ? t.loading : t.uploadAvatar }}</span>
               </Button>
             </label>
-            <p class="text-xs text-muted-foreground">jpg、png、gif、webp</p>
+            <p class="text-[11px] text-muted-foreground/60">jpg、png、gif、webp</p>
           </div>
         </div>
       </CardContent>
@@ -88,13 +77,18 @@ async function onAvatarSelect(e: Event) {
       <CardHeader><CardTitle class="font-serif">{{ t.tagline }}</CardTitle></CardHeader>
       <CardContent>
         <div class="grid gap-1.5">
-          <Label>{{ t.tagline }}</Label>
-          <Textarea v-model="description" rows="3" placeholder="野有蔓草…" />
+          <Label class="text-xs text-muted-foreground/70">{{ t.tagline }}</Label>
+          <textarea
+            v-model="description"
+            class="font-deco w-full rounded border border-input bg-transparent px-3 py-2 text-sm placeholder:text-muted-foreground/40 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent min-h-[80px] resize-y"
+            rows="3"
+            placeholder="野有蔓草…"
+          />
         </div>
       </CardContent>
       <CardFooter>
-        <Button :disabled="saving || loading" @click="save">
-          <SaveIcon class="h-4 w-4 mr-1" />{{ saving ? t.saving : t.saveHomepage }}
+        <Button class="rounded-full px-5" :disabled="saving || loading" @click="save">
+          <SaveIcon class="h-4 w-4 mr-1.5" />{{ saving ? t.saving : t.saveHomepage }}
         </Button>
       </CardFooter>
     </Card>

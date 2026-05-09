@@ -40,11 +40,8 @@ onMounted(async () => {
         parent: editorEl.value
       })
     }
-  } catch (e: any) {
-    notify.error(e)
-  } finally {
-    loading.value = false
-  }
+  } catch (e: any) { notify.error(e) }
+  finally { loading.value = false }
 })
 
 onBeforeUnmount(() => { view?.destroy() })
@@ -56,21 +53,18 @@ async function save() {
   try {
     await api.saveNowPage(raw)
     notify.success(t.value.saveNow)
-  } catch (e: any) {
-    notify.error(e)
-  } finally {
-    saving.value = false
-  }
+  } catch (e: any) { notify.error(e) }
+  finally { saving.value = false }
 }
 </script>
 
 <template>
-  <div class="flex flex-col h-full">
-    <p class="text-sm text-muted-foreground mb-2">{{ t.now }} · Markdown</p>
-    <div ref="editorEl" class="flex-1 overflow-auto rounded-lg border border-border" />
-    <div class="py-3 flex gap-2">
-      <Button :disabled="saving || loading" @click="save">
-        <SaveIcon class="h-4 w-4 mr-1" />{{ saving ? t.saving : t.saveNow }}
+  <div class="flex flex-col h-full max-w-3xl">
+    <p class="font-deco text-sm text-muted-foreground mb-3">{{ t.now }} · Markdown</p>
+    <div ref="editorEl" class="flex-1 overflow-auto rounded border border-accent/20" />
+    <div class="py-4 flex justify-center">
+      <Button class="rounded-full px-6" :disabled="saving || loading" @click="save">
+        <SaveIcon class="h-4 w-4 mr-1.5" />{{ saving ? t.saving : t.saveNow }}
       </Button>
     </div>
   </div>

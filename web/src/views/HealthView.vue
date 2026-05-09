@@ -6,7 +6,6 @@ import { useI18n } from '@/i18n'
 import { useNotify } from '@/composables/useNotify'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 
 const { t } = useI18n()
@@ -17,48 +16,49 @@ const health = ref<{ status: string; checks: Array<{ name: string; status: strin
 
 async function load() {
   loading.value = true
-  try {
-    health.value = await api.health()
-  } catch (e: any) {
-    notify.error(e, { onRetry: load })
-  } finally {
-    loading.value = false
-  }
+  try { health.value = await api.health() }
+  catch (e: any) { notify.error(e, { onRetry: load }) }
+  finally { loading.value = false }
 }
 
 onMounted(load)
 </script>
 
 <template>
-  <div class="max-w-3xl space-y-4">
+  <div class="max-w-2xl space-y-5">
     <div class="flex items-center gap-2">
       <h2 class="font-serif text-lg font-semibold m-0">{{ t.health }}</h2>
-      <Button variant="ghost" size="icon" class="h-7 w-7" :disabled="loading" :title="t.loading" @click="load">
+      <Button variant="ghost" size="icon" class="h-7 w-7 text-muted-foreground" :disabled="loading" @click="load">
         <RefreshCwIcon class="h-3.5 w-3.5" :class="{ 'animate-spin': loading }" />
       </Button>
-      <Badge v-if="health" :variant="health.status === 'ok' ? 'default' : 'destructive'">
+      <Badge v-if="health" :variant="health.status === 'ok' ? 'default' : 'destructive'" class="text-[10px]">
         {{ health.status }}
       </Badge>
     </div>
 
-    <div class="grid gap-3">
-      <template v-if="loading">
-        <Skeleton v-for="i in 3" :key="i" class="h-[72px] rounded-lg" />
-      </template>
-      <template v-else-if="health">
-        <Card v-for="check in health.checks" :key="check.name">
-          <CardContent class="py-3 px-4 space-y-1">
-            <div class="flex items-center gap-2">
-              <CheckCircleIcon v-if="check.status === 'ok'" class="h-4 w-4 text-ok" />
-              <XCircleIcon v-else class="h-4 w-4 text-destructive" />
-              <span class="text-sm font-medium">{{ check.name }}</span>
-            </div>
-            <p class="text-sm text-muted-foreground">{{ check.message }}</p>
-            <p v-if="check.technicalDetail" class="text-xs font-mono text-muted-foreground/70">{{ check.technicalDetail }}</p>
-            <p v-if="check.suggestion && check.status !== 'ok'" class="text-xs text-warn">建议：{{ check.suggestion }}</p>
-          </CardContent>
-        </Card>
-      </template>
+    <div v-if="loading" class="space-y-3">
+      <Skeleton v-for="i in 3" :key="i" class="h-[72px] animate-fade-up" style="animation-delay: calc(var(--i, 0) * 30ms)" />
+    </div>
+
+    <div v-else-if="health" class="space-y-2 stagger">
+      <div
+        v-for="check in health.checks"
+        :key="check.name"
+        class="relative flex items-start gap-3 rounded border border-border/60 bg-card px-4 py-3 animate-fade-up"
+      >
+        <!-- Status bar -->
+        <div class="absolute left-0 top-2 bottom-2 w-0.5 rounded-full" :class="check.status === 'ok' ? 'bg-ok' : 'bg-destructive'" />
+        <div class="pl-2 space-y-1 min-w-0">
+          <div class="flex items-center gap-2">
+            <CheckCircleIcon v-if="check.status === 'ok'" class="h-4 w-4 text-ok shrink-0" />
+            <XCircleIcon v-else class="h-4 w-4 text-destructive shrink-0" />
+            <span class="text-sm font-medium">{{ check.name }}</span>
+          </div>
+          <p class="text-sm text-muted-foreground">{{ check.message }}</p>
+          <p v-if="check.technicalDetail" class="text-[11px] font-mono text-muted-foreground/60">{{ check.technicalDetail }}</p>
+          <p v-if="check.suggestion && check.status !== 'ok'" class="text-xs text-warn">建议：{{ check.suggestion }}</p>
+        </div>
+      </div>
     </div>
   </div>
 </template>

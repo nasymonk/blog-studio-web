@@ -34,9 +34,7 @@ async function save() {
   saving.value = true
   try {
     const saved = await api.saveConfig(cfg.value)
-    store.config = saved
-    cfg.value = saved
-    dirty.value = false
+    store.config = saved; cfg.value = saved; dirty.value = false
     notify.success(t.value.saveSettings)
   } catch (e: any) { notify.error(e) }
   finally { saving.value = false }
@@ -51,35 +49,35 @@ function validate(): string {
 </script>
 
 <template>
-  <div v-if="cfg" class="max-w-2xl space-y-4">
+  <div v-if="cfg" class="space-y-4">
     <Card>
-      <CardHeader><CardTitle class="font-serif">{{ t.generalSettings }}</CardTitle></CardHeader>
+      <CardHeader><CardTitle class="font-serif text-base">{{ t.generalSettings }}</CardTitle></CardHeader>
       <CardContent class="grid gap-4 sm:grid-cols-2">
         <div class="grid gap-1.5">
-          <Label>{{ t.siteId }}</Label>
+          <Label class="text-[10px] uppercase tracking-wider text-muted-foreground/70">{{ t.siteId }}</Label>
           <Input v-model="cfg.site.id" @input="dirty=true" />
         </div>
         <div class="grid gap-1.5">
-          <Label>{{ t.siteName }}</Label>
+          <Label class="text-[10px] uppercase tracking-wider text-muted-foreground/70">{{ t.siteName }}</Label>
           <Input v-model="cfg.site.name" @input="dirty=true" />
         </div>
         <div class="grid gap-1.5 sm:col-span-2">
-          <Label>{{ t.basePath }}</Label>
+          <Label class="text-[10px] uppercase tracking-wider text-muted-foreground/70">{{ t.basePath }}</Label>
           <Input v-model="cfg.basePath" @input="dirty=true" />
-          <p class="text-xs text-muted-foreground">例：/studio</p>
+          <p class="text-[11px] text-muted-foreground/50">例：/studio</p>
         </div>
       </CardContent>
     </Card>
 
     <Card>
-      <CardHeader><CardTitle class="font-serif">预览</CardTitle></CardHeader>
+      <CardHeader><CardTitle class="font-serif text-base">预览</CardTitle></CardHeader>
       <CardContent class="grid gap-4 sm:grid-cols-2">
         <div class="grid gap-1.5">
-          <Label>{{ t.previewTTL }}</Label>
+          <Label class="text-[10px] uppercase tracking-wider text-muted-foreground/70">{{ t.previewTTL }}</Label>
           <Input v-model.number="cfg.preview.ttlMinutes" type="number" min="10" @input="dirty=true" />
         </div>
         <div class="grid gap-1.5">
-          <Label>{{ t.maxUploadMb }}</Label>
+          <Label class="text-[10px] uppercase tracking-wider text-muted-foreground/70">{{ t.maxUploadMb }}</Label>
           <Input type="number" min="1" :model-value="Math.round(cfg.maxUploadBytes / 1024 / 1024)"
             @update:model-value="(v: string | number) => { cfg!.maxUploadBytes = Number(v) * 1024 * 1024; dirty=true }" />
         </div>
@@ -87,10 +85,10 @@ function validate(): string {
     </Card>
 
     <div>
-      <Button :disabled="saving || !dirty" @click="save">
-        <SaveIcon class="h-4 w-4 mr-1" />{{ saving ? t.saving : t.saveSettings }}
+      <Button class="rounded-full px-5" :disabled="saving || !dirty" @click="save">
+        <SaveIcon class="h-4 w-4 mr-1.5" />{{ saving ? t.saving : t.saveSettings }}
       </Button>
     </div>
   </div>
-  <Skeleton v-else class="h-[300px] max-w-2xl" />
+  <Skeleton v-else class="h-[300px] max-w-3xl" />
 </template>

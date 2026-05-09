@@ -14,17 +14,22 @@ const tabs = [
 </script>
 
 <template>
-  <div class="flex flex-col gap-6">
-    <nav class="flex gap-1 border-b border-border" role="tablist">
+  <div class="flex flex-col gap-6 max-w-3xl">
+    <nav class="flex gap-1 border-b border-border/60" role="tablist">
       <RouterLink
         v-for="tab in tabs"
         :key="tab.to"
         :to="tab.to"
         role="tab"
-        class="px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors -mb-px border-b-2 border-transparent"
-        :class="{ 'border-primary text-foreground': route.path === tab.to }"
+        class="relative px-3 py-2.5 text-sm text-muted-foreground transition-colors -mb-px"
+        :class="route.path === tab.to ? 'text-foreground font-medium' : 'hover:text-foreground'"
       >
         {{ tab.label() }}
+        <!-- Active underline -->
+        <div
+          v-if="route.path === tab.to"
+          class="absolute bottom-0 left-2 right-2 h-0.5 bg-accent rounded-full animate-fade-in"
+        />
       </RouterLink>
     </nav>
     <RouterView />
