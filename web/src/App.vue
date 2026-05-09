@@ -113,7 +113,7 @@ onMounted(async () => {
       <RouterView />
     </div>
 
-    <div v-else class="flex min-h-svh">
+    <div v-else class="flex h-svh overflow-hidden">
       <!-- Sidebar -->
       <aside class="w-[240px] shrink-0 border-r border-border bg-sidebar flex flex-col" aria-label="主导航">
         <!-- Brand -->
