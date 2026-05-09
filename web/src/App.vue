@@ -41,7 +41,7 @@ const pageTitle = computed(() => {
   if (name === 'editor') return store.editor.dirty ? `● ${t.value.edit}` : t.value.edit
   if (name === 'home') return t.value.home
   if (name === 'now') return t.value.now
-  if (name === 'settings') return t.value.settings
+  if (name === 'settings' || name?.startsWith('settings-')) return t.value.settings
   if (name === 'health') return t.value.health
   return 'Blog Studio'
 })
@@ -187,7 +187,7 @@ onMounted(async () => {
         <button class="btn btn-ghost btn-sm" aria-label="关闭提示" @click="store.banner = null">✕</button>
       </div>
 
-      <main id="main-content" class="stage-content" tabindex="-1">
+      <main id="main-content" class="page-content" tabindex="-1">
         <RouterView />
       </main>
     </div>

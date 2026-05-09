@@ -15,7 +15,7 @@ const router = createRouter({
       path: '/settings',
       component: () => import('@/views/settings/SettingsLayout.vue'),
       children: [
-        { path: '', redirect: 'general' },
+        { path: '', redirect: { name: 'settings-general' } },
         { name: 'settings-general', path: 'general', component: () => import('@/views/settings/GeneralTab.vue') },
         { name: 'settings-writing', path: 'writing', component: () => import('@/views/settings/WritingTab.vue') },
         { name: 'settings-wechat', path: 'wechat', component: () => import('@/views/settings/WechatTab.vue') },
