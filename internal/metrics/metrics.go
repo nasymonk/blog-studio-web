@@ -16,7 +16,7 @@ var (
 	HTTPDuration = prometheus.NewHistogramVec(prometheus.HistogramOpts{
 		Name:    "http_request_duration_seconds",
 		Help:    "HTTP request latency.",
-		Buckets: append(prometheus.DefBuckets, 0.5, 1.0, 2.0, 5.0),
+		Buckets: prometheus.DefBuckets,
 	}, []string{"method", "path"})
 
 	HugoDuration = prometheus.NewHistogramVec(prometheus.HistogramOpts{
