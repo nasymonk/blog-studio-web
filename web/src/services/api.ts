@@ -133,7 +133,6 @@ export const api = {
   post: (slug: string) => request<PostDraft>(`/posts/${encodeURIComponent(slug)}`),
   saveDraft: (draft: PostDraft) => request<{ saved: boolean }>(`/posts/${encodeURIComponent(draft.slug)}/draft`, { method: 'PUT', body: JSON.stringify(draft) }),
   publishBlog: (draft: PostDraft, confirmOverwrite = false, signal?: AbortSignal) => request<PublishResult>(`/posts/${encodeURIComponent(draft.slug)}/publish/blog`, { method: 'POST', body: JSON.stringify({ slug: draft.slug, draft, confirmOverwrite }) }, signal),
-  publishWechat: (draft: PostDraft, signal?: AbortSignal) => request<PublishResult>(`/posts/${encodeURIComponent(draft.slug)}/publish/wechat-draft`, { method: 'POST', body: JSON.stringify(draft) }, signal),
   preview: (draft: PostDraft, signal?: AbortSignal) => request<PreviewResult>(`/posts/${encodeURIComponent(draft.slug)}/preview`, { method: 'POST', body: JSON.stringify(draft) }, signal),
   rollback: (slug: string) => request<PublishResult>(`/posts/${encodeURIComponent(slug)}/rollback`, { method: 'POST' }),
   uploadAsset: (slug: string, file: File) => {

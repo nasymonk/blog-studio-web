@@ -8,7 +8,7 @@ const dict = {
     edit: '编辑',
     preview: '预览',
     publish: '发布博客',
-    publishWechat: '发微信草稿',
+
     rollback: '回滚',
     saveDraft: '保存草稿',
     settings: '设置',
@@ -57,7 +57,6 @@ const dict = {
     assetUpload: '上传图片',
     generalSettings: '基本设置',
     writingSettings: '写作设置',
-    wechatSettings: '微信公众号',
     securitySettings: '安全',
     auditLog: '审计日志',
     saveSettings: '保存设置',
@@ -100,8 +99,7 @@ const dict = {
     basePath: 'Base Path',
     previewTTL: '预览有效期（分钟）',
     maxUploadMb: '最大上传（MB）',
-    wechatEnabled: '启用微信公众号',
-    wechatAppId: 'AppID',
+
     large: '大文件',
     sync: '同步文章',
     theme: '切换主题',
@@ -112,7 +110,7 @@ const dict = {
     edit: 'Edit',
     preview: 'Preview',
     publish: 'Publish',
-    publishWechat: 'WeChat Draft',
+
     rollback: 'Rollback',
     saveDraft: 'Save Draft',
     settings: 'Settings',
@@ -161,7 +159,7 @@ const dict = {
     assetUpload: 'Upload Image',
     generalSettings: 'General',
     writingSettings: 'Writing',
-    wechatSettings: 'WeChat',
+
     securitySettings: 'Security',
     auditLog: 'Audit Log',
     saveSettings: 'Save Settings',
@@ -204,8 +202,7 @@ const dict = {
     basePath: 'Base Path',
     previewTTL: 'Preview TTL (minutes)',
     maxUploadMb: 'Max Upload (MB)',
-    wechatEnabled: 'Enable WeChat',
-    wechatAppId: 'AppID',
+
     large: 'Large file',
     sync: 'Sync Posts',
     theme: 'Toggle Theme',

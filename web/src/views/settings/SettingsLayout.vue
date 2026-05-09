@@ -7,7 +7,6 @@ const { t } = useI18n()
 const tabs = [
   { to: '/settings/general', label: () => t.value.generalSettings },
   { to: '/settings/writing', label: () => t.value.writingSettings },
-  { to: '/settings/wechat', label: () => t.value.wechatSettings },
   { to: '/settings/security', label: () => t.value.securitySettings },
   { to: '/settings/audit', label: () => t.value.auditLog },
 ]

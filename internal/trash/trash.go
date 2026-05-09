@@ -1,9 +1,12 @@
 package trash
 
 import (
+	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
+	"syscall"
 	"time"
 
 	"blog-studio-web/internal/apperror"
@@ -33,7 +36,7 @@ func (s *Store) Move(siteID, slug, srcDir string) (string, *apperror.AppError) {
 	ts := time.Now().UTC().Format("20060102T150405Z")
 	id := ts + "-" + slug
 	dst := filepath.Join(s.paths.Trash, siteID, id)
-	if err := os.Rename(srcDir, dst); err != nil {
+	if err := moveDir(srcDir, dst); err != nil {
 		return "", apperror.Wrap("TRASH_MOVE_FAILED", "无法移动文章到回收站。", err, "检查文件权限。", true)
 	}
 	return id, nil
@@ -77,7 +80,7 @@ func (s *Store) Restore(siteID, id, postRoot string) *apperror.AppError {
 	if err := os.MkdirAll(filepath.Dir(dst), 0755); err != nil {
 		return apperror.Wrap("TRASH_RESTORE_MKDIR", "无法创建目录。", err, "检查权限。", true)
 	}
-	if err := os.Rename(src, dst); err != nil {
+	if err := moveDir(src, dst); err != nil {
 		return apperror.Wrap("TRASH_RESTORE_FAILED", "无法从回收站还原文章。", err, "检查文件权限。", true)
 	}
 	return nil
@@ -135,6 +138,49 @@ func parseTime(id string) string {
 		return ""
 	}
 	return t.Format(time.RFC3339)
+}
+
+// moveDir tries os.Rename first; falls back to copy+delete for cross-device moves (EXDEV).
+func moveDir(src, dst string) error {
+	if err := os.Rename(src, dst); err == nil {
+		return nil
+	} else if !errors.Is(err, syscall.EXDEV) {
+		return err
+	}
+	if err := copyDir(src, dst); err != nil {
+		_ = os.RemoveAll(dst)
+		return err
+	}
+	return os.RemoveAll(src)
+}
+
+func copyDir(src, dst string) error {
+	return filepath.Walk(src, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		rel, _ := filepath.Rel(src, path)
+		target := filepath.Join(dst, rel)
+		if info.IsDir() {
+			return os.MkdirAll(target, info.Mode())
+		}
+		return copyFile(path, target, info.Mode())
+	})
+}
+
+func copyFile(src, dst string, mode os.FileMode) error {
+	in, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer in.Close()
+	out, err := os.OpenFile(dst, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, mode)
+	if err != nil {
+		return err
+	}
+	defer out.Close()
+	_, err = io.Copy(out, in)
+	return err
 }
 
 func dirSize(path string) int64 {

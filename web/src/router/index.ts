@@ -18,7 +18,6 @@ const router = createRouter({
         { path: '', redirect: { name: 'settings-general' } },
         { name: 'settings-general', path: 'general', component: () => import('@/views/settings/GeneralTab.vue') },
         { name: 'settings-writing', path: 'writing', component: () => import('@/views/settings/WritingTab.vue') },
-        { name: 'settings-wechat', path: 'wechat', component: () => import('@/views/settings/WechatTab.vue') },
         { name: 'settings-security', path: 'security', component: () => import('@/views/settings/SecurityTab.vue') },
         { name: 'settings-audit', path: 'audit', component: () => import('@/views/settings/AuditTab.vue') },
       ]
