@@ -78,9 +78,9 @@ async function save() {
         <h1 class="flex items-center gap-2 font-serif text-lg font-semibold">
           <ClockIcon class="h-4 w-4" /> {{ t.now }}
         </h1>
-        <p class="text-xs text-muted-foreground mt-0.5">Markdown 格式的"现在"页面</p>
+        <p class="text-xs text-muted-foreground mt-0.5">{{ t.nowSubtitle }}</p>
       </div>
-      <span v-if="wordCount > 0" class="text-[11px] text-muted-foreground/60">{{ wordCount }} 字</span>
+      <span v-if="wordCount > 0" class="text-[11px] text-muted-foreground/60">{{ wordCount }} {{ t.wordUnit }}</span>
     </div>
 
     <div v-if="loading" class="flex-1 space-y-3 animate-fade-in">
@@ -90,7 +90,7 @@ async function save() {
     <div v-else class="flex flex-col flex-1 min-h-0">
       <div ref="editorEl" class="flex-1 overflow-auto rounded border border-border/60" />
       <div class="py-4 flex items-center justify-center gap-3">
-        <span v-if="saving" class="text-[11px] text-muted-foreground/60 animate-pulse">保存中…</span>
+        <span v-if="saving" class="text-[11px] text-muted-foreground/60 animate-pulse">{{ t.saving }}</span>
         <Button class="rounded-full px-6" :disabled="saving || loading" @click="save">
           <SaveIcon class="h-4 w-4 mr-1.5" />{{ saving ? t.saving : t.saveNow }}
         </Button>

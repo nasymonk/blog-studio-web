@@ -18,14 +18,14 @@ const error = ref('')
 
 async function changePassword() {
   error.value = ''
-  if (newPassword.value.length < 6) { error.value = '密码至少 6 位'; return }
+  if (newPassword.value.length < 6) { error.value = t.value.passwordMinLength; return }
   saving.value = true
   try {
     await api.changePassword(currentPassword.value, newPassword.value)
-    notify.success('密码已修改')
+    notify.success(t.value.passwordChanged)
     currentPassword.value = ''
     newPassword.value = ''
-  } catch (e: any) { error.value = e?.message || '修改失败' }
+  } catch (e: any) { error.value = e?.message || t.value.passwordChangeFailed }
   finally { saving.value = false }
 }
 </script>
@@ -37,7 +37,7 @@ async function changePassword() {
         <CardTitle class="flex items-center gap-2 font-serif text-base">
           <LockIcon class="h-4 w-4 text-accent" /> {{ t.securitySettings }}
         </CardTitle>
-        <p class="text-xs text-muted-foreground">修改管理员密码。密码至少 6 位。</p>
+        <p class="text-xs text-muted-foreground">{{ t.passwordDesc }}</p>
       </CardHeader>
       <CardContent class="space-y-4">
         <div class="grid gap-1.5">

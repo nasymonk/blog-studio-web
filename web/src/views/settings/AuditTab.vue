@@ -43,7 +43,7 @@ onMounted(load)
     </div>
 
     <Skeleton v-if="loading" class="h-[300px]" />
-    <div v-else-if="entries.length === 0" class="text-center py-16 text-muted-foreground text-sm">暂无审计记录</div>
+    <div v-else-if="entries.length === 0" class="text-center py-16 text-muted-foreground text-sm">{{ t.noAuditRecords }}</div>
 
     <div v-else class="rounded border border-border/60 overflow-hidden">
       <Table>
@@ -86,17 +86,17 @@ onMounted(load)
         </SheetHeader>
         <div v-if="selected" class="mt-4 space-y-4">
           <dl class="grid gap-3 text-sm" style="grid-template-columns:100px 1fr">
-            <dt class="text-muted-foreground text-xs">时间</dt><dd class="font-mono text-[11px]">{{ fmtTime(selected.timestamp) }}</dd>
-            <dt class="text-muted-foreground text-xs">审计 ID</dt><dd class="font-mono text-[11px]">{{ selected.auditId }}</dd>
-            <dt class="text-muted-foreground text-xs">操作</dt><dd>{{ selected.operation }}</dd>
-            <dt class="text-muted-foreground text-xs">结果</dt><dd><Badge :variant="selected.result === 'success' ? 'default' : 'destructive'" class="text-[10px]">{{ selected.result }}</Badge></dd>
-            <dt class="text-muted-foreground text-xs">备份 ID</dt><dd>{{ selected.backupId || '—' }}</dd>
-            <dt class="text-muted-foreground text-xs">错误码</dt><dd>{{ selected.errorCode || '—' }}</dd>
-            <dt class="text-muted-foreground text-xs">错误信息</dt><dd>{{ selected.errorBrief || '—' }}</dd>
+            <dt class="text-muted-foreground text-xs">{{ t.time }}</dt><dd class="font-mono text-[11px]">{{ fmtTime(selected.timestamp) }}</dd>
+            <dt class="text-muted-foreground text-xs">{{ t.auditId }}</dt><dd class="font-mono text-[11px]">{{ selected.auditId }}</dd>
+            <dt class="text-muted-foreground text-xs">{{ t.op }}</dt><dd>{{ selected.operation }}</dd>
+            <dt class="text-muted-foreground text-xs">{{ t.result }}</dt><dd><Badge :variant="selected.result === 'success' ? 'default' : 'destructive'" class="text-[10px]">{{ selected.result }}</Badge></dd>
+            <dt class="text-muted-foreground text-xs">{{ t.backupId }}</dt><dd>{{ selected.backupId || '—' }}</dd>
+            <dt class="text-muted-foreground text-xs">{{ t.errorCode }}</dt><dd>{{ selected.errorCode || '—' }}</dd>
+            <dt class="text-muted-foreground text-xs">{{ t.errorMessage }}</dt><dd>{{ selected.errorBrief || '—' }}</dd>
           </dl>
           <div v-if="selected.buildResult">
-            <p class="text-xs font-medium mb-1.5">构建日志</p>
-            <pre class="text-[11px] font-mono bg-muted/50 p-3 rounded max-h-[300px] overflow-auto whitespace-pre-wrap border border-border/40">{{ selected.buildResult.stderr || selected.buildResult.stdout || '（空）' }}</pre>
+            <p class="text-xs font-medium mb-1.5">{{ t.buildLog }}</p>
+            <pre class="text-[11px] font-mono bg-muted/50 p-3 rounded max-h-[300px] overflow-auto whitespace-pre-wrap border border-border/40">{{ selected.buildResult.stderr || selected.buildResult.stdout || t.emptyLog }}</pre>
           </div>
         </div>
       </SheetContent>

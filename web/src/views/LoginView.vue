@@ -65,7 +65,7 @@ async function login() {
           :password-length="password.length"
         />
         <p class="login-tagline font-deco text-lg tracking-widest mt-4">
-          写作是一种修行
+          {{ t.writingQuote }}
         </p>
       </div>
 
@@ -80,7 +80,7 @@ async function login() {
       <!-- Mobile brand (hidden on lg+) -->
       <div class="lg:hidden mb-8 text-center">
         <div class="font-display text-6xl text-accent animate-ink-breathe select-none">博</div>
-        <p class="font-deco text-sm mt-2 text-muted-foreground tracking-widest">写作是一种修行</p>
+        <p class="font-deco text-sm mt-2 text-muted-foreground tracking-widest">{{ t.writingQuote }}</p>
       </div>
 
       <div class="w-full max-w-[400px] space-y-8">

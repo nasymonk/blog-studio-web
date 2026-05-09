@@ -132,7 +132,7 @@ function previewPost() {
 }
 
 async function rollback() {
-  if (!draft.value || !confirm('确认回滚到上一个版本？此操作不可撤销。')) return
+  if (!draft.value || !confirm(t.value.rollbackConfirm)) return
   try {
     await api.rollback(slug.value)
     notify.success(t.value.rollbackOk)
@@ -156,8 +156,8 @@ function savedLabel(): string {
   if (store.editor.savedAt) {
     const secs = Math.round((Date.now() - store.editor.savedAt.getTime()) / 1000)
     if (secs < 5) return t.value.saved
-    if (secs < 60) return `${t.value.autoSaved} ${secs}s 前`
-    return `${t.value.autoSaved} ${Math.round(secs/60)}m 前`
+    if (secs < 60) return `${t.value.autoSaved} ${t.value.agoSeconds(secs)}`
+    return `${t.value.autoSaved} ${t.value.agoMinutes(Math.round(secs/60))}`
   }
   if (dirty.value) return t.value.unsaved
   return t.value.saved
@@ -169,9 +169,9 @@ const metaSummary = computed(() => {
   if (!draft.value) return ''
   const parts: string[] = []
   if (draft.value.frontMatter.date) parts.push(draft.value.frontMatter.date)
-  if (draft.value.frontMatter.tags.length) parts.push(`${draft.value.frontMatter.tags.length} 标签`)
-  if (draft.value.frontMatter.draft) parts.push('草稿')
-  if (draft.value.frontMatter.math) parts.push('数学公式')
+  if (draft.value.frontMatter.tags.length) parts.push(t.value.tagCount(draft.value.frontMatter.tags.length))
+  if (draft.value.frontMatter.draft) parts.push(t.value.draft)
+  if (draft.value.frontMatter.math) parts.push(t.value.math)
   return parts.join(' · ')
 })
 
@@ -225,7 +225,7 @@ function onTagKeydown(e: KeyboardEvent) {
           @click="metaExpanded = true"
         >
           <span v-if="metaSummary">{{ metaSummary }}</span>
-          <span v-else class="opacity-50">点击编辑元信息…</span>
+          <span v-else class="opacity-50">{{ t.editMeta }}</span>
           <ChevronDownIcon class="h-3 w-3 ml-auto opacity-40" />
         </button>
 
@@ -250,7 +250,7 @@ function onTagKeydown(e: KeyboardEvent) {
                 <Badge v-for="tag in draft.frontMatter.tags" :key="tag" variant="secondary" class="font-deco text-[11px] cursor-pointer gap-0.5" @click="removeTag(tag)">
                   # {{ tag }} ×
                 </Badge>
-                <input class="flex-1 min-w-[50px] bg-transparent outline-none text-sm placeholder:text-muted-foreground" placeholder="添加…" @keydown="onTagKeydown" />
+                <input class="flex-1 min-w-[50px] bg-transparent outline-none text-sm placeholder:text-muted-foreground" :placeholder="t.addTag" @keydown="onTagKeydown" />
               </div>
             </div>
             <div class="grid gap-1">
@@ -269,7 +269,7 @@ function onTagKeydown(e: KeyboardEvent) {
             </div>
           </div>
           <button class="text-[10px] text-muted-foreground/50 hover:text-muted-foreground transition-colors flex items-center gap-1 cursor-pointer" @click="metaExpanded = false">
-            <ChevronUpIcon class="h-3 w-3" /> 收起
+            <ChevronUpIcon class="h-3 w-3" /> {{ t.collapse }}
           </button>
         </div>
       </div>
@@ -329,7 +329,7 @@ function onTagKeydown(e: KeyboardEvent) {
     <!-- Error -->
     <div v-else class="flex-1 flex flex-col items-center justify-center gap-3 animate-fade-up">
       <AlertCircleIcon class="h-10 w-10 text-destructive/40" />
-      <p class="font-serif text-muted-foreground">文章加载失败</p>
+      <p class="font-serif text-muted-foreground">{{ t.postLoadFailed }}</p>
       <Button class="rounded-full px-5" @click="loadPost">{{ t.retry }}</Button>
     </div>
   </div>

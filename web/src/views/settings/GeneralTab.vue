@@ -42,8 +42,8 @@ async function save() {
 
 function validate(): string {
   if (!cfg.value) return ''
-  if (!cfg.value.basePath.startsWith('/')) return 'Base Path 必须以 / 开头'
-  if (cfg.value.preview.ttlMinutes < 10) return '预览有效期不能少于 10 分钟'
+  if (!cfg.value.basePath.startsWith('/')) return t.value.basePathError
+  if (cfg.value.preview.ttlMinutes < 10) return t.value.previewTTLError
   return ''
 }
 </script>
@@ -64,13 +64,13 @@ function validate(): string {
         <div class="grid gap-1.5 sm:col-span-2">
           <Label class="text-[10px] uppercase tracking-wider text-muted-foreground/70">{{ t.basePath }}</Label>
           <Input v-model="cfg.basePath" @input="dirty=true" />
-          <p class="text-[11px] text-muted-foreground/50">例：/studio</p>
+          <p class="text-[11px] text-muted-foreground/50">{{ t.basePathExample }}</p>
         </div>
       </CardContent>
     </Card>
 
     <Card>
-      <CardHeader><CardTitle class="font-serif text-base">预览</CardTitle></CardHeader>
+      <CardHeader><CardTitle class="font-serif text-base">{{ t.previewSettings }}</CardTitle></CardHeader>
       <CardContent class="grid gap-4 sm:grid-cols-2">
         <div class="grid gap-1.5">
           <Label class="text-[10px] uppercase tracking-wider text-muted-foreground/70">{{ t.previewTTL }}</Label>

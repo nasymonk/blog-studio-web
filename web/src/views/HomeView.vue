@@ -57,7 +57,7 @@ async function onAvatarSelect(e: Event) {
       <h1 class="flex items-center gap-2 font-serif text-lg font-semibold">
         <HomeIcon class="h-4 w-4" /> {{ t.home }}
       </h1>
-      <p class="text-xs text-muted-foreground mt-0.5">管理首页展示信息</p>
+      <p class="text-xs text-muted-foreground mt-0.5">{{ t.homeSubtitle }}</p>
     </div>
 
     <div class="stagger space-y-5">
@@ -76,7 +76,7 @@ async function onAvatarSelect(e: Event) {
                   <span><UploadIcon class="h-3.5 w-3.5 mr-1.5" />{{ uploadingAvatar ? t.loading : t.uploadAvatar }}</span>
                 </Button>
               </label>
-              <p class="text-[11px] text-muted-foreground/60">jpg、png、gif、webp · 建议 200×200px</p>
+              <p class="text-[11px] text-muted-foreground/60">{{ t.avatarFormats }}</p>
             </div>
           </div>
         </CardContent>

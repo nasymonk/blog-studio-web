@@ -47,12 +47,12 @@ async function save() {
         <div class="grid gap-1.5 sm:col-span-2">
           <Label class="text-[10px] uppercase tracking-wider text-muted-foreground/70">{{ t.blogRoot }}</Label>
           <Input v-model="cfg.site.blogRoot" @input="dirty=true" />
-          <p class="text-[11px] text-muted-foreground/50">Hugo 站点根目录路径</p>
+          <p class="text-[11px] text-muted-foreground/50">{{ t.blogRootHint }}</p>
         </div>
         <div class="grid gap-1.5">
           <Label class="text-[10px] uppercase tracking-wider text-muted-foreground/70">{{ t.postSection }}</Label>
           <Input v-model="cfg.site.postSection" @input="dirty=true" />
-          <p class="text-[11px] text-muted-foreground/50">文章存放的子目录名称</p>
+          <p class="text-[11px] text-muted-foreground/50">{{ t.postSectionHint }}</p>
         </div>
         <div class="grid gap-1.5">
           <Label class="text-[10px] uppercase tracking-wider text-muted-foreground/70">{{ t.buildCommand }}</Label>

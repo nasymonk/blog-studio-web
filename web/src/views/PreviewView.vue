@@ -3,11 +3,13 @@ import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { AlertCircleIcon, RefreshCwIcon } from 'lucide-vue-next'
 import { api } from '@/services/api'
+import { useI18n } from '@/i18n'
 import { useNotify } from '@/composables/useNotify'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 
 const route = useRoute()
+const { t } = useI18n()
 const notify = useNotify()
 const slug = decodeURIComponent(route.params.slug as string)
 const url = ref('')
@@ -43,9 +45,9 @@ onMounted(loadPreview)
     </div>
     <div v-else-if="error" class="flex-1 flex flex-col items-center justify-center gap-3 animate-fade-in">
       <AlertCircleIcon class="h-10 w-10 text-destructive/40" />
-      <p class="font-serif text-sm text-muted-foreground">预览生成失败</p>
+      <p class="font-serif text-sm text-muted-foreground">{{ t.previewFailed }}</p>
       <Button variant="outline" class="rounded-full px-5" @click="loadPreview">
-        <RefreshCwIcon class="h-3.5 w-3.5 mr-1.5" />重试
+        <RefreshCwIcon class="h-3.5 w-3.5 mr-1.5" />{{ t.retry }}
       </Button>
     </div>
     <iframe v-else-if="url" :src="url" class="flex-1 border-none bg-background animate-fade-in" />

@@ -76,7 +76,7 @@ const contentNav = [
 const systemNav = [
   { to: '/settings', icon: SettingsIcon, label: () => t.value.settings },
   { to: '/health', icon: HeartPulseIcon, label: () => t.value.health, dot: () => store.health && store.health.status !== 'ok' },
-  { to: '/trash', icon: Trash2Icon, label: () => '回收站' },
+  { to: '/trash', icon: Trash2Icon, label: () => t.value.trash },
 ]
 
 async function logout() {
@@ -95,7 +95,7 @@ async function syncPosts() {
 router.beforeEach((to, from) => {
   if (to.name !== 'login' && !store.session.authenticated) return { name: 'login' }
   if (from.name === 'editor' && to.name !== 'editor' && store.editor.dirty) {
-    if (!window.confirm('文章有未保存的更改，确认离开？')) return false
+    if (!window.confirm(t.value.confirmLeave)) return false
     store.editor.dirty = false
   }
 })
@@ -136,7 +136,7 @@ onMounted(async () => {
           <div class="font-display text-3xl text-accent leading-none select-none">博</div>
           <div class="min-w-0">
             <div class="font-serif font-semibold text-sm truncate leading-tight">{{ store.config?.site.name || 'Blog Studio' }}</div>
-            <div class="text-[10px] text-muted-foreground tracking-wider">管理后台</div>
+            <div class="text-[10px] text-muted-foreground tracking-wider">{{ t.adminSubtitle }}</div>
           </div>
         </div>
 
@@ -146,7 +146,7 @@ onMounted(async () => {
           <nav class="px-3 py-3 space-y-4" role="navigation" aria-label="主菜单">
             <!-- Content group -->
             <div>
-              <div class="px-2.5 mb-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground/60">内容</div>
+              <div class="px-2.5 mb-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground/60">{{ t.contentGroup }}</div>
               <div class="space-y-0.5">
                 <Tooltip v-for="item in contentNav" :key="item.to">
                   <TooltipTrigger as-child>
@@ -172,7 +172,7 @@ onMounted(async () => {
 
             <!-- System group -->
             <div>
-              <div class="px-2.5 mb-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground/60">系统</div>
+              <div class="px-2.5 mb-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground/60">{{ t.systemGroup }}</div>
               <div class="space-y-0.5">
                 <Tooltip v-for="item in systemNav" :key="item.to">
                   <TooltipTrigger as-child>

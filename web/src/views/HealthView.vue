@@ -48,9 +48,9 @@ onMounted(load)
 
     <div v-else-if="!health" class="text-center py-16 text-muted-foreground animate-fade-up">
       <RefreshCwIcon class="h-8 w-8 mx-auto opacity-20 mb-3" />
-      <p class="font-serif">暂无健康数据</p>
+      <p class="font-serif">{{ t.noHealthData }}</p>
       <Button variant="outline" class="rounded-full px-5 mt-3" @click="load">
-        <RefreshCwIcon class="h-3.5 w-3.5 mr-1.5" />刷新
+        <RefreshCwIcon class="h-3.5 w-3.5 mr-1.5" />{{ t.refresh }}
       </Button>
     </div>
 
@@ -70,7 +70,7 @@ onMounted(load)
           </div>
           <p class="text-sm text-muted-foreground">{{ check.message }}</p>
           <p v-if="check.technicalDetail" class="text-[11px] font-mono text-muted-foreground/60">{{ check.technicalDetail }}</p>
-          <p v-if="check.suggestion && check.status !== 'ok'" class="text-xs text-warn">建议：{{ check.suggestion }}</p>
+          <p v-if="check.suggestion && check.status !== 'ok'" class="text-xs text-warn">{{ t.suggestion }}{{ check.suggestion }}</p>
         </div>
       </div>
     </div>

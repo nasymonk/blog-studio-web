@@ -105,16 +105,16 @@ async function loadPosts() {
 }
 
 async function newPost() {
-  const slug = prompt('新文章 slug（英文、连字符）：')
+  const slug = prompt(t.value.newPostSlug)
   if (!slug) return
   router.push(`/posts/${encodeURIComponent(slug)}`)
 }
 
 async function deletePost(post: PostState) {
-  if (!confirm(`将《${post.title || post.slug}》移到回收站？可在回收站还原。`)) return
+  if (!confirm(t.value.deleteConfirm(post.title || post.slug))) return
   try {
     await api.deletePost(post.slug)
-    notify.success(`已删除《${post.title || post.slug}》`)
+    notify.success(t.value.deleteOk(post.title || post.slug))
     store.posts = store.posts.filter(p => p.slug !== post.slug)
   } catch (e: any) { notify.error(e) }
 }
@@ -141,11 +141,11 @@ function relDate(iso: string) {
   const d = new Date(iso)
   const diff = Date.now() - d.getTime()
   const days = Math.floor(diff / 86400000)
-  if (days === 0) return '今天'
-  if (days === 1) return '昨天'
-  if (days < 30) return `${days} 天前`
-  if (days < 365) return `${Math.floor(days / 30)} 月前`
-  return `${Math.floor(days / 365)} 年前`
+  if (days === 0) return t.value.today
+  if (days === 1) return t.value.yesterday
+  if (days < 30) return t.value.daysAgo(days)
+  if (days < 365) return t.value.monthsAgo(Math.floor(days / 30))
+  return t.value.yearsAgo(Math.floor(days / 365))
 }
 
 function toggleTag(tag: string) {
@@ -209,14 +209,14 @@ onMounted(loadPosts)
 
     <!-- Stats -->
     <div class="flex gap-3 text-xs text-muted-foreground">
-      <span>共 {{ store.posts.length }} 篇</span>
+      <span>{{ t.totalPosts(store.posts.length) }}</span>
       <span class="text-border">·</span>
-      <span>草稿 {{ store.posts.filter(p => p.draft).length }}</span>
+      <span>{{ t.draftCount(store.posts.filter(p => p.draft).length) }}</span>
       <span class="text-border">·</span>
-      <span>冲突 {{ store.posts.filter(p => p.syncStatus === 'conflict').length }}</span>
+      <span>{{ t.conflictCount(store.posts.filter(p => p.syncStatus === 'conflict').length) }}</span>
       <template v-if="filtered.length !== store.posts.length">
         <span class="text-border">·</span>
-        <span>筛选后 {{ filtered.length }} 篇</span>
+        <span>{{ t.filteredCount(filtered.length) }}</span>
       </template>
     </div>
 
@@ -229,7 +229,7 @@ onMounted(loadPosts)
     <div v-else-if="filtered.length === 0" class="text-center py-20 text-muted-foreground space-y-3">
       <FileTextIcon class="h-10 w-10 mx-auto opacity-30" />
       <p class="font-serif font-medium">{{ searchQuery || statusFilter !== 'all' || selectedTags.length ? t.noResults : t.noPosts }}</p>
-      <p v-if="!searchQuery && statusFilter === 'all' && !selectedTags.length" class="text-sm">点击「新建文章」创建你的第一篇文章</p>
+      <p v-if="!searchQuery && statusFilter === 'all' && !selectedTags.length" class="text-sm">{{ t.createFirstPost }}</p>
       <Button v-if="!searchQuery && statusFilter === 'all' && !selectedTags.length" class="rounded-full px-5" @click="newPost">
         <PlusIcon class="h-3.5 w-3.5 mr-1" />{{ t.newPost }}
       </Button>
@@ -291,7 +291,7 @@ onMounted(loadPosts)
                 <Button variant="ghost" size="icon" class="h-7 w-7 text-muted-foreground" :title="t.preview" @click.stop="router.push(`/posts/${encodeURIComponent(filtered[virtualRow.index]!.slug)}/preview`)">
                   <EyeIcon class="h-3.5 w-3.5" />
                 </Button>
-                <Button variant="ghost" size="icon" class="h-7 w-7 text-destructive/60 hover:text-destructive" title="移到回收站" @click.stop="deletePost(filtered[virtualRow.index]!)">
+                <Button variant="ghost" size="icon" class="h-7 w-7 text-destructive/60 hover:text-destructive" :title="t.moveToTrash" @click.stop="deletePost(filtered[virtualRow.index]!)">
                   <Trash2Icon class="h-3.5 w-3.5" />
                 </Button>
               </div>
