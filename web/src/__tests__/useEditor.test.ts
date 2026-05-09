@@ -164,7 +164,7 @@ describe('useWysiwyg', () => {
 
   it('mathExtension() returns a MarkdownExtension object', async () => {
     const { mathExtension } = await import('../composables/useWysiwyg')
-    const ext = mathExtension()
+    const ext = mathExtension() as any
     expect(ext).toBeDefined()
     expect(ext.defineNodes).toBeDefined()
     expect(Array.isArray(ext.defineNodes)).toBe(true)
@@ -177,7 +177,7 @@ describe('useWysiwyg', () => {
 
   it('mathExtension defines MathInline and MathBlock nodes', async () => {
     const { mathExtension } = await import('../composables/useWysiwyg')
-    const ext = mathExtension()
+    const ext = mathExtension() as any
     const nodeNames = ext.defineNodes.map((n: string | { name: string }) =>
       typeof n === 'string' ? n : n.name,
     )

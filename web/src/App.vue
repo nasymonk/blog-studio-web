@@ -7,7 +7,7 @@ import {
   LogOutIcon, MoonIcon, SunIcon, Globe2Icon, RefreshCwIcon, Trash2Icon
 } from 'lucide-vue-next'
 import { useEventListener } from '@vueuse/core'
-import { api } from '@/services/api'
+import { api, setUnauthorizedHandler } from '@/services/api'
 import { createStore, provideStore } from '@/store'
 import { useI18n } from '@/i18n'
 import { useTheme } from '@/composables/useTheme'
@@ -60,6 +60,11 @@ const pageTitle = computed(() => {
 
 const editorDirty = computed(() => route.name === 'editor' && store.editor.dirty)
 const editorSaving = computed(() => route.name === 'editor' && store.editor.saving)
+
+setUnauthorizedHandler(() => {
+  store.session.authenticated = false
+  router.push('/login')
+})
 
 const contentNav = [
   { to: '/posts', icon: FileTextIcon, label: () => t.value.posts, count: () => store.posts.length },

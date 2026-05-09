@@ -105,6 +105,8 @@ export type AuditEntry = {
 }
 
 let csrfToken = ''
+let onUnauthorized: (() => void) | null = null
+export function setUnauthorizedHandler(handler: () => void) { onUnauthorized = handler }
 const base = `${window.location.pathname.split('/').filter(Boolean)[0] ? '/' + window.location.pathname.split('/').filter(Boolean)[0] : ''}/api`
 
 async function request<T>(path: string, options: RequestInit = {}, signal?: AbortSignal): Promise<T> {
@@ -113,8 +115,8 @@ async function request<T>(path: string, options: RequestInit = {}, signal?: Abor
   if (csrfToken && options.method && options.method !== 'GET') headers.set('X-CSRF-Token', csrfToken)
   const response = await fetch(`${base}${path}`, { credentials: 'same-origin', signal, ...options, headers })
   if (response.status === 401 && path !== '/auth/login' && path !== '/session') {
-    window.location.href = '/studio/#/login'
-    return new Promise(() => {}) // never resolves — page is navigating away
+    if (onUnauthorized) onUnauthorized()
+    return new Promise(() => {})
   }
   const payload = await response.json().catch(() => ({ ok: false, error: { message: response.statusText } }))
   if (!response.ok || !payload.ok) {
