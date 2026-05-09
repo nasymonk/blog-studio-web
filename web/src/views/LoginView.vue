@@ -9,6 +9,7 @@ import { useTheme } from '@/composables/useTheme'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import AnimatedCharacters from '@/components/AnimatedCharacters.vue'
 
 const router = useRouter()
 const store = useStore()
@@ -19,6 +20,14 @@ const password = ref('')
 const loading = ref(false)
 const error = ref('')
 const btnHover = ref(false)
+const isTyping = ref(false)
+let typingTimeout: ReturnType<typeof setTimeout> | null = null
+
+function onPasswordInput() {
+  isTyping.value = true
+  if (typingTimeout) clearTimeout(typingTimeout)
+  typingTimeout = setTimeout(() => { isTyping.value = false }, 600)
+}
 
 async function login() {
   if (!password.value || loading.value) return
@@ -49,12 +58,13 @@ async function login() {
         style="background-image: linear-gradient(rgba(30,28,24,1) 1px, transparent 1px), linear-gradient(90deg, rgba(30,28,24,1) 1px, transparent 1px); background-size: 40px 40px;" />
 
       <!-- Center content -->
-      <div class="relative z-10 text-center space-y-6">
-        <div class="animate-ink-breathe font-display text-accent select-none"
-          style="font-size: 140px; line-height: 1; filter: drop-shadow(0 4px 24px rgba(79,111,130,0.15));">
-          博
-        </div>
-        <p class="font-deco text-lg tracking-widest" style="color: #8a7e6e;">
+      <div class="relative z-10 flex flex-col items-center justify-center">
+        <AnimatedCharacters
+          :is-typing="isTyping"
+          :show-password="false"
+          :password-length="password.length"
+        />
+        <p class="font-deco text-lg tracking-widest mt-4" style="color: #8a7e6e;">
           写作是一种修行
         </p>
       </div>
@@ -89,6 +99,7 @@ async function login() {
               autocomplete="current-password"
               autofocus
               class="h-12 border-0 border-b border-border rounded-none bg-transparent px-0 focus-visible:ring-0 focus-visible:border-accent transition-colors"
+              @input="onPasswordInput"
             />
             <p v-if="error" class="text-xs text-destructive mt-1">{{ error }}</p>
           </div>
