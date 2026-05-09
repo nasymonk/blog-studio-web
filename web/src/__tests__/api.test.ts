@@ -72,21 +72,24 @@ describe('api', () => {
     await expect(api.posts()).rejects.toMatchObject({ message: 'Bad Gateway' })
   })
 
-  it('redirects to /login on 401 for authenticated endpoints', async () => {
-    const { api } = await import('../services/api')
+  it('calls unauthorized handler on 401 for authenticated endpoints', async () => {
+    const { api, setUnauthorizedHandler } = await import('../services/api')
+    const handler = vi.fn()
+    setUnauthorizedHandler(handler)
     vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
       ok: false,
       status: 401,
       statusText: 'Unauthorized',
       json: () => Promise.resolve({ ok: false, error: { message: 'Unauthorized' } }),
     } as Response)
-    // Promise never resolves (page is navigating away), so race with a timeout
+    // Promise never resolves (handler redirects away), so race with a timeout
     const result = await Promise.race([
       api.posts().then(() => 'resolved'),
       new Promise(resolve => setTimeout(() => resolve('timeout'), 100)),
     ])
     expect(result).toBe('timeout')
-    expect(window.location.href).toBe('/studio/#/login')
+    expect(handler).toHaveBeenCalledTimes(1)
+    setUnauthorizedHandler(null as any)
   })
 
   it('login() does NOT redirect on 401', async () => {

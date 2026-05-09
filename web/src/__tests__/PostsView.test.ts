@@ -52,11 +52,17 @@ vi.mock('lucide-vue-next', () => ({
   AlertTriangleIcon: { template: '<span />' },
   FileTextIcon: { template: '<span />' },
   Trash2Icon: { template: '<span />' },
+  CheckSquareIcon: { template: '<span />' },
+  SquareIcon: { template: '<span />' },
+  SendIcon: { template: '<span />' },
+  DownloadIcon: { template: '<span />' },
+  UploadIcon: { template: '<span />' },
 }))
 
 vi.mock('@vueuse/core', () => ({
   useDebounceFn: (fn: Function) => fn,
   useStorage: (_key: string, defaultValue: unknown) => ref(defaultValue),
+  reactiveOmit: (obj: Record<string, unknown>, ..._keys: string[]) => obj,
 }))
 
 vi.mock('@tanstack/vue-virtual', () => ({
