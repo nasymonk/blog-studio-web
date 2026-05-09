@@ -1,12 +1,13 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import { RefreshCwIcon } from 'lucide-vue-next'
+import { ref, onMounted, watch } from 'vue'
+import { RefreshCwIcon, SearchIcon } from 'lucide-vue-next'
 import { api } from '@/services/api'
 import type { AuditEntry } from '@/services/api'
 import { useI18n } from '@/i18n'
 import { useNotify } from '@/composables/useNotify'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -17,18 +18,45 @@ const entries = ref<AuditEntry[]>([])
 const loading = ref(false)
 const selected = ref<AuditEntry | null>(null)
 
+const searchQuery = ref('')
+const operationFilter = ref('')
+const operations = ['', 'publish', 'save', 'delete', 'rollback']
+
+function opLabel(op: string) {
+  if (!op) return t.value.opAll
+  const map: Record<string, () => string> = {
+    publish: () => t.value.opPublish,
+    save: () => t.value.opSave,
+    delete: () => t.value.opDelete,
+    rollback: () => t.value.opRollback,
+  }
+  return map[op]?.() ?? op
+}
+
 function fmtTime(iso: string) {
   if (!iso) return ''
   try { return new Date(iso).toLocaleString('zh-CN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) }
   catch { return iso }
 }
 
+let debounceTimer: ReturnType<typeof setTimeout> | null = null
+
 async function load() {
   loading.value = true
-  try { entries.value = await api.audit(100) }
+  try {
+    entries.value = await api.audit(100, operationFilter.value || undefined, searchQuery.value || undefined)
+  }
   catch (e: any) { notify.error(e) }
   finally { loading.value = false }
 }
+
+function debouncedLoad() {
+  if (debounceTimer) clearTimeout(debounceTimer)
+  debounceTimer = setTimeout(load, 300)
+}
+
+watch(operationFilter, load)
+watch(searchQuery, debouncedLoad)
 
 onMounted(load)
 </script>
@@ -40,6 +68,30 @@ onMounted(load)
       <Button variant="ghost" size="icon" class="h-7 w-7 text-muted-foreground" :disabled="loading" @click="load">
         <RefreshCwIcon class="h-3.5 w-3.5" :class="{ 'animate-spin': loading }" />
       </Button>
+    </div>
+
+    <!-- Search and filter controls -->
+    <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
+      <div class="relative flex-1">
+        <SearchIcon class="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+        <Input
+          v-model="searchQuery"
+          :placeholder="t.searchAudit"
+          class="pl-8 h-8 text-sm"
+        />
+      </div>
+      <div class="flex items-center gap-1 flex-wrap">
+        <Button
+          v-for="op in operations"
+          :key="op"
+          :variant="operationFilter === op ? 'default' : 'outline'"
+          size="sm"
+          class="h-7 text-xs rounded-full px-3"
+          @click="operationFilter = op"
+        >
+          {{ opLabel(op) }}
+        </Button>
+      </div>
     </div>
 
     <Skeleton v-if="loading" class="h-[300px]" />

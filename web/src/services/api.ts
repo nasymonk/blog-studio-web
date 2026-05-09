@@ -155,7 +155,12 @@ export const api = {
   getNowPage: () => request<{ raw: string }>('/pages/now'),
   saveNowPage: (raw: string) => request<{ saved: boolean }>('/pages/now', { method: 'PUT', body: JSON.stringify({ raw }) }),
   health: () => request<{ status: string; checks: Array<{ name: string; status: string; message: string; technicalDetail: string; suggestion: string }> }>('/health/full'),
-  audit: (limit = 50) => request<AuditEntry[]>(`/audit?limit=${limit}`),
+  audit: (limit = 50, operation?: string, search?: string) => {
+    const params = new URLSearchParams({ limit: String(limit) })
+    if (operation) params.set('operation', operation)
+    if (search) params.set('search', search)
+    return request<AuditEntry[]>(`/audit?${params.toString()}`)
+  },
   config: () => request<Config>('/config'),
   saveConfig: (config: Config) => request<Config>('/config', { method: 'PUT', body: JSON.stringify(config) }),
   deletePost: (slug: string) => request<{ trashId: string }>(`/posts/${encodeURIComponent(slug)}`, { method: 'DELETE' }),

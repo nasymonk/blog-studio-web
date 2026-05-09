@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 	"syscall"
@@ -841,12 +842,39 @@ func (s *Server) health(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) auditRecent(w http.ResponseWriter, r *http.Request) {
-	items, err := s.audit.Recent(50)
+	limit := 50
+	if v := r.URL.Query().Get("limit"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 && n <= 500 {
+			limit = n
+		}
+	}
+	operationFilter := r.URL.Query().Get("operation")
+	searchQuery := strings.ToLower(r.URL.Query().Get("search"))
+
+	items, err := s.audit.Recent(limit * 5) // fetch extra to account for filtering
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
-	writeOK(w, items)
+
+	// Apply filters
+	filtered := make([]audit.Entry, 0, limit)
+	for _, item := range items {
+		if len(filtered) >= limit {
+			break
+		}
+		if operationFilter != "" && item.Operation != operationFilter {
+			continue
+		}
+		if searchQuery != "" {
+			combined := strings.ToLower(item.Slug + " " + item.Actor + " " + item.ErrorBrief + " " + item.ErrorCode)
+			if !strings.Contains(combined, searchQuery) {
+				continue
+			}
+		}
+		filtered = append(filtered, item)
+	}
+	writeOK(w, filtered)
 }
 
 func (s *Server) getConfig(w http.ResponseWriter, r *http.Request) {
