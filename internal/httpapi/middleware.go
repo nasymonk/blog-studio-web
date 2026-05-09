@@ -8,12 +8,15 @@ import (
 	"net/http"
 	"runtime/debug"
 	"strconv"
+	"sync"
 	"time"
 
 	"blog-studio-web/internal/apperror"
 	"blog-studio-web/internal/auth"
 	"blog-studio-web/internal/logging"
 	"blog-studio-web/internal/metrics"
+
+	"golang.org/x/time/rate"
 )
 
 type statusWriter struct {
@@ -139,4 +142,97 @@ func accessLog(logger *slog.Logger) func(http.Handler) http.Handler {
 			_ = logger
 		})
 	}
+}
+
+const maxRequestBodyBytes = 10 << 20 // 10 MB
+
+// withMaxBytes wraps request bodies with http.MaxBytesReader for write methods
+// (POST, PUT, DELETE) to prevent oversized payloads.
+func withMaxBytes(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPost || r.Method == http.MethodPut || r.Method == http.MethodDelete {
+			r.Body = http.MaxBytesReader(w, r.Body, maxRequestBodyBytes)
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
+// writeRateEntry holds a per-IP rate limiter for write endpoints.
+type writeRateEntry struct {
+	limiter  *rate.Limiter
+	lastSeen time.Time
+}
+
+// writeRateLimiter provides per-IP rate limiting for write API endpoints.
+type writeRateLimiter struct {
+	mu   sync.Mutex
+	ips  map[string]*writeRateEntry
+	rate rate.Limit
+	burst int
+}
+
+func newWriteRateLimiter(rps float64, burst int) *writeRateLimiter {
+	rl := &writeRateLimiter{
+		ips:   make(map[string]*writeRateEntry),
+		rate:  rate.Limit(rps),
+		burst: burst,
+	}
+	go rl.cleanup()
+	return rl
+}
+
+func (rl *writeRateLimiter) Allow(ip string) bool {
+	rl.mu.Lock()
+	defer rl.mu.Unlock()
+	entry, ok := rl.ips[ip]
+	if !ok {
+		if len(rl.ips) >= 1024 {
+			rl.evictOldestLocked()
+		}
+		entry = &writeRateEntry{limiter: rate.NewLimiter(rl.rate, rl.burst)}
+		rl.ips[ip] = entry
+	}
+	entry.lastSeen = time.Now()
+	return entry.limiter.Allow()
+}
+
+func (rl *writeRateLimiter) evictOldestLocked() {
+	var oldest string
+	var oldestTime time.Time
+	for ip, e := range rl.ips {
+		if oldest == "" || e.lastSeen.Before(oldestTime) {
+			oldest = ip
+			oldestTime = e.lastSeen
+		}
+	}
+	if oldest != "" {
+		delete(rl.ips, oldest)
+	}
+}
+
+func (rl *writeRateLimiter) cleanup() {
+	for range time.Tick(5 * time.Minute) {
+		cutoff := time.Now().Add(-30 * time.Minute)
+		rl.mu.Lock()
+		for ip, e := range rl.ips {
+			if e.lastSeen.Before(cutoff) {
+				delete(rl.ips, ip)
+			}
+		}
+		rl.mu.Unlock()
+	}
+}
+
+// withWriteRateLimit applies per-IP rate limiting to write methods (POST, PUT, DELETE).
+func (s *Server) withWriteRateLimit(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPost || r.Method == http.MethodPut || r.Method == http.MethodDelete {
+			ip := auth.RealIP(r)
+			if !s.writeLimiter.Allow(ip) {
+				writeError(w, http.StatusTooManyRequests, apperror.New("RATE_LIMITED", "请求过于频繁，请稍后重试。", "rate limit exceeded for "+ip, "请稍后重试。", true))
+				return
+			}
+		}
+		next.ServeHTTP(w, r)
+	})
 }

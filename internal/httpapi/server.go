@@ -49,6 +49,7 @@ type Server struct {
 	runner       *hugobuild.Runner
 	logger       *slog.Logger
 	loginLimiter *auth.LoginLimiter
+	writeLimiter *writeRateLimiter
 	staticPrefix string
 }
 
@@ -71,6 +72,7 @@ func NewWithAudit(paths config.Paths, cfg config.Config, cfgStore *config.Store,
 		runner:       runner,
 		logger:       logger,
 		loginLimiter: auth.NewLoginLimiter(),
+		writeLimiter: newWriteRateLimiter(10, 20),
 		pub:          publish.NewService(paths, cfg, backupStore, auditLogger, runner),
 		prev:         preview.NewService(paths, cfg, runner),
 		wec:          wechat.NewService(paths, cfg, auditLogger),
@@ -129,7 +131,11 @@ func (s *Server) Handler() http.Handler {
 	chain := recoverer(s.logger)(
 		requestID(
 			accessLog(s.logger)(
-				secureHeaders(mux),
+				secureHeaders(
+					withMaxBytes(
+						s.withWriteRateLimit(mux),
+					),
+				),
 			),
 		),
 	)
@@ -371,8 +377,8 @@ func (s *Server) uploadAsset(w http.ResponseWriter, r *http.Request, slug string
 		writeError(w, http.StatusBadRequest, appErr)
 		return
 	}
-	if !allowedUpload(name) {
-		writeError(w, http.StatusBadRequest, apperror.New("UPLOAD_TYPE_INVALID", "不支持的文件类型。", name, "仅上传 jpg、png、gif、webp、svg。", false))
+	if appErr := validateUpload(name, data); appErr != nil {
+		writeError(w, http.StatusBadRequest, appErr)
 		return
 	}
 	target, safeErr := storage.SafeJoin(postDir, name)
@@ -481,8 +487,8 @@ func (s *Server) uploadAvatar(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, appErr)
 		return
 	}
-	if !allowedUpload(name) {
-		writeError(w, http.StatusBadRequest, apperror.New("UPLOAD_TYPE_INVALID", "不支持的文件类型。", name, "仅上传 jpg、png、gif、webp。", false))
+	if appErr := validateUpload(name, data); appErr != nil {
+		writeError(w, http.StatusBadRequest, appErr)
 		return
 	}
 	ext := strings.ToLower(filepath.Ext(name))
@@ -706,11 +712,52 @@ func secureHeaders(next http.Handler) http.Handler {
 func allowedUpload(name string) bool {
 	ext := strings.ToLower(filepath.Ext(name))
 	switch ext {
-	case ".jpg", ".jpeg", ".png", ".gif", ".webp", ".svg":
+	case ".jpg", ".jpeg", ".png", ".gif", ".webp", ".svg", ".pdf":
 		return true
 	default:
 		return false
 	}
+}
+
+// allowedMIMETypes maps file extensions to their expected MIME type prefixes.
+var allowedMIMETypes = map[string][]string{
+	".jpg":  {"image/jpeg"},
+	".jpeg": {"image/jpeg"},
+	".png":  {"image/png"},
+	".gif":  {"image/gif"},
+	".webp": {"image/webp"},
+	".svg":  {"image/svg+xml", "text/xml", "application/xml"},
+	".pdf":  {"application/pdf"},
+}
+
+// validateUpload checks file extension against an allowlist and verifies the
+// MIME type by reading the first 512 bytes of data.
+func validateUpload(name string, data []byte) *apperror.AppError {
+	ext := strings.ToLower(filepath.Ext(name))
+	if !allowedUpload(name) {
+		return apperror.New("UPLOAD_TYPE_INVALID", "不支持的文件类型。", name, "仅上传 jpg、png、gif、webp、svg、pdf。", false)
+	}
+	// Detect MIME type from file content.
+	buf := data
+	if len(buf) > 512 {
+		buf = buf[:512]
+	}
+	detected := http.DetectContentType(buf)
+	expected, ok := allowedMIMETypes[ext]
+	if !ok {
+		return apperror.New("UPLOAD_TYPE_INVALID", "不支持的文件类型。", name, "仅上传 jpg、png、gif、webp、svg、pdf。", false)
+	}
+	mimeOK := false
+	for _, m := range expected {
+		if strings.HasPrefix(detected, m) {
+			mimeOK = true
+			break
+		}
+	}
+	if !mimeOK {
+		return apperror.New("UPLOAD_MIME_MISMATCH", "文件内容与扩展名不匹配。", "detected="+detected+", ext="+ext, "请上传真实的图片或 PDF 文件。", false)
+	}
+	return nil
 }
 
 func readHugoParam(toml, key string) string {
