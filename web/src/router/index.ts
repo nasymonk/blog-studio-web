@@ -24,6 +24,7 @@ const router = createRouter({
     },
     { name: 'health', path: '/health', component: () => import('@/views/HealthView.vue') },
     { name: 'trash', path: '/trash', component: () => import('@/views/TrashView.vue') },
+    { name: 'tags', path: '/tags', component: () => import('@/views/TagsView.vue') },
   ]
 })
 

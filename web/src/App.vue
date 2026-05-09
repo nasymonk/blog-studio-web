@@ -4,7 +4,7 @@ import { RouterView, RouterLink, useRoute } from 'vue-router'
 import { Toaster, toast } from 'vue-sonner'
 import {
   FileTextIcon, SettingsIcon, HomeIcon, ClockIcon, HeartPulseIcon,
-  LogOutIcon, MoonIcon, SunIcon, Globe2Icon, RefreshCwIcon, Trash2Icon
+  LogOutIcon, MoonIcon, SunIcon, Globe2Icon, RefreshCwIcon, Trash2Icon, TagsIcon
 } from 'lucide-vue-next'
 import { useEventListener } from '@vueuse/core'
 import { api, setUnauthorizedHandler } from '@/services/api'
@@ -56,6 +56,7 @@ const pageTitle = computed(() => {
   if (name === 'now') return t.value.now
   if (name === 'settings' || name?.startsWith('settings-')) return t.value.settings
   if (name === 'health') return t.value.health
+  if (name === 'tags') return t.value.tagManagement
   return 'Blog Studio'
 })
 
@@ -69,6 +70,7 @@ setUnauthorizedHandler(() => {
 
 const contentNav = [
   { to: '/posts', icon: FileTextIcon, label: () => t.value.posts, count: () => store.posts.length },
+  { to: '/tags', icon: TagsIcon, label: () => t.value.tags },
   { to: '/home', icon: HomeIcon, label: () => t.value.home },
   { to: '/now', icon: ClockIcon, label: () => t.value.now },
 ]

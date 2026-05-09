@@ -164,4 +164,6 @@ export const api = {
   purgeTrash: (id: string) => request<{ purged: boolean }>(`/trash/${encodeURIComponent(id)}`, { method: 'DELETE' }),
   bulkTrash: (slugs: string[]) => request<Array<{ slug: string; success: boolean; error?: string }>>('/posts/bulk/trash', { method: 'POST', body: JSON.stringify({ slugs }) }),
   bulkPublish: (slugs: string[]) => request<Array<{ slug: string; status: string; error?: string }>>('/posts/bulk/publish', { method: 'POST', body: JSON.stringify({ slugs }) }),
+  renameTag: (oldName: string, newName: string) => request<{ updated: number }>('/tags/rename', { method: 'POST', body: JSON.stringify({ oldName, newName }) }),
+  deleteTag: (name: string) => request<{ updated: number }>('/tags/delete', { method: 'POST', body: JSON.stringify({ name }) }),
 }

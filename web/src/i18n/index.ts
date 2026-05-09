@@ -173,6 +173,16 @@ const dict = {
     trashSelected: '删除所选',
     publishSelected: '发布所选',
     selectedCount: (n: number) => `已选 ${n} 篇`,
+    tagManagement: '标签管理',
+    tagUsage: (n: number) => `${n} 篇文章`,
+    renameTag: '重命名标签',
+    deleteTag: '删除标签',
+    newTagName: '新标签名',
+    renameTagConfirm: (old: string, name: string) => `将标签 "${old}" 重命名为 "${name}"？`,
+    deleteTagConfirm: (tag: string) => `从所有文章中删除标签 "${tag}"？`,
+    tagRenamed: (old: string, name: string) => `已将 "${old}" 重命名为 "${name}"`,
+    tagDeleted: (tag: string) => `已删除标签 "${tag}"`,
+    noTags: '暂无标签',
   },
   en: {
     posts: 'Posts',
@@ -346,6 +356,16 @@ const dict = {
     trashSelected: 'Trash Selected',
     publishSelected: 'Publish Selected',
     selectedCount: (n: number) => `${n} selected`,
+    tagManagement: 'Tag Management',
+    tagUsage: (n: number) => `${n} posts`,
+    renameTag: 'Rename Tag',
+    deleteTag: 'Delete Tag',
+    newTagName: 'New tag name',
+    renameTagConfirm: (old: string, name: string) => `Rename tag "${old}" to "${name}"?`,
+    deleteTagConfirm: (tag: string) => `Delete tag "${tag}" from all posts?`,
+    tagRenamed: (old: string, name: string) => `Renamed "${old}" to "${name}"`,
+    tagDeleted: (tag: string) => `Deleted tag "${tag}"`,
+    noTags: 'No tags yet',
   }
 } as const
 

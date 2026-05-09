@@ -152,6 +152,8 @@ func (s *Server) Handler() http.Handler {
 	api.HandleFunc("DELETE /posts/", s.withWriteAuth(s.postRouter))
 	api.HandleFunc("POST /posts/bulk/trash", s.withWriteAuth(s.bulkTrash))
 	api.HandleFunc("POST /posts/bulk/publish", s.withWriteAuth(s.bulkPublish))
+	api.HandleFunc("POST /tags/rename", s.withWriteAuth(s.renameTag))
+	api.HandleFunc("POST /tags/delete", s.withWriteAuth(s.deleteTag))
 	api.HandleFunc("GET /site", s.withAuth(s.getSite))
 	api.HandleFunc("PUT /site", s.withWriteAuth(s.putSite))
 	api.HandleFunc("POST /site/avatar", s.withWriteAuth(s.uploadAvatar))
@@ -439,6 +441,96 @@ func (s *Server) bulkPublish(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	writeOK(w, results)
+}
+
+func (s *Server) renameTag(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		OldName string `json:"oldName"`
+		NewName string `json:"newName"`
+	}
+	if err := decodeJSON(r, &req); err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+	if req.OldName == "" || req.NewName == "" {
+		writeError(w, http.StatusBadRequest, apperror.New("INVALID_INPUT", "标签名不能为空。", "", "提供新旧标签名。", false))
+		return
+	}
+	pub := s.publisher()
+	posts, err := pub.ListPosts()
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
+	updated := 0
+	for _, p := range posts {
+		draft, loadErr := pub.LoadPost(p.Slug)
+		if loadErr != nil {
+			continue
+		}
+		changed := false
+		for i, tag := range draft.FrontMatter.Tags {
+			if tag == req.OldName {
+				draft.FrontMatter.Tags[i] = req.NewName
+				changed = true
+			}
+		}
+		if !changed {
+			continue
+		}
+		if saveErr := pub.SaveDraft(draft); saveErr != nil {
+			continue
+		}
+		updated++
+	}
+	pub.InvalidateCache()
+	writeOK(w, map[string]interface{}{"updated": updated})
+}
+
+func (s *Server) deleteTag(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Name string `json:"name"`
+	}
+	if err := decodeJSON(r, &req); err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+	if req.Name == "" {
+		writeError(w, http.StatusBadRequest, apperror.New("INVALID_INPUT", "标签名不能为空。", "", "提供要删除的标签名。", false))
+		return
+	}
+	pub := s.publisher()
+	posts, err := pub.ListPosts()
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
+	updated := 0
+	for _, p := range posts {
+		draft, loadErr := pub.LoadPost(p.Slug)
+		if loadErr != nil {
+			continue
+		}
+		newTags := make([]string, 0, len(draft.FrontMatter.Tags))
+		changed := false
+		for _, tag := range draft.FrontMatter.Tags {
+			if tag == req.Name {
+				changed = true
+			} else {
+				newTags = append(newTags, tag)
+			}
+		}
+		if !changed {
+			continue
+		}
+		draft.FrontMatter.Tags = newTags
+		if saveErr := pub.SaveDraft(draft); saveErr != nil {
+			continue
+		}
+		updated++
+	}
+	pub.InvalidateCache()
+	writeOK(w, map[string]interface{}{"updated": updated})
 }
 
 func (s *Server) listTrash(w http.ResponseWriter, r *http.Request) {
