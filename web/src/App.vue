@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { RouterView, RouterLink, useRoute } from 'vue-router'
-import { Toaster } from 'vue-sonner'
+import { Toaster, toast } from 'vue-sonner'
 import {
   FileTextIcon, SettingsIcon, HomeIcon, ClockIcon, HeartPulseIcon,
   LogOutIcon, MoonIcon, SunIcon, Globe2Icon, RefreshCwIcon, Trash2Icon
@@ -28,6 +28,13 @@ const { t, lang, setLang } = useI18n()
 const { theme, toggle: toggleTheme } = useTheme()
 const isDark = computed(() => theme.value === 'dark')
 const notify = useNotify()
+
+watch(() => store.banner, (b) => {
+  if (!b) return
+  const fn = b.type === 'error' ? toast.error : b.type === 'ok' ? toast.success : toast.warning
+  fn(b.message, { duration: b.type === 'error' ? Infinity : 6000 })
+  store.banner = null
+})
 
 const isAuthed = computed(() => store.session.authenticated)
 const isLoginPage = computed(() => route.name === 'login')
@@ -214,14 +221,6 @@ onMounted(async () => {
             </Button>
           </div>
         </header>
-
-        <div v-if="store.banner" class="flex items-center gap-2 px-6 py-2 text-sm" role="alert"
-          :class="store.banner.type === 'error' ? 'bg-error-bg text-destructive' : store.banner.type === 'ok' ? 'bg-ok-bg text-ok' : 'bg-warn-bg text-warn'">
-          <span class="flex-1">{{ store.banner.message }}</span>
-          <Button variant="ghost" size="icon" class="h-6 w-6" aria-label="关闭" @click="store.banner = null">
-            <span class="text-xs">✕</span>
-          </Button>
-        </div>
 
         <main id="main-content" class="flex-1 overflow-auto p-6" tabindex="-1">
           <transition name="page" mode="out-in">
