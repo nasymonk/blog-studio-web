@@ -143,7 +143,10 @@ function onKeydown(e: KeyboardEvent) {
           </template>
 
           <!-- Empty -->
-          <div v-if="items.length === 0" class="py-10 text-center text-sm text-muted-foreground/50">无匹配结果</div>
+          <div v-if="items.length === 0" class="py-10 text-center space-y-2 animate-fade-in">
+            <SearchIcon class="h-6 w-6 mx-auto text-muted-foreground/25" />
+            <p class="text-sm text-muted-foreground/50">无匹配结果</p>
+          </div>
         </div>
       </ScrollArea>
     </DialogContent>

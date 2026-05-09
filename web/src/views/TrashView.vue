@@ -5,6 +5,7 @@ import { api } from '@/services/api'
 import type { TrashItem } from '@/services/api'
 import { useNotify } from '@/composables/useNotify'
 import { Button } from '@/components/ui/button'
+import { Skeleton } from '@/components/ui/skeleton'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 
 const notify = useNotify()
@@ -60,12 +61,14 @@ onMounted(load)
   <div class="max-w-3xl space-y-5">
     <div>
       <h1 class="flex items-center gap-2 font-serif text-lg font-semibold"><Trash2Icon class="h-4 w-4" /> 回收站</h1>
-      <p class="text-xs text-muted-foreground mt-0.5">已删除的文章在 30 天后自动清空</p>
+      <p class="text-xs text-muted-foreground mt-0.5">{{ loading ? '加载中…' : `${items.length} 篇文章 · 30 天后自动清空` }}</p>
     </div>
 
-    <div v-if="loading" class="text-center py-20 text-muted-foreground text-sm">加载中…</div>
+    <div v-if="loading" class="stagger space-y-2">
+      <Skeleton v-for="i in 5" :key="i" class="h-[44px] animate-fade-up" />
+    </div>
 
-    <div v-else-if="items.length === 0" class="text-center py-20 text-muted-foreground">
+    <div v-else-if="items.length === 0" class="text-center py-20 text-muted-foreground animate-fade-up">
       <Trash2Icon class="h-8 w-8 mx-auto opacity-20 mb-3" />
       <p class="font-serif">回收站为空</p>
     </div>
@@ -81,7 +84,7 @@ onMounted(load)
           </TableRow>
         </TableHeader>
         <TableBody>
-          <TableRow v-for="item in items" :key="item.id" class="group hover:bg-muted/30">
+          <TableRow v-for="(item, idx) in items" :key="item.id" class="group hover:bg-muted/30" :class="idx % 2 === 1 ? 'bg-muted/15' : ''">
             <TableCell><span class="font-mono text-sm">{{ item.slug }}</span></TableCell>
             <TableCell :title="item.deletedAt" class="text-sm text-muted-foreground">{{ relDate(item.deletedAt) }}</TableCell>
             <TableCell class="text-sm text-muted-foreground">{{ fmtSize(item.size) }}</TableCell>
@@ -90,7 +93,7 @@ onMounted(load)
                 <Button variant="ghost" size="sm" class="text-xs h-7 text-muted-foreground" @click="restore(item)">
                   <UndoIcon class="h-3 w-3 mr-1" /> 还原
                 </Button>
-                <Button variant="ghost" size="sm" class="text-xs h-7 text-destructive/60 hover:text-destructive" @click="purge(item)">
+                <Button variant="ghost" size="sm" class="text-xs h-7 text-destructive hover:bg-destructive/10" @click="purge(item)">
                   <Trash2Icon class="h-3 w-3 mr-1" /> 永久删除
                 </Button>
               </div>

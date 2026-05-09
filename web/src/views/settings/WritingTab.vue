@@ -9,7 +9,7 @@ import { useNotify } from '@/composables/useNotify'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
 
@@ -47,10 +47,12 @@ async function save() {
         <div class="grid gap-1.5 sm:col-span-2">
           <Label class="text-[10px] uppercase tracking-wider text-muted-foreground/70">{{ t.blogRoot }}</Label>
           <Input v-model="cfg.site.blogRoot" @input="dirty=true" />
+          <p class="text-[11px] text-muted-foreground/50">Hugo 站点根目录路径</p>
         </div>
         <div class="grid gap-1.5">
           <Label class="text-[10px] uppercase tracking-wider text-muted-foreground/70">{{ t.postSection }}</Label>
           <Input v-model="cfg.site.postSection" @input="dirty=true" />
+          <p class="text-[11px] text-muted-foreground/50">文章存放的子目录名称</p>
         </div>
         <div class="grid gap-1.5">
           <Label class="text-[10px] uppercase tracking-wider text-muted-foreground/70">{{ t.buildCommand }}</Label>
@@ -63,12 +65,12 @@ async function save() {
           </Select>
         </div>
       </CardContent>
+      <CardFooter>
+        <Button class="rounded-full px-5" :disabled="saving || !dirty" @click="save">
+          <SaveIcon class="h-4 w-4 mr-1.5" />{{ saving ? t.saving : t.saveSettings }}
+        </Button>
+      </CardFooter>
     </Card>
-    <div>
-      <Button class="rounded-full px-5" :disabled="saving || !dirty" @click="save">
-        <SaveIcon class="h-4 w-4 mr-1.5" />{{ saving ? t.saving : t.saveSettings }}
-      </Button>
-    </div>
   </div>
   <Skeleton v-else class="h-[200px] max-w-3xl" />
 </template>

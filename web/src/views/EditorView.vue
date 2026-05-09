@@ -2,7 +2,7 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
-  SaveIcon, SendIcon, EyeIcon, SplitSquareHorizontalIcon, Loader2Icon,
+  SaveIcon, SendIcon, EyeIcon, SplitSquareHorizontalIcon, Loader2Icon, AlertCircleIcon,
   BoldIcon, ItalicIcon, LinkIcon, ImageIcon, CodeIcon, Heading1Icon,
   RotateCcwIcon, ListIcon, ChevronDownIcon, ChevronUpIcon
 } from 'lucide-vue-next'
@@ -275,6 +275,7 @@ function onTagKeydown(e: KeyboardEvent) {
           <ListIcon class="h-3.5 w-3.5" />
         </Button>
         <div class="flex-1" />
+        <Separator orientation="vertical" class="mx-1 h-4" />
         <Button variant="ghost" size="sm" class="text-xs h-7 text-destructive/60 hover:text-destructive" :title="t.rollback" @click="rollback">
           <RotateCcwIcon class="h-3 w-3 mr-1" />{{ t.rollback }}
         </Button>
@@ -313,8 +314,9 @@ function onTagKeydown(e: KeyboardEvent) {
     </template>
 
     <!-- Error -->
-    <div v-else class="text-center py-20 space-y-3">
-      <p class="text-muted-foreground">文章加载失败</p>
+    <div v-else class="flex-1 flex flex-col items-center justify-center gap-3 animate-fade-up">
+      <AlertCircleIcon class="h-10 w-10 text-destructive/40" />
+      <p class="font-serif text-muted-foreground">文章加载失败</p>
       <Button class="rounded-full px-5" @click="loadPost">{{ t.retry }}</Button>
     </div>
   </div>

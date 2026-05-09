@@ -36,11 +36,25 @@ onMounted(load)
       </Badge>
     </div>
 
-    <div v-if="loading" class="space-y-3">
-      <Skeleton v-for="i in 3" :key="i" class="h-[72px] animate-fade-up" style="animation-delay: calc(var(--i, 0) * 30ms)" />
+    <div v-if="loading" class="space-y-2">
+      <div v-for="i in 3" :key="i" class="relative flex items-start gap-3 rounded border border-border/60 bg-card px-4 py-3 animate-fade-up">
+        <div class="absolute left-0 top-2 bottom-2 w-0.5 rounded-full bg-primary/10" />
+        <div class="pl-2 space-y-2 flex-1">
+          <Skeleton class="h-4 w-28" />
+          <Skeleton class="h-3 w-full max-w-xs" />
+        </div>
+      </div>
     </div>
 
-    <div v-else-if="health" class="space-y-2 stagger">
+    <div v-else-if="!health" class="text-center py-16 text-muted-foreground animate-fade-up">
+      <RefreshCwIcon class="h-8 w-8 mx-auto opacity-20 mb-3" />
+      <p class="font-serif">暂无健康数据</p>
+      <Button variant="outline" class="rounded-full px-5 mt-3" @click="load">
+        <RefreshCwIcon class="h-3.5 w-3.5 mr-1.5" />刷新
+      </Button>
+    </div>
+
+    <div v-else class="space-y-2 stagger">
       <div
         v-for="check in health.checks"
         :key="check.name"

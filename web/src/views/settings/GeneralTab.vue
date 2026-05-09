@@ -9,7 +9,7 @@ import { useNotify } from '@/composables/useNotify'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 
 const store = useStore()
@@ -82,13 +82,12 @@ function validate(): string {
             @update:model-value="(v: string | number) => { cfg!.maxUploadBytes = Number(v) * 1024 * 1024; dirty=true }" />
         </div>
       </CardContent>
+      <CardFooter>
+        <Button class="rounded-full px-5" :disabled="saving || !dirty" @click="save">
+          <SaveIcon class="h-4 w-4 mr-1.5" />{{ saving ? t.saving : t.saveSettings }}
+        </Button>
+      </CardFooter>
     </Card>
-
-    <div>
-      <Button class="rounded-full px-5" :disabled="saving || !dirty" @click="save">
-        <SaveIcon class="h-4 w-4 mr-1.5" />{{ saving ? t.saving : t.saveSettings }}
-      </Button>
-    </div>
   </div>
   <Skeleton v-else class="h-[300px] max-w-3xl" />
 </template>
