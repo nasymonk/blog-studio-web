@@ -81,6 +81,12 @@ export type SiteInfo = {
   profileImage: string
 }
 
+export type PostStats = {
+  views: number
+  lastViewed: string
+  readingTime: number
+}
+
 export type TrashItem = {
   id: string
   slug: string
@@ -164,6 +170,7 @@ export const api = {
   config: () => request<Config>('/config'),
   saveConfig: (config: Config) => request<Config>('/config', { method: 'PUT', body: JSON.stringify(config) }),
   deletePost: (slug: string) => request<{ trashId: string }>(`/posts/${encodeURIComponent(slug)}`, { method: 'DELETE' }),
+  postStats: (slug: string) => request<PostStats>(`/posts/${encodeURIComponent(slug)}/stats`),
   trash: () => request<TrashItem[]>('/trash'),
   restoreTrash: (id: string) => request<{ restored: boolean }>(`/trash/${encodeURIComponent(id)}/restore`, { method: 'POST' }),
   purgeTrash: (id: string) => request<{ purged: boolean }>(`/trash/${encodeURIComponent(id)}`, { method: 'DELETE' }),

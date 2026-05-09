@@ -7,7 +7,7 @@ import {
   RotateCcwIcon, ListIcon, ChevronDownIcon, ChevronUpIcon, PenLineIcon
 } from 'lucide-vue-next'
 import { api } from '@/services/api'
-import type { PostDraft } from '@/services/api'
+import type { PostDraft, PostStats } from '@/services/api'
 import { useStore } from '@/store'
 import { useI18n } from '@/i18n'
 import { useTheme } from '@/composables/useTheme'
@@ -37,6 +37,7 @@ const draft = ref<PostDraft | null>(null)
 const showOutline = ref(true)
 const metaExpanded = ref(false)
 const keybindingHelpOpen = ref(false)
+const postStats = ref<PostStats | null>(null)
 
 const editorContainer = ref<HTMLElement | null>(null)
 const { body, dirty, saving, savedAt, wordCount, mode, mount,
@@ -66,6 +67,7 @@ async function loadPost() {
   try {
     draft.value = await api.post(slug.value)
     body.value = draft.value.body
+    api.postStats(slug.value).then(s => { postStats.value = s }).catch(() => {})
   }
   catch (e: any) {
     if (e.status === 404) {
@@ -337,6 +339,8 @@ function onRootKeydown(e: KeyboardEvent) {
         <span>{{ wordCount }} {{ t.wordCount }}</span>
         <span class="text-border/40">·</span>
         <span>{{ readingTime }} {{ t.readingTime }}</span>
+        <span v-if="postStats" class="text-border/40">·</span>
+        <span v-if="postStats">{{ t.views }}: {{ postStats.views }}</span>
         <span class="text-border/40">·</span>
         <span :class="{ 'text-destructive': dirty, 'text-ok': !dirty }">{{ savedLabel() }}</span>
         <div class="flex-1" />

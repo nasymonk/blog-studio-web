@@ -14,6 +14,7 @@ import (
 	"sync"
 	"syscall"
 	"time"
+	"unicode"
 
 	"blog-studio-web/internal/apperror"
 	"blog-studio-web/internal/audit"
@@ -311,6 +312,8 @@ func (s *Server) postRouter(w http.ResponseWriter, r *http.Request) {
 			s.createPreview(w, r, slug)
 		case "rollback":
 			s.rollback(w, r, slug)
+		case "stats":
+			s.getPostStats(w, r, slug)
 		default:
 			writeError(w, http.StatusNotFound, apperror.New("NOT_FOUND", "接口不存在。", r.URL.Path, "检查 API 路径。", false))
 		}
@@ -336,7 +339,85 @@ func (s *Server) loadPost(w http.ResponseWriter, r *http.Request, slug string) {
 		writeError(w, http.StatusNotFound, err)
 		return
 	}
+	// Increment view count asynchronously
+	go s.incrementViewCount(slug, post.Body)
 	writeOK(w, post)
+}
+
+type PostStats struct {
+	Views       int    `json:"views"`
+	LastViewed  string `json:"lastViewed"`
+	ReadingTime int    `json:"readingTime"`
+}
+
+func (s *Server) statsDir() string {
+	return filepath.Join(s.paths.DataRoot, "stats")
+}
+
+func (s *Server) statsPath(slug string) string {
+	return filepath.Join(s.statsDir(), slug+".json")
+}
+
+func (s *Server) loadStats(slug string) PostStats {
+	data, err := os.ReadFile(s.statsPath(slug))
+	if err != nil {
+		return PostStats{}
+	}
+	var stats PostStats
+	_ = json.Unmarshal(data, &stats)
+	return stats
+}
+
+func (s *Server) saveStats(slug string, stats PostStats) {
+	dir := s.statsDir()
+	_ = os.MkdirAll(dir, 0755)
+	data, _ := json.MarshalIndent(stats, "", "  ")
+	_ = os.WriteFile(s.statsPath(slug), data, 0644)
+}
+
+func (s *Server) incrementViewCount(slug, body string) {
+	stats := s.loadStats(slug)
+	stats.Views++
+	stats.LastViewed = time.Now().UTC().Format(time.RFC3339)
+	stats.ReadingTime = calcReadingTime(body)
+	s.saveStats(slug, stats)
+}
+
+func (s *Server) getPostStats(w http.ResponseWriter, r *http.Request, slug string) {
+	if r.Method != http.MethodGet {
+		writeError(w, http.StatusMethodNotAllowed, apperror.New("METHOD_NOT_ALLOWED", "不支持的请求方法。", r.Method, "使用 GET 请求。", false))
+		return
+	}
+	stats := s.loadStats(slug)
+	// Also compute current reading time from the post body
+	post, err := s.publisher().LoadPost(slug)
+	if err == nil {
+		stats.ReadingTime = calcReadingTime(post.Body)
+	}
+	writeOK(w, stats)
+}
+
+// calcReadingTime estimates reading time in minutes.
+// Uses 200 wpm for English, 400 cpm for Chinese.
+func calcReadingTime(body string) int {
+	if body == "" {
+		return 1
+	}
+	var chineseChars, totalChars int
+	for _, r := range body {
+		if unicode.Is(unicode.Han, r) {
+			chineseChars++
+		}
+		totalChars++
+	}
+	nonChinese := totalChars - chineseChars
+	// English: ~5 chars per word, 200 wpm => 1000 chars/min
+	// Chinese: 400 chars/min
+	minutes := float64(nonChinese)/1000.0 + float64(chineseChars)/400.0
+	if minutes < 1 {
+		return 1
+	}
+	return int(minutes + 0.5)
 }
 
 func (s *Server) deletePost(w http.ResponseWriter, r *http.Request, slug string) {
