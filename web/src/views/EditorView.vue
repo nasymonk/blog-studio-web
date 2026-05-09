@@ -2,9 +2,9 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
-  SaveIcon, SendIcon, EyeIcon, SplitSquareHorizontalIcon, Loader2Icon, AlertCircleIcon,
+  SaveIcon, SendIcon, EyeIcon, Loader2Icon, AlertCircleIcon,
   BoldIcon, ItalicIcon, LinkIcon, ImageIcon, CodeIcon, Heading1Icon,
-  RotateCcwIcon, ListIcon, ChevronDownIcon, ChevronUpIcon
+  RotateCcwIcon, ListIcon, ChevronDownIcon, ChevronUpIcon, PenLineIcon
 } from 'lucide-vue-next'
 import { api } from '@/services/api'
 import type { PostDraft } from '@/services/api'
@@ -13,7 +13,6 @@ import { useI18n } from '@/i18n'
 import { useTheme } from '@/composables/useTheme'
 import { useNotify } from '@/composables/useNotify'
 import { useEditor } from '@/composables/useEditor'
-import MarkdownPreview from '@/components/MarkdownPreview.vue'
 import EditorOutline from '@/components/EditorOutline.vue'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -33,14 +32,13 @@ const notify = useNotify()
 const slug = computed(() => decodeURIComponent(route.params.slug as string))
 const loading = ref(true)
 const publishing = ref(false)
-const showPreview = ref(false)
 const draft = ref<PostDraft | null>(null)
 const showOutline = ref(true)
 const metaExpanded = ref(false)
 
 const editorContainer = ref<HTMLElement | null>(null)
-const { body, dirty, saving, savedAt, wordCount, mount,
-        execBold, execItalic, execLink, execCode, execHeading, insertText, goToLine } = useEditor(
+const { body, dirty, saving, savedAt, wordCount, mode, mount,
+        execBold, execItalic, execLink, execCode, execHeading, insertText, goToLine, toggleMode } = useEditor(
   editorContainer,
   '',
   theme,
@@ -267,8 +265,9 @@ function onTagKeydown(e: KeyboardEvent) {
         <Button variant="ghost" size="icon" class="h-7 w-7 text-muted-foreground hover:text-foreground" title="行内代码" @click="execCode"><CodeIcon class="h-3.5 w-3.5" /></Button>
         <Button variant="ghost" size="icon" class="h-7 w-7 text-muted-foreground hover:text-foreground" title="标题" @click="execHeading"><Heading1Icon class="h-3.5 w-3.5" /></Button>
         <Separator orientation="vertical" class="mx-1 h-4" />
-        <Button variant="ghost" size="icon" class="h-7 w-7" :class="showPreview ? 'bg-accent/10 text-accent' : 'text-muted-foreground'" :title="t.splitPreview" @click="showPreview = !showPreview">
-          <SplitSquareHorizontalIcon class="h-3.5 w-3.5" />
+        <Button variant="ghost" size="icon" class="h-7 w-7" :class="mode === 'source' ? 'bg-accent/10 text-accent' : 'text-muted-foreground'" :title="mode === 'wysiwyg' ? '切换源码模式' : '切换所见即所得'" @click="toggleMode">
+          <CodeIcon v-if="mode === 'wysiwyg'" class="h-3.5 w-3.5" />
+          <PenLineIcon v-else class="h-3.5 w-3.5" />
         </Button>
         <Button variant="ghost" size="icon" class="h-7 w-7" :class="showOutline ? 'bg-accent/10 text-accent' : 'text-muted-foreground'" title="大纲" @click="showOutline = !showOutline">
           <ListIcon class="h-3.5 w-3.5" />
@@ -284,9 +283,6 @@ function onTagKeydown(e: KeyboardEvent) {
       <div class="flex flex-1 min-h-0 overflow-hidden rounded border border-border/60">
         <div class="flex-1 overflow-auto p-6">
           <div ref="editorContainer" class="h-full" />
-        </div>
-        <div v-if="showPreview" class="flex-1 overflow-auto border-l-2 border-accent/30 bg-card p-6">
-          <MarkdownPreview :source="body" />
         </div>
         <EditorOutline v-if="showOutline" :body="body" :on-jump="goToLine" />
       </div>

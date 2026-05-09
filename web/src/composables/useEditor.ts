@@ -5,6 +5,7 @@ import { EditorState, Compartment } from '@codemirror/state'
 import { defaultKeymap, historyKeymap, history, indentWithTab } from '@codemirror/commands'
 import { markdown } from '@codemirror/lang-markdown'
 import { oneDark } from '@codemirror/theme-one-dark'
+import { wysiwyg } from './useWysiwyg'
 
 export type SaveFn = (body: string) => Promise<void>
 export type PasteImageFn = (file: File) => Promise<string>
@@ -31,8 +32,10 @@ export function useEditor(
   const saving = ref(false)
   const savedAt = ref<Date | null>(null)
   const wordCount = ref(0)
+  const mode = ref<'wysiwyg' | 'source'>('wysiwyg')
   let view: EditorView | null = null
   const themeCompartment = new Compartment()
+  const wysiwygCompartment = new Compartment()
   let saveTimer: ReturnType<typeof setTimeout> | null = null
 
   function scheduleAutoSave() {
@@ -116,6 +119,7 @@ export function useEditor(
           { key: 'Mod-k', run: (v) => wrapSelection(v, '[', '](url)') },
         ]),
         themeCompartment.of(theme.value === 'dark' ? oneDark : []),
+        wysiwygCompartment.of(wysiwyg()),
         updateListener,
         pasteHandler,
       ]
@@ -130,6 +134,16 @@ export function useEditor(
       view.dispatch({ effects: themeCompartment.reconfigure(val === 'dark' ? oneDark : []) })
     }
   })
+
+  function toggleMode() {
+    if (!view) return
+    const newMode = mode.value === 'wysiwyg' ? 'source' : 'wysiwyg'
+    mode.value = newMode
+    view.dispatch({
+      effects: wysiwygCompartment.reconfigure(newMode === 'wysiwyg' ? wysiwyg() : []),
+    })
+    view.focus()
+  }
 
   function destroy() {
     if (saveTimer) { clearTimeout(saveTimer); saveTimer = null }
@@ -183,5 +197,5 @@ export function useEditor(
     view.focus()
   }
 
-  return { body, dirty, saving, savedAt, wordCount, mount, destroy, save, execBold, execItalic, execLink, execImage, execCode, execHeading, insertText, goToLine }
+  return { body, dirty, saving, savedAt, wordCount, mode, mount, destroy, save, toggleMode, execBold, execItalic, execLink, execImage, execCode, execHeading, insertText, goToLine }
 }
