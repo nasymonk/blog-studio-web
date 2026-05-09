@@ -166,4 +166,14 @@ export const api = {
   bulkPublish: (slugs: string[]) => request<Array<{ slug: string; status: string; error?: string }>>('/posts/bulk/publish', { method: 'POST', body: JSON.stringify({ slugs }) }),
   renameTag: (oldName: string, newName: string) => request<{ updated: number }>('/tags/rename', { method: 'POST', body: JSON.stringify({ oldName, newName }) }),
   deleteTag: (name: string) => request<{ updated: number }>('/tags/delete', { method: 'POST', body: JSON.stringify({ name }) }),
+  metrics: async (): Promise<string> => {
+    const headers = new Headers()
+    if (csrfToken) headers.set('X-CSRF-Token', csrfToken)
+    const response = await fetch(`${base}/metrics`, { credentials: 'same-origin', headers })
+    if (response.status === 401) {
+      if (onUnauthorized) onUnauthorized()
+      return new Promise(() => {})
+    }
+    return response.text()
+  },
 }

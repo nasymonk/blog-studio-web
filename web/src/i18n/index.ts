@@ -183,6 +183,12 @@ const dict = {
     tagRenamed: (old: string, name: string) => `已将 "${old}" 重命名为 "${name}"`,
     tagDeleted: (tag: string) => `已删除标签 "${tag}"`,
     noTags: '暂无标签',
+    metrics: '运行指标',
+    totalRequests: '总请求数',
+    errorRate: '错误率',
+    avgBuildDuration: '平均构建耗时',
+    activePreviews: '活跃预览',
+    noMetricsData: '暂无指标数据',
   },
   en: {
     posts: 'Posts',
@@ -366,6 +372,12 @@ const dict = {
     tagRenamed: (old: string, name: string) => `Renamed "${old}" to "${name}"`,
     tagDeleted: (tag: string) => `Deleted tag "${tag}"`,
     noTags: 'No tags yet',
+    metrics: 'Metrics',
+    totalRequests: 'Total Requests',
+    errorRate: 'Error Rate',
+    avgBuildDuration: 'Avg Build Duration',
+    activePreviews: 'Active Previews',
+    noMetricsData: 'No metrics data',
   }
 } as const
 
