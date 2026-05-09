@@ -4,6 +4,7 @@ import { EditorView, keymap, lineNumbers, highlightActiveLine } from '@codemirro
 import { EditorState, Compartment } from '@codemirror/state'
 import { defaultKeymap, historyKeymap, history, indentWithTab } from '@codemirror/commands'
 import { markdown } from '@codemirror/lang-markdown'
+import { languages } from '@codemirror/language-data'
 import { bracketMatching, indentOnInput } from '@codemirror/language'
 import { GFM } from '@lezer/markdown'
 import { oneDark } from '@codemirror/theme-one-dark'
@@ -122,7 +123,7 @@ export function useEditor(
     const state = EditorState.create({
       doc: body.value || initialBody,
       extensions: [
-        markdown({ extensions: [GFM, wysiwygMod.mathExtension()] }),
+        markdown({ extensions: [GFM, wysiwygMod.mathExtension()], codeLanguages: languages }),
         history(),
         lineNumbers(),
         bracketMatching(),
