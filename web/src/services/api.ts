@@ -162,4 +162,6 @@ export const api = {
   trash: () => request<TrashItem[]>('/trash'),
   restoreTrash: (id: string) => request<{ restored: boolean }>(`/trash/${encodeURIComponent(id)}/restore`, { method: 'POST' }),
   purgeTrash: (id: string) => request<{ purged: boolean }>(`/trash/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+  bulkTrash: (slugs: string[]) => request<Array<{ slug: string; success: boolean; error?: string }>>('/posts/bulk/trash', { method: 'POST', body: JSON.stringify({ slugs }) }),
+  bulkPublish: (slugs: string[]) => request<Array<{ slug: string; status: string; error?: string }>>('/posts/bulk/publish', { method: 'POST', body: JSON.stringify({ slugs }) }),
 }

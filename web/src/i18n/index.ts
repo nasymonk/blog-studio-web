@@ -168,6 +168,11 @@ const dict = {
     skipToContent: '跳到主内容',
     scheduledAt: '定时发布',
     scheduledAtHint: '到达时间后自动发布',
+    selectAll: '全选',
+    deselectAll: '取消全选',
+    trashSelected: '删除所选',
+    publishSelected: '发布所选',
+    selectedCount: (n: number) => `已选 ${n} 篇`,
   },
   en: {
     posts: 'Posts',
@@ -336,6 +341,11 @@ const dict = {
     skipToContent: 'Skip to content',
     scheduledAt: 'Schedule',
     scheduledAtHint: 'Auto-publish when time is reached',
+    selectAll: 'Select All',
+    deselectAll: 'Deselect All',
+    trashSelected: 'Trash Selected',
+    publishSelected: 'Publish Selected',
+    selectedCount: (n: number) => `${n} selected`,
   }
 } as const
 

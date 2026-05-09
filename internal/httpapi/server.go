@@ -150,6 +150,8 @@ func (s *Server) Handler() http.Handler {
 	api.HandleFunc("PUT /posts/", s.withWriteAuth(s.postRouter))
 	api.HandleFunc("POST /posts/", s.withWriteAuth(s.postRouter))
 	api.HandleFunc("DELETE /posts/", s.withWriteAuth(s.postRouter))
+	api.HandleFunc("POST /posts/bulk/trash", s.withWriteAuth(s.bulkTrash))
+	api.HandleFunc("POST /posts/bulk/publish", s.withWriteAuth(s.bulkPublish))
 	api.HandleFunc("GET /site", s.withAuth(s.getSite))
 	api.HandleFunc("PUT /site", s.withWriteAuth(s.putSite))
 	api.HandleFunc("POST /site/avatar", s.withWriteAuth(s.uploadAvatar))
@@ -354,6 +356,89 @@ func (s *Server) deletePost(w http.ResponseWriter, r *http.Request, slug string)
 		Slug: slug, Operation: "delete", Target: "trash", Result: "ok", BackupID: trashID,
 	})
 	writeOK(w, map[string]string{"trashId": trashID})
+}
+
+func (s *Server) bulkTrash(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Slugs []string `json:"slugs"`
+	}
+	if err := decodeJSON(r, &req); err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+	sn := s.snap()
+	type result struct {
+		Slug    string `json:"slug"`
+		Success bool   `json:"success"`
+		Error   string `json:"error,omitempty"`
+	}
+	results := make([]result, 0, len(req.Slugs))
+	for _, slug := range req.Slugs {
+		postDir, err := storage.SafeJoin(sn.cfg.Site.BlogRoot, "content", sn.cfg.Site.PostSection, slug)
+		if err != nil {
+			results = append(results, result{Slug: slug, Success: false, Error: err.Error()})
+			continue
+		}
+		if _, statErr := os.Stat(postDir); os.IsNotExist(statErr) {
+			results = append(results, result{Slug: slug, Success: false, Error: "not found"})
+			continue
+		}
+		trashID, trashErr := s.trashStore.Move(sn.cfg.Site.ID, slug, postDir)
+		if trashErr != nil {
+			results = append(results, result{Slug: slug, Success: false, Error: trashErr.Error()})
+			continue
+		}
+		_ = s.audit.Append(audit.Entry{
+			AuditID: audit.NewID("audit"), Actor: "admin", SiteID: sn.cfg.Site.ID,
+			Slug: slug, Operation: "delete", Target: "trash", Result: "ok", BackupID: trashID,
+		})
+		results = append(results, result{Slug: slug, Success: true})
+	}
+	s.publisher().InvalidateCache()
+	writeOK(w, results)
+}
+
+func (s *Server) bulkPublish(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Slugs []string `json:"slugs"`
+	}
+	if err := decodeJSON(r, &req); err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+	pub := s.publisher()
+	type result struct {
+		Slug    string `json:"slug"`
+		Status  string `json:"status"`
+		Error   string `json:"error,omitempty"`
+	}
+	results := make([]result, 0, len(req.Slugs))
+	for _, slug := range req.Slugs {
+		draft, loadErr := pub.LoadPost(slug)
+		if loadErr != nil {
+			results = append(results, result{Slug: slug, Status: "failed", Error: "load failed"})
+			continue
+		}
+		draft.FrontMatter.Draft = false
+		ctx, cancel := context.WithTimeout(r.Context(), 2*time.Minute)
+		publishReq := publish.BlogPublishRequest{
+			Slug:             slug,
+			Draft:            draft,
+			ConfirmOverwrite: true,
+		}
+		publishResult := pub.PublishBlog(ctx, publishReq)
+		cancel()
+		if publishResult.Status == "success" {
+			results = append(results, result{Slug: slug, Status: "success"})
+		} else {
+			errMsg := ""
+			if publishResult.Error != nil {
+				errMsg = publishResult.Error.Message
+			}
+			results = append(results, result{Slug: slug, Status: publishResult.Status, Error: errMsg})
+		}
+	}
+	writeOK(w, results)
 }
 
 func (s *Server) listTrash(w http.ResponseWriter, r *http.Request) {

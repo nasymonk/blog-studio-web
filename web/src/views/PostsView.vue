@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { PlusIcon, SearchIcon, RefreshCwIcon, EditIcon, EyeIcon, AlertTriangleIcon, FileTextIcon, Trash2Icon } from 'lucide-vue-next'
+import { PlusIcon, SearchIcon, RefreshCwIcon, EditIcon, EyeIcon, AlertTriangleIcon, FileTextIcon, Trash2Icon, CheckSquareIcon, SquareIcon, SendIcon } from 'lucide-vue-next'
 import { useDebounceFn } from '@vueuse/core'
 import { useVirtualizer } from '@tanstack/vue-virtual'
 import { api } from '@/services/api'
@@ -15,6 +15,7 @@ import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Separator } from '@/components/ui/separator'
 
 const router = useRouter()
 const route = useRoute()
@@ -30,6 +31,7 @@ const sortBy = ref((route.query.sort as string) || 'date-desc')
 const searchInputRef = ref<HTMLInputElement | null>(null)
 const parentRef = ref<HTMLElement | null>(null)
 const focusedIndex = ref(-1)
+const selectedSlugs = ref<Set<string>>(new Set())
 
 function onListKeydown(e: KeyboardEvent) {
   const active = document.activeElement as HTMLElement
@@ -154,6 +156,46 @@ function toggleTag(tag: string) {
   else selectedTags.value.push(tag)
 }
 
+function toggleSelect(slug: string) {
+  const next = new Set(selectedSlugs.value)
+  if (next.has(slug)) next.delete(slug)
+  else next.add(slug)
+  selectedSlugs.value = next
+}
+
+function selectAll() {
+  selectedSlugs.value = new Set(filtered.value.map(p => p.slug))
+}
+
+function deselectAll() {
+  selectedSlugs.value = new Set()
+}
+
+async function bulkTrash() {
+  const slugs = [...selectedSlugs.value]
+  if (!slugs.length || !confirm(t.value.trashSelected + ` (${slugs.length})?`)) return
+  try {
+    const results = await api.bulkTrash(slugs)
+    const ok = results.filter(r => r.success).length
+    notify.success(`${ok}/${slugs.length} deleted`)
+    selectedSlugs.value = new Set()
+    store.posts = store.posts.filter(p => !selectedSlugs.value.has(p.slug) || !slugs.includes(p.slug))
+    await loadPosts()
+  } catch (e: any) { notify.error(e) }
+}
+
+async function bulkPublish() {
+  const slugs = [...selectedSlugs.value]
+  if (!slugs.length) return
+  try {
+    const results = await api.bulkPublish(slugs)
+    const ok = results.filter(r => r.status === 'success').length
+    notify.success(`${ok}/${slugs.length} published`)
+    selectedSlugs.value = new Set()
+    await loadPosts()
+  } catch (e: any) { notify.error(e) }
+}
+
 onMounted(loadPosts)
 </script>
 
@@ -266,6 +308,16 @@ onMounted(loadPosts)
             @focus="focusedIndex = virtualRow.index"
             @keydown.enter.prevent="router.push(`/posts/${encodeURIComponent(filtered[virtualRow.index]!.slug)}`)"
           >
+            <!-- Selection checkbox -->
+            <button
+              class="flex items-center justify-center w-8 shrink-0 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+              :aria-label="selectedSlugs.has(filtered[virtualRow.index]!.slug) ? t.deselectAll : t.selectAll"
+              @click.stop="toggleSelect(filtered[virtualRow.index]!.slug)"
+            >
+              <CheckSquareIcon v-if="selectedSlugs.has(filtered[virtualRow.index]!.slug)" class="h-4 w-4 text-accent" />
+              <SquareIcon v-else class="h-4 w-4" />
+            </button>
+
             <!-- Status color bar -->
             <div class="w-[3px] shrink-0 rounded-l" :class="statusColor(filtered[virtualRow.index]!)" />
 
@@ -299,6 +351,28 @@ onMounted(loadPosts)
           </div>
         </div>
       </div>
+    </div>
+
+    <!-- Bulk action bar -->
+    <div
+      v-if="selectedSlugs.size > 0"
+      class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-5 py-3 bg-card border border-border rounded-xl shadow-lg animate-fade-up"
+    >
+      <span class="text-sm text-muted-foreground">{{ t.selectedCount(selectedSlugs.size) }}</span>
+      <Separator orientation="vertical" class="h-5" />
+      <Button variant="ghost" size="sm" class="text-xs h-7" @click="selectAll">
+        {{ t.selectAll }}
+      </Button>
+      <Button variant="ghost" size="sm" class="text-xs h-7" @click="deselectAll">
+        {{ t.deselectAll }}
+      </Button>
+      <Separator orientation="vertical" class="h-5" />
+      <Button variant="outline" size="sm" class="text-xs h-7 text-destructive" @click="bulkTrash">
+        <Trash2Icon class="h-3 w-3 mr-1" />{{ t.trashSelected }}
+      </Button>
+      <Button size="sm" class="text-xs h-7 rounded-full" @click="bulkPublish">
+        <SendIcon class="h-3 w-3 mr-1" />{{ t.publishSelected }}
+      </Button>
     </div>
   </div>
 </template>
