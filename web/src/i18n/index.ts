@@ -166,6 +166,7 @@ const dict = {
     errorCode: '错误码',
     errorMessage: '错误信息',
     emptyLog: '（空）',
+    skipToContent: '跳到主内容',
   },
   en: {
     posts: 'Posts',
@@ -332,6 +333,7 @@ const dict = {
     errorCode: 'Error Code',
     errorMessage: 'Error Message',
     emptyLog: '(empty)',
+    skipToContent: 'Skip to content',
   }
 } as const
 

@@ -120,7 +120,7 @@ onMounted(async () => {
     <Toaster position="top-right" rich-colors :expand="true" />
     <CommandPalette v-model:open="paletteOpen" />
 
-    <a href="#main-content" class="sr-only focus:not-sr-only focus:absolute focus:z-[9999] focus:top-2 focus:left-2 focus:px-3 focus:py-2 focus:bg-background focus:border focus:border-border focus:rounded">跳到主内容</a>
+    <a href="#main-content" :aria-label="t.skipToContent" class="sr-only focus:not-sr-only focus:absolute focus:z-[9999] focus:top-2 focus:left-2 focus:px-3 focus:py-2 focus:bg-background focus:border focus:border-border focus:rounded">{{ t.skipToContent }}</a>
 
     <div v-if="isLoginPage || !isAuthed" class="min-h-svh">
       <ErrorBoundary>
