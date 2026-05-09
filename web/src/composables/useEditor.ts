@@ -120,6 +120,25 @@ export function useEditor(
       }
     })
 
+    const dropHandler = EditorView.domEventHandlers({
+      drop(event, editorView) {
+        if (!onPasteImage) return false
+        const file = event.dataTransfer?.files[0]
+        if (!file || !file.type.startsWith('image/')) return false
+        event.preventDefault()
+        const pos = editorView.posAtCoords({ x: event.clientX, y: event.clientY })
+          ?? editorView.state.selection.main.head
+        onPasteImage(file).then((filename) => {
+          const insert = `![](${filename})`
+          editorView.dispatch(editorView.state.update({
+            changes: { from: pos, insert },
+            selection: { anchor: pos + insert.length }
+          }))
+        })
+        return true
+      }
+    })
+
     const state = EditorState.create({
       doc: body.value || initialBody,
       extensions: [
@@ -145,6 +164,7 @@ export function useEditor(
         wysiwygCompartment.of(wysiwygMod.wysiwyg()),
         updateListener,
         pasteHandler,
+        dropHandler,
       ]
     })
 
