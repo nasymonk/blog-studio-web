@@ -37,20 +37,21 @@ describe('useNotify', () => {
     expect(toast.error).toHaveBeenCalledWith('Transient error', expect.objectContaining({ duration: 8000 }))
   })
 
-  it('error(AppError) shows message with technicalDetail as description', () => {
+  it('error(AppError) shows technicalDetail and suggestion in description', () => {
     const { error } = useNotify()
     error({ code: 'HUGO_FAIL', message: '构建失败', technicalDetail: 'exit code 1', suggestion: '检查 hugo 安装', retryable: true })
     expect(toast.error).toHaveBeenCalledWith(
       '构建失败',
-      expect.objectContaining({ description: 'exit code 1' })
+      expect.objectContaining({ description: 'exit code 1\n建议：检查 hugo 安装' })
     )
   })
 
-  it('error(AppError) uses suggestion as action label', () => {
+  it('error(AppError) with suggestion only shows suggestion in description', () => {
     const { error } = useNotify()
     error({ code: 'ERR', message: 'Failed', technicalDetail: '', suggestion: '重启服务', retryable: false })
     const call = vi.mocked(toast.error).mock.calls[0]
-    expect((call[1]?.action as any)?.label).toBe('重启服务')
+    expect(call[1]?.description).toBe('建议：重启服务')
+    expect((call[1]?.action as any)?.label).toBeUndefined()
   })
 
   it('error(err, { onRetry }) adds retry action button', () => {

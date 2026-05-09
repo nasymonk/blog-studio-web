@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import { SaveIcon, ClockIcon } from 'lucide-vue-next'
 import { EditorView, keymap } from '@codemirror/view'
-import { EditorState } from '@codemirror/state'
+import { EditorState, Compartment } from '@codemirror/state'
 import { defaultKeymap, historyKeymap, history } from '@codemirror/commands'
 import { markdown } from '@codemirror/lang-markdown'
 import { oneDark } from '@codemirror/theme-one-dark'
@@ -21,6 +21,7 @@ const loading = ref(false)
 const saving = ref(false)
 const editorEl = ref<HTMLElement | null>(null)
 let view: EditorView | null = null
+const themeCompartment = new Compartment()
 
 const wordCount = computed(() => {
   if (!view) return 0
@@ -40,7 +41,7 @@ onMounted(async () => {
             history(),
             EditorView.lineWrapping,
             keymap.of([...defaultKeymap, ...historyKeymap]),
-            theme.value === 'dark' ? oneDark : [],
+            themeCompartment.of(theme.value === 'dark' ? oneDark : []),
           ]
         }),
         parent: editorEl.value
@@ -48,6 +49,12 @@ onMounted(async () => {
     }
   } catch (e: any) { notify.error(e) }
   finally { loading.value = false }
+})
+
+watch(theme, (val) => {
+  if (view) {
+    view.dispatch({ effects: themeCompartment.reconfigure(val === 'dark' ? oneDark : []) })
+  }
 })
 
 onBeforeUnmount(() => { view?.destroy() })

@@ -215,9 +215,10 @@ onMounted(async () => {
           </div>
         </header>
 
-        <div v-if="store.banner" class="flex items-center gap-2 px-6 py-2 bg-warn-bg text-warn text-sm" role="alert">
+        <div v-if="store.banner" class="flex items-center gap-2 px-6 py-2 text-sm" role="alert"
+          :class="store.banner.type === 'error' ? 'bg-error-bg text-destructive' : store.banner.type === 'ok' ? 'bg-ok-bg text-ok' : 'bg-warn-bg text-warn'">
           <span class="flex-1">{{ store.banner.message }}</span>
-          <Button variant="ghost" size="icon" class="h-6 w-6" @click="store.banner = null">
+          <Button variant="ghost" size="icon" class="h-6 w-6" aria-label="关闭" @click="store.banner = null">
             <span class="text-xs">✕</span>
           </Button>
         </div>

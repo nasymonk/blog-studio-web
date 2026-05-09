@@ -80,7 +80,12 @@ describe('api', () => {
       statusText: 'Unauthorized',
       json: () => Promise.resolve({ ok: false, error: { message: 'Unauthorized' } }),
     } as Response)
-    await expect(api.posts()).rejects.toThrow('unauthenticated')
+    // Promise never resolves (page is navigating away), so race with a timeout
+    const result = await Promise.race([
+      api.posts().then(() => 'resolved'),
+      new Promise(resolve => setTimeout(() => resolve('timeout'), 100)),
+    ])
+    expect(result).toBe('timeout')
     expect(window.location.href).toBe('/studio/#/login')
   })
 

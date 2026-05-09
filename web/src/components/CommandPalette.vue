@@ -14,7 +14,7 @@ const emit = defineEmits<{ 'update:open': [val: boolean] }>()
 
 const router = useRouter()
 const store = useStore()
-const { t, setLang } = useI18n()
+const { t, lang, setLang } = useI18n()
 const { toggle: toggleTheme } = useTheme()
 
 const query = ref('')
@@ -26,7 +26,7 @@ interface Cmd { label: string; description?: string; shortcut?: string; action: 
 const fixedCmds: Cmd[] = [
   { label: '新建文章', shortcut: '', action: () => { close(); const s = prompt('Slug:'); if (s) router.push(`/posts/${encodeURIComponent(s)}`) } },
   { label: '切换主题', shortcut: '', action: () => { close(); toggleTheme() } },
-  { label: '切换语言', shortcut: '', action: () => { close(); setLang(t.value === t.value ? 'en' : 'zh') } },
+  { label: '切换语言', shortcut: '', action: () => { close(); setLang(lang.value === 'zh' ? 'en' : 'zh') } },
   { label: '跳到设置', shortcut: '', action: () => go('/settings') },
   { label: '跳到审计', shortcut: '', action: () => go('/settings/audit') },
   { label: '跳到健康检查', shortcut: '', action: () => go('/health') },

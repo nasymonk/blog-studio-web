@@ -64,13 +64,13 @@ async function login() {
           :show-password="false"
           :password-length="password.length"
         />
-        <p class="font-deco text-lg tracking-widest mt-4" style="color: #8a7e6e;">
+        <p class="login-tagline font-deco text-lg tracking-widest mt-4">
           写作是一种修行
         </p>
       </div>
 
       <!-- Bottom brand -->
-      <div class="absolute bottom-8 text-xs tracking-[0.2em] uppercase" style="color: rgba(107,100,87,0.3);">
+      <div class="login-brand absolute bottom-8 text-xs tracking-[0.2em] uppercase">
         Blog Studio
       </div>
     </div>
@@ -151,11 +151,23 @@ async function login() {
 .login-left-panel {
   background: linear-gradient(135deg, #f5f0e6 0%, #ece5d5 50%, #e0d8c8 100%);
 }
+.login-tagline {
+  color: #8a7e6e;
+}
+.login-brand {
+  color: rgba(107, 100, 87, 0.3);
+}
 :global(.dark) .login-left-panel {
   background: linear-gradient(135deg, #1e2023 0%, #24262a 50%, #1a1b1e 100%);
 }
 :global(.dark) .login-left-panel .animate-ink-breathe {
   color: var(--accent);
   filter: drop-shadow(0 4px 24px rgba(157,194,214,0.15));
+}
+:global(.dark) .login-tagline {
+  color: #8a9eae;
+}
+:global(.dark) .login-brand {
+  color: rgba(157, 194, 214, 0.2);
 }
 </style>

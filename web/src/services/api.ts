@@ -114,7 +114,7 @@ async function request<T>(path: string, options: RequestInit = {}, signal?: Abor
   const response = await fetch(`${base}${path}`, { credentials: 'same-origin', signal, ...options, headers })
   if (response.status === 401 && path !== '/auth/login' && path !== '/session') {
     window.location.href = '/studio/#/login'
-    throw new Error('unauthenticated')
+    return new Promise(() => {}) // never resolves — page is navigating away
   }
   const payload = await response.json().catch(() => ({ ok: false, error: { message: response.statusText } }))
   if (!response.ok || !payload.ok) {

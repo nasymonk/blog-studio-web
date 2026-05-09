@@ -234,7 +234,7 @@ onMounted(loadPosts)
       <div
         v-for="(post, i) in paginated"
         :key="post.slug"
-        class="post-card group relative flex items-stretch rounded cursor-pointer transition-all duration-200 animate-fade-up hover:-translate-y-px hover:shadow-sm bg-card border border-border/60"
+        class="post-card group relative flex items-stretch rounded cursor-pointer transition-all duration-200 animate-fade-up hover:-translate-y-px hover:shadow-sm bg-card border border-border/60 focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-1"
         tabindex="0"
         role="button"
         :aria-label="post.title"

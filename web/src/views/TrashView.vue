@@ -89,7 +89,7 @@ onMounted(load)
             <TableCell :title="item.deletedAt" class="text-sm text-muted-foreground">{{ relDate(item.deletedAt) }}</TableCell>
             <TableCell class="text-sm text-muted-foreground">{{ fmtSize(item.size) }}</TableCell>
             <TableCell class="text-right">
-              <div class="flex gap-1 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
+              <div class="flex gap-1 justify-end opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity">
                 <Button variant="ghost" size="sm" class="text-xs h-7 text-muted-foreground" @click="restore(item)">
                   <UndoIcon class="h-3 w-3 mr-1" /> 还原
                 </Button>

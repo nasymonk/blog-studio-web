@@ -18,16 +18,15 @@ export function useNotify() {
 
     const action = onRetry
       ? { label: '重试', onClick: onRetry }
-      : typeof err === 'object' && err.suggestion
-        ? { label: err.suggestion, onClick: () => {} }
-        : undefined
+      : undefined
 
     if (typeof err === 'string') {
       toast.error(err, { duration, action })
       return
     }
+    const description = [err.technicalDetail, err.suggestion && `建议：${err.suggestion}`].filter(Boolean).join('\n') || undefined
     toast.error(err.message, {
-      description: err.technicalDetail || undefined,
+      description,
       duration,
       action,
     })

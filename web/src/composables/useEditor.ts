@@ -50,12 +50,16 @@ export function useEditor(
     }, 1500)
   }
 
-  function save() {
+  async function save() {
     if (saveTimer) { clearTimeout(saveTimer); saveTimer = null }
-    onSave(body.value).then(() => {
+    saving.value = true
+    try {
+      await onSave(body.value)
       dirty.value = false
       savedAt.value = new Date()
-    })
+    } finally {
+      saving.value = false
+    }
     return true
   }
 
@@ -95,7 +99,7 @@ export function useEditor(
     })
 
     const state = EditorState.create({
-      doc: initialBody,
+      doc: body.value || initialBody,
       extensions: [
         markdown(),
         history(),

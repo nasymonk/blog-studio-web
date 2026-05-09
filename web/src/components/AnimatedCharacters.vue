@@ -35,19 +35,27 @@ onMounted(() => window.addEventListener('mousemove', onMouseMove))
 onUnmounted(() => window.removeEventListener('mousemove', onMouseMove))
 
 // Blink scheduler
+const blinkTimers: ReturnType<typeof setTimeout>[] = []
+
 function scheduleBlink(setBlinking: (v: boolean) => void) {
   const tick = () => {
     const delay = Math.random() * 4000 + 3000
-    setTimeout(() => {
+    const t1 = setTimeout(() => {
       setBlinking(true)
-      setTimeout(() => {
+      const t2 = setTimeout(() => {
         setBlinking(false)
         tick()
       }, 150)
+      blinkTimers.push(t2)
     }, delay)
+    blinkTimers.push(t1)
   }
   tick()
 }
+
+onUnmounted(() => {
+  blinkTimers.forEach(clearTimeout)
+})
 
 onMounted(() => {
   scheduleBlink((v) => { coralBlinking.value = v })

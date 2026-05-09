@@ -106,14 +106,10 @@ async function publishBlog(confirmOverwrite = false) {
   finally { publishing.value = false }
 }
 
-async function previewPost() {
+function previewPost() {
   if (!draft.value) return
   draft.value.body = body.value
-  try {
-    const result = await api.preview(draft.value)
-    if (result.error) { notify.error(result.error); return }
-    router.push(`/posts/${encodeURIComponent(slug.value)}/preview`)
-  } catch (e: any) { notify.error(e, { onRetry: previewPost }) }
+  router.push(`/posts/${encodeURIComponent(slug.value)}/preview`)
 }
 
 async function rollback() {
@@ -132,7 +128,7 @@ function addTag(tag: string) {
 }
 function removeTag(tag: string) {
   if (!draft.value) return
-  draft.value.frontMatter.tags = draft.value.frontMatter.tags.filter(t => t !== tag)
+  draft.value.frontMatter.tags = draft.value.frontMatter.tags.filter(tg => tg !== tag)
   store.editor.dirty = true
 }
 
