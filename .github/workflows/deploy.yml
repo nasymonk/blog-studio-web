@@ -23,7 +23,8 @@ jobs:
               root@8.130.214.67 << 'ENDSSH'
             set -e
             cd /root/blog-studio-web-src
-            git pull
+            git fetch origin
+            git reset --hard origin/main
             docker build -t blog-studio-web:ecs .
             cd /root/blog-nginx
             docker compose up -d --no-deps blog-studio-web
