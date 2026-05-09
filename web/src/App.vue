@@ -13,6 +13,7 @@ import { useI18n } from '@/i18n'
 import { useTheme } from '@/composables/useTheme'
 import { useNotify } from '@/composables/useNotify'
 import CommandPalette from '@/components/CommandPalette.vue'
+import ErrorBoundary from '@/components/ErrorBoundary.vue'
 import router from '@/router'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -122,7 +123,9 @@ onMounted(async () => {
     <a href="#main-content" class="sr-only focus:not-sr-only focus:absolute focus:z-[9999] focus:top-2 focus:left-2 focus:px-3 focus:py-2 focus:bg-background focus:border focus:border-border focus:rounded">跳到主内容</a>
 
     <div v-if="isLoginPage || !isAuthed" class="min-h-svh">
-      <RouterView />
+      <ErrorBoundary>
+        <RouterView />
+      </ErrorBoundary>
     </div>
 
     <div v-else class="flex h-svh overflow-hidden">
@@ -228,9 +231,11 @@ onMounted(async () => {
         </header>
 
         <main id="main-content" class="flex-1 overflow-auto p-6" tabindex="-1">
-          <transition name="page" mode="out-in">
-            <RouterView :key="route.path" />
-          </transition>
+          <ErrorBoundary>
+            <transition name="page" mode="out-in">
+              <RouterView :key="route.path" />
+            </transition>
+          </ErrorBoundary>
         </main>
       </div>
     </div>
