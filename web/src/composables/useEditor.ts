@@ -1,11 +1,14 @@
 import { ref, watch, onBeforeUnmount, type Ref } from 'vue'
 import { countWords } from '@/utils/words'
-import { EditorView, keymap, lineNumbers } from '@codemirror/view'
+import { EditorView, keymap, lineNumbers, highlightActiveLine } from '@codemirror/view'
 import { EditorState, Compartment } from '@codemirror/state'
 import { defaultKeymap, historyKeymap, history, indentWithTab } from '@codemirror/commands'
 import { markdown } from '@codemirror/lang-markdown'
+import { bracketMatching, indentOnInput } from '@codemirror/language'
+import { searchKeymap, openSearchPanel } from '@codemirror/search'
+import { GFM } from '@lezer/markdown'
 import { oneDark } from '@codemirror/theme-one-dark'
-import { wysiwyg } from './useWysiwyg'
+import { wysiwyg, mathExtension } from './useWysiwyg'
 
 export type SaveFn = (body: string) => Promise<void>
 export type PasteImageFn = (file: File) => Promise<string>
@@ -104,14 +107,18 @@ export function useEditor(
     const state = EditorState.create({
       doc: body.value || initialBody,
       extensions: [
-        markdown(),
+        markdown({ extensions: [GFM, mathExtension()] }),
         history(),
         lineNumbers(),
+        bracketMatching(),
+        highlightActiveLine(),
+        indentOnInput(),
         EditorView.lineWrapping,
         EditorView.contentAttributes.of({ spellcheck: 'false', autocorrect: 'off', autocapitalize: 'off' }),
         keymap.of([
           ...defaultKeymap,
           ...historyKeymap,
+          ...searchKeymap,
           indentWithTab,
           { key: 'Mod-s', run: () => { save(); return true } },
           { key: 'Mod-b', run: (v) => wrapSelection(v, '**', '**') },

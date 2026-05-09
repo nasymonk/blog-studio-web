@@ -118,7 +118,9 @@ async function request<T>(path: string, options: RequestInit = {}, signal?: Abor
   }
   const payload = await response.json().catch(() => ({ ok: false, error: { message: response.statusText } }))
   if (!response.ok || !payload.ok) {
-    throw payload.error || new Error(response.statusText)
+    const err = payload.error || new Error(response.statusText)
+    if (response.status) (err as any).status = response.status
+    throw err
   }
   return payload.data as T
 }

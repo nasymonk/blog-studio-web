@@ -65,17 +65,35 @@ async function loadPost() {
     draft.value = await api.post(slug.value)
     body.value = draft.value.body
   }
-  catch (e: any) { notify.error(e, { onRetry: loadPost }) }
+  catch (e: any) {
+    if (e.status === 404) {
+      draft.value = {
+        slug: slug.value,
+        body: '',
+        frontMatter: {
+          title: '',
+          date: new Date().toISOString().slice(0, 10),
+          draft: true,
+          tags: [],
+          categories: [],
+        },
+        assets: [],
+      }
+      body.value = ''
+    } else {
+      notify.error(e, { onRetry: loadPost })
+    }
+  }
   finally { loading.value = false }
 }
 
 onMounted(async () => {
   await loadPost()
-  if (editorContainer.value && draft.value) mount(editorContainer.value)
+  if (editorContainer.value) mount(editorContainer.value)
 })
 
 watch(editorContainer, (el) => {
-  if (el && draft.value && !loading.value) mount(el)
+  if (el && !loading.value) mount(el)
 })
 
 async function saveDraft() {
