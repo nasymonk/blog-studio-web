@@ -6,7 +6,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 describe('useTheme', () => {
   beforeEach(() => {
     localStorage.clear()
-    document.documentElement.removeAttribute('data-theme')
+    document.documentElement.classList.remove('dark')
     vi.resetModules()
   })
 
@@ -50,12 +50,12 @@ describe('useTheme', () => {
     expect(theme.value).toBe('light')
   })
 
-  it('sets data-theme attribute on documentElement', async () => {
+  it('sets dark class on documentElement', async () => {
     const { useTheme } = await import('../composables/useTheme')
     const { toggle } = useTheme()
     toggle()
     // useStorage's watcher fires synchronously via triggerRef in happy-dom
     await Promise.resolve()
-    expect(document.documentElement.getAttribute('data-theme')).toBe('dark')
+    expect(document.documentElement.classList.contains('dark')).toBe(true)
   })
 })

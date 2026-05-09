@@ -6,6 +6,9 @@ import { SearchIcon } from 'lucide-vue-next'
 import { useStore } from '@/store'
 import { useI18n } from '@/i18n'
 import { useTheme } from '@/composables/useTheme'
+import { Dialog, DialogContent } from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { ScrollArea } from '@/components/ui/scroll-area'
 
 const props = defineProps<{ open: boolean }>()
 const emit = defineEmits<{ 'update:open': [val: boolean] }>()
@@ -79,102 +82,39 @@ function onKeydown(e: KeyboardEvent) {
   else if (e.key === 'Enter') { e.preventDefault(); if (items.value[cursor.value]) select(items.value[cursor.value]) }
   else if (e.key === 'Escape') close()
 }
-
-useEventListener('keydown', (e: KeyboardEvent) => {
-  if (props.open && e.key === 'Escape') close()
-})
 </script>
 
 <template>
-  <Teleport to="body">
-    <div v-if="open" class="palette-backdrop" @click.self="close">
-      <div class="palette-dialog" role="dialog" aria-modal="true" aria-label="命令面板" @keydown="onKeydown">
-        <div class="palette-search">
-          <SearchIcon :size="16" class="palette-icon" />
-          <input
-            ref="inputRef"
-            v-model="query"
-            class="palette-input"
-            placeholder="搜索命令或文章…"
-            autocomplete="off"
-          />
-        </div>
-        <ul class="palette-list" role="listbox">
-          <li
+  <Dialog :open="open" @update:open="(v: boolean) => emit('update:open', v)">
+    <DialogContent class="overflow-hidden p-0 gap-0 max-w-[560px] top-[15vh] translate-y-0" @keydown="onKeydown">
+      <div class="flex items-center gap-2 border-b border-border px-4 py-3">
+        <SearchIcon class="h-4 w-4 text-muted-foreground shrink-0" />
+        <Input
+          ref="inputRef"
+          v-model="query"
+          class="border-0 shadow-none focus-visible:ring-0 text-sm h-auto p-0"
+          placeholder="搜索命令或文章…"
+          autocomplete="off"
+        />
+      </div>
+      <ScrollArea class="max-h-[360px]">
+        <div class="p-1.5">
+          <button
             v-for="(item, i) in items"
             :key="i"
-            class="palette-item"
-            :class="{ active: cursor === i }"
+            class="flex w-full items-center justify-between rounded-md px-3 py-2.5 text-sm cursor-pointer transition-colors"
+            :class="cursor === i ? 'bg-accent text-accent-foreground' : 'hover:bg-muted'"
             role="option"
             :aria-selected="cursor === i"
             @click="select(item)"
             @mouseenter="cursor = i"
           >
-            <span class="palette-label">{{ item.label }}</span>
-            <span v-if="item.description" class="palette-desc">{{ item.description }}</span>
-          </li>
-          <li v-if="items.length === 0" class="palette-empty">无匹配结果</li>
-        </ul>
-      </div>
-    </div>
-  </Teleport>
+            <span class="flex-1 text-left">{{ item.label }}</span>
+            <span v-if="item.description" class="text-xs" :class="cursor === i ? 'text-accent-foreground/70' : 'text-muted-foreground'">{{ item.description }}</span>
+          </button>
+          <div v-if="items.length === 0" class="py-8 text-center text-sm text-muted-foreground">无匹配结果</div>
+        </div>
+      </ScrollArea>
+    </DialogContent>
+  </Dialog>
 </template>
-
-<style scoped>
-.palette-backdrop {
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.4);
-  z-index: 9999;
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
-  padding-top: 15vh;
-}
-.palette-dialog {
-  background: var(--bg-elevated, #fff);
-  border: 1px solid var(--border-color, #e5e7eb);
-  border-radius: 12px;
-  box-shadow: 0 20px 60px rgba(0,0,0,0.25);
-  width: min(560px, 90vw);
-  overflow: hidden;
-}
-.palette-search {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 14px 16px;
-  border-bottom: 1px solid var(--border-color, #e5e7eb);
-}
-.palette-icon { opacity: 0.4; flex-shrink: 0; }
-.palette-input {
-  flex: 1;
-  border: none;
-  outline: none;
-  background: transparent;
-  font-size: 15px;
-  color: var(--text-primary, #111);
-}
-.palette-list {
-  list-style: none;
-  margin: 0;
-  padding: 6px;
-  max-height: 360px;
-  overflow-y: auto;
-}
-.palette-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 10px 12px;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 14px;
-  gap: 12px;
-}
-.palette-item.active { background: var(--accent-color, #4f46e5); color: #fff; }
-.palette-label { flex: 1; }
-.palette-desc { font-size: 12px; opacity: 0.55; }
-.palette-item.active .palette-desc { opacity: 0.75; color: #fff; }
-.palette-empty { padding: 20px; text-align: center; color: var(--text-muted, #9ca3af); font-size: 14px; }
-</style>

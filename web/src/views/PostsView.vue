@@ -9,6 +9,12 @@ import { useStore } from '@/store'
 import { useI18n } from '@/i18n'
 import { useNotify } from '@/composables/useNotify'
 import { filterPosts } from '@/utils/filterPosts'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Badge } from '@/components/ui/badge'
+import { Card, CardContent } from '@/components/ui/card'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Skeleton } from '@/components/ui/skeleton'
 
 const router = useRouter()
 const route = useRoute()
@@ -114,12 +120,19 @@ async function deletePost(post: PostState) {
   }
 }
 
-function statusBadge(p: PostState): { cls: string; label: string } {
-  if (p.syncStatus === 'conflict') return { cls: 'badge-error', label: t.value.conflicts }
-  if (p.syncStatus === 'stale') return { cls: 'badge-warn', label: t.value.stale }
-  if (p.draft) return { cls: 'badge-neutral', label: t.value.draft }
-  if (p.syncStatus === 'clean') return { cls: 'badge-ok', label: t.value.published }
-  return { cls: 'badge-neutral', label: p.syncStatus }
+const statusVariant: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
+  conflict: 'destructive',
+  stale: 'secondary',
+  draft: 'outline',
+  clean: 'default',
+}
+
+function statusBadge(p: PostState): { variant: 'default' | 'secondary' | 'destructive' | 'outline'; label: string } {
+  if (p.syncStatus === 'conflict') return { variant: 'destructive', label: t.value.conflicts }
+  if (p.syncStatus === 'stale') return { variant: 'secondary', label: t.value.stale }
+  if (p.draft) return { variant: 'outline', label: t.value.draft }
+  if (p.syncStatus === 'clean') return { variant: 'default', label: t.value.published }
+  return { variant: 'outline', label: p.syncStatus }
 }
 
 function relDate(iso: string) {
@@ -144,108 +157,122 @@ onMounted(loadPosts)
 </script>
 
 <template>
-  <div class="page-content" style="display:flex;flex-direction:column;gap:16px">
+  <div class="flex flex-col gap-4">
     <!-- Toolbar -->
-    <div class="flex items-center gap-2">
-      <div style="position:relative;flex:1;max-width:340px">
-        <SearchIcon :size="15" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--tertiary);pointer-events:none" />
-        <input ref="searchInputRef" v-model="searchQuery" class="input" style="padding-left:32px" :placeholder="t.search" />
+    <div class="flex items-center gap-2 flex-wrap">
+      <div class="relative flex-1 max-w-[340px]">
+        <SearchIcon class="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+        <Input ref="searchInputRef" v-model="searchQuery" class="pl-9" :placeholder="t.search" />
       </div>
-      <select v-model="sortBy" class="input" style="width:auto;min-width:130px">
-        <option value="date-desc">{{ t.sortDate }} ↓</option>
-        <option value="date-asc">{{ t.sortDate }} ↑</option>
-        <option value="title">{{ t.sortTitle }}</option>
-        <option value="status">{{ t.sortStatus }}</option>
-      </select>
-      <div style="display:flex;gap:4px;flex-wrap:wrap">
-        <button
-v-for="s in ['all','drafts','published','conflicts','stale']" :key="s"
-          class="btn btn-sm" :class="{ 'btn-primary': statusFilter === s }"
+      <Select v-model="sortBy">
+        <SelectTrigger class="w-auto min-w-[130px]"><SelectValue /></SelectTrigger>
+        <SelectContent>
+          <SelectItem value="date-desc">{{ t.sortDate }} ↓</SelectItem>
+          <SelectItem value="date-asc">{{ t.sortDate }} ↑</SelectItem>
+          <SelectItem value="title">{{ t.sortTitle }}</SelectItem>
+          <SelectItem value="status">{{ t.sortStatus }}</SelectItem>
+        </SelectContent>
+      </Select>
+      <div class="flex gap-1 flex-wrap">
+        <Button
+          v-for="s in ['all','drafts','published','conflicts','stale']" :key="s"
+          variant="ghost" size="sm"
+          :class="{ 'bg-primary text-primary-foreground hover:bg-primary/90': statusFilter === s }"
           @click="statusFilter = s">
           {{ t[s as keyof typeof t] || s }}
-        </button>
+        </Button>
       </div>
-      <div style="margin-left:auto;display:flex;gap:8px">
-        <button class="btn btn-primary" @click="newPost">
-          <PlusIcon :size="15" />{{ t.newPost }}
-        </button>
-        <button class="btn btn-ghost btn-icon" :title="t.loading" :disabled="store.postsLoading" @click="loadPosts">
-          <RefreshCwIcon :size="15" :class="{ spin: store.postsLoading }" />
-        </button>
+      <div class="ml-auto flex gap-2">
+        <Button @click="newPost"><PlusIcon class="h-4 w-4 mr-1" />{{ t.newPost }}</Button>
+        <Button variant="ghost" size="icon" class="h-9 w-9" :title="t.loading" :disabled="store.postsLoading" @click="loadPosts">
+          <RefreshCwIcon class="h-4 w-4" :class="{ 'animate-spin': store.postsLoading }" />
+        </Button>
       </div>
     </div>
 
     <!-- Tag chips -->
-    <div v-if="allTags.length" class="flex gap-2 flex-wrap">
-      <button
-v-for="tag in allTags" :key="tag" class="btn btn-sm"
-        :class="{ 'btn-primary': selectedTags.includes(tag) }"
+    <div v-if="allTags.length" class="flex gap-1.5 flex-wrap">
+      <Button
+        v-for="tag in allTags" :key="tag" variant="ghost" size="sm"
+        :class="{ 'bg-primary text-primary-foreground hover:bg-primary/90': selectedTags.includes(tag) }"
         @click="toggleTag(tag)">
         # {{ tag }}
-      </button>
+      </Button>
     </div>
 
     <!-- Stats row -->
-    <div class="flex gap-2 text-sm text-muted">
+    <div class="flex gap-2 text-sm text-muted-foreground">
       <span>共 {{ store.posts.length }} 篇</span>
-      <span class="sep">·</span>
+      <span class="text-border">·</span>
       <span>草稿 {{ store.posts.filter(p => p.draft).length }}</span>
-      <span class="sep">·</span>
+      <span class="text-border">·</span>
       <span>冲突 {{ store.posts.filter(p => p.syncStatus === 'conflict').length }}</span>
-      <span v-if="filtered.length !== store.posts.length" class="sep">·</span>
-      <span v-if="filtered.length !== store.posts.length">筛选后 {{ filtered.length }} 篇</span>
+      <template v-if="filtered.length !== store.posts.length">
+        <span class="text-border">·</span>
+        <span>筛选后 {{ filtered.length }} 篇</span>
+      </template>
     </div>
 
     <!-- Loading skeletons -->
     <template v-if="store.postsLoading">
-      <div v-for="i in 5" :key="i" class="skeleton" style="height:88px;border-radius:12px"></div>
+      <Skeleton v-for="i in 5" :key="i" class="h-[88px] rounded-xl" />
     </template>
 
     <!-- Empty -->
-    <div v-else-if="paginated.length === 0" class="empty-state">
-      <FileTextIcon :size="40" />
-      <strong>{{ searchQuery || statusFilter !== 'all' || selectedTags.length ? t.noResults : t.noPosts }}</strong>
-      <p v-if="!searchQuery && statusFilter === 'all' && !selectedTags.length">点击「新建文章」创建你的第一篇文章</p>
-      <button v-if="!searchQuery && statusFilter === 'all' && !selectedTags.length" class="btn btn-primary" @click="newPost">
-        <PlusIcon :size="14" />{{ t.newPost }}
-      </button>
+    <div v-else-if="paginated.length === 0" class="text-center py-16 text-muted-foreground space-y-2">
+      <FileTextIcon class="h-10 w-10 mx-auto opacity-40" />
+      <p class="font-medium">{{ searchQuery || statusFilter !== 'all' || selectedTags.length ? t.noResults : t.noPosts }}</p>
+      <p v-if="!searchQuery && statusFilter === 'all' && !selectedTags.length" class="text-sm">点击「新建文章」创建你的第一篇文章</p>
+      <Button v-if="!searchQuery && statusFilter === 'all' && !selectedTags.length" @click="newPost">
+        <PlusIcon class="h-3.5 w-3.5 mr-1" />{{ t.newPost }}
+      </Button>
     </div>
 
     <!-- Post list -->
     <template v-else>
-      <div v-for="(post, i) in paginated" :key="post.slug" class="post-card" tabindex="0" role="button" :aria-label="post.title" @click="router.push(`/posts/${encodeURIComponent(post.slug)}`)" @focus="focusedIndex = i" @keydown.enter.prevent="router.push(`/posts/${encodeURIComponent(post.slug)}`)">
-        <div class="post-card-body">
-          <div class="flex items-center gap-2">
-            <span class="post-card-title">{{ post.title || post.slug }}</span>
-            <AlertTriangleIcon v-if="post.large" :size="13" style="color:var(--warn);flex-shrink:0" :title="t.large" />
-          </div>
-          <div class="post-card-meta">
-            <span class="post-card-date" :title="post.date">{{ relDate(post.date) }}</span>
-            <span class="badge" :class="statusBadge(post).cls">{{ statusBadge(post).label }}</span>
-            <div class="post-card-tags">
-              <span v-for="tag in (post.tags || []).slice(0, 4)" :key="tag" class="tag-chip"># {{ tag }}</span>
+      <Card
+        v-for="(post, i) in paginated"
+        :key="post.slug"
+        class="post-card cursor-pointer transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        tabindex="0"
+        role="button"
+        :aria-label="post.title"
+        @click="router.push(`/posts/${encodeURIComponent(post.slug)}`)"
+        @focus="focusedIndex = i"
+        @keydown.enter.prevent="router.push(`/posts/${encodeURIComponent(post.slug)}`)"
+      >
+        <CardContent class="py-3 px-4 flex items-center justify-between gap-3">
+          <div class="flex-1 min-w-0 space-y-1">
+            <div class="flex items-center gap-2">
+              <span class="font-medium truncate">{{ post.title || post.slug }}</span>
+              <AlertTriangleIcon v-if="post.large" class="h-3.5 w-3.5 text-warn shrink-0" :title="t.large" />
+            </div>
+            <div class="flex items-center gap-2 text-sm text-muted-foreground">
+              <span :title="post.date">{{ relDate(post.date) }}</span>
+              <Badge :variant="statusBadge(post).variant" class="text-xs">{{ statusBadge(post).label }}</Badge>
+              <span v-for="tag in (post.tags || []).slice(0, 4)" :key="tag" class="text-xs text-muted-foreground"># {{ tag }}</span>
             </div>
           </div>
-        </div>
-        <div class="post-actions">
-          <button class="btn btn-ghost btn-icon btn-sm" :title="t.edit" @click.stop="router.push(`/posts/${encodeURIComponent(post.slug)}`)">
-            <EditIcon :size="14" />
-          </button>
-          <button class="btn btn-ghost btn-icon btn-sm" :title="t.preview" @click.stop="router.push(`/posts/${encodeURIComponent(post.slug)}/preview`)">
-            <EyeIcon :size="14" />
-          </button>
-          <button class="btn btn-ghost btn-icon btn-sm btn-danger-text" title="移到回收站" @click.stop="deletePost(post)">
-            <Trash2Icon :size="14" />
-          </button>
-        </div>
-      </div>
+          <div class="flex gap-0.5 shrink-0 opacity-0 group-hover:opacity-100 focus-within:opacity-100" :class="{ 'opacity-100': focusedIndex === i }">
+            <Button variant="ghost" size="icon" class="h-7 w-7" :title="t.edit" @click.stop="router.push(`/posts/${encodeURIComponent(post.slug)}`)">
+              <EditIcon class="h-3.5 w-3.5" />
+            </Button>
+            <Button variant="ghost" size="icon" class="h-7 w-7" :title="t.preview" @click.stop="router.push(`/posts/${encodeURIComponent(post.slug)}/preview`)">
+              <EyeIcon class="h-3.5 w-3.5" />
+            </Button>
+            <Button variant="ghost" size="icon" class="h-7 w-7 text-destructive hover:text-destructive" title="移到回收站" @click.stop="deletePost(post)">
+              <Trash2Icon class="h-3.5 w-3.5" />
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
     </template>
 
     <!-- Pagination -->
-    <div v-if="totalPages > 1" class="flex items-center gap-2 justify-between">
-      <button class="btn btn-sm" :disabled="page === 1" @click="page--">‹ 上一页</button>
-      <span class="text-sm text-muted">{{ page }} / {{ totalPages }}</span>
-      <button class="btn btn-sm" :disabled="page === totalPages" @click="page++">下一页 ›</button>
+    <div v-if="totalPages > 1" class="flex items-center justify-between">
+      <Button variant="ghost" size="sm" :disabled="page === 1" @click="page--">‹ 上一页</Button>
+      <span class="text-sm text-muted-foreground">{{ page }} / {{ totalPages }}</span>
+      <Button variant="ghost" size="sm" :disabled="page === totalPages" @click="page++">下一页 ›</Button>
     </div>
   </div>
 </template>

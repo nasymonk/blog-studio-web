@@ -4,6 +4,9 @@ import { Trash2Icon, UndoIcon } from 'lucide-vue-next'
 import { api } from '@/services/api'
 import type { TrashItem } from '@/services/api'
 import { useNotify } from '@/composables/useNotify'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 
 const notify = useNotify()
 const items = ref<TrashItem[]>([])
@@ -63,58 +66,49 @@ onMounted(load)
 </script>
 
 <template>
-  <div class="view-root">
-    <div class="view-header">
-      <h1 class="view-title"><Trash2Icon :size="18" /> 回收站</h1>
-      <p class="view-subtitle">已删除的文章在 30 天后自动清空</p>
+  <div class="max-w-3xl space-y-4">
+    <div>
+      <h1 class="flex items-center gap-2 font-serif text-lg font-semibold"><Trash2Icon class="h-4 w-4" /> 回收站</h1>
+      <p class="text-sm text-muted-foreground">已删除的文章在 30 天后自动清空</p>
     </div>
 
-    <div v-if="loading" class="empty-state">加载中…</div>
+    <div v-if="loading" class="text-center py-16 text-muted-foreground">加载中…</div>
 
-    <div v-else-if="items.length === 0" class="empty-state">
-      <Trash2Icon :size="32" style="opacity:0.3;margin-bottom:12px" />
+    <div v-else-if="items.length === 0" class="text-center py-16 text-muted-foreground">
+      <Trash2Icon class="h-8 w-8 mx-auto opacity-30 mb-3" />
       <p>回收站为空</p>
     </div>
 
-    <table v-else class="trash-table">
-      <thead>
-        <tr>
-          <th>文章</th>
-          <th>删除时间</th>
-          <th>大小</th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="item in items" :key="item.id">
-          <td>
-            <span class="trash-slug">{{ item.slug }}</span>
-          </td>
-          <td :title="item.deletedAt">{{ relDate(item.deletedAt) }}</td>
-          <td>{{ fmtSize(item.size) }}</td>
-          <td class="trash-actions">
-            <button class="btn btn-ghost btn-sm" @click="restore(item)">
-              <UndoIcon :size="13" /> 还原
-            </button>
-            <button class="btn btn-ghost btn-sm btn-danger-text" @click="purge(item)">
-              <Trash2Icon :size="13" /> 永久删除
-            </button>
-          </td>
-        </tr>
-      </tbody>
-    </table>
+    <Card v-else>
+      <CardContent class="p-0">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>文章</TableHead>
+              <TableHead>删除时间</TableHead>
+              <TableHead>大小</TableHead>
+              <TableHead class="text-right"></TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            <TableRow v-for="item in items" :key="item.id">
+              <TableCell><span class="font-mono text-sm">{{ item.slug }}</span></TableCell>
+              <TableCell :title="item.deletedAt" class="text-sm text-muted-foreground">{{ relDate(item.deletedAt) }}</TableCell>
+              <TableCell class="text-sm">{{ fmtSize(item.size) }}</TableCell>
+              <TableCell class="text-right">
+                <div class="flex gap-1 justify-end">
+                  <Button variant="ghost" size="sm" @click="restore(item)">
+                    <UndoIcon class="h-3.5 w-3.5 mr-1" /> 还原
+                  </Button>
+                  <Button variant="ghost" size="sm" class="text-destructive hover:text-destructive" @click="purge(item)">
+                    <Trash2Icon class="h-3.5 w-3.5 mr-1" /> 永久删除
+                  </Button>
+                </div>
+              </TableCell>
+            </TableRow>
+          </TableBody>
+        </Table>
+      </CardContent>
+    </Card>
   </div>
 </template>
-
-<style scoped>
-.view-root { padding: 32px; max-width: 900px; }
-.view-header { margin-bottom: 24px; }
-.view-title { display: flex; align-items: center; gap: 8px; font-size: 20px; font-weight: 700; margin: 0 0 4px; }
-.view-subtitle { color: var(--text-muted, #9ca3af); font-size: 13px; margin: 0; }
-.empty-state { text-align: center; padding: 60px 0; color: var(--text-muted, #9ca3af); }
-.trash-table { width: 100%; border-collapse: collapse; font-size: 14px; }
-.trash-table th { text-align: left; padding: 8px 12px; font-size: 12px; font-weight: 600; color: var(--text-muted, #9ca3af); border-bottom: 1px solid var(--border-color, #e5e7eb); }
-.trash-table td { padding: 12px; border-bottom: 1px solid var(--border-light, #f3f4f6); }
-.trash-slug { font-family: monospace; font-size: 13px; }
-.trash-actions { display: flex; gap: 6px; justify-content: flex-end; }
-</style>

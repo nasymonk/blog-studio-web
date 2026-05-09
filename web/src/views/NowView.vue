@@ -10,6 +10,7 @@ import { api } from '@/services/api'
 import { useI18n } from '@/i18n'
 import { useTheme } from '@/composables/useTheme'
 import { useNotify } from '@/composables/useNotify'
+import { Button } from '@/components/ui/button'
 
 const { t } = useI18n()
 const { theme } = useTheme()
@@ -64,13 +65,13 @@ async function save() {
 </script>
 
 <template>
-  <div class="now-page">
-    <div class="now-hint">{{ t.now }} · Markdown</div>
-    <div ref="editorEl" class="now-editor" style="flex:1;overflow:auto;border:1px solid var(--border);border-radius:8px;margin:10px 0 0"></div>
-    <div style="padding:10px 0 16px;display:flex;gap:8px">
-      <button class="btn btn-primary" :disabled="saving || loading" @click="save">
-        <SaveIcon :size="14" />{{ saving ? t.saving : t.saveNow }}
-      </button>
+  <div class="flex flex-col h-full">
+    <p class="text-sm text-muted-foreground mb-2">{{ t.now }} · Markdown</p>
+    <div ref="editorEl" class="flex-1 overflow-auto rounded-lg border border-border" />
+    <div class="py-3 flex gap-2">
+      <Button :disabled="saving || loading" @click="save">
+        <SaveIcon class="h-4 w-4 mr-1" />{{ saving ? t.saving : t.saveNow }}
+      </Button>
     </div>
   </div>
 </template>

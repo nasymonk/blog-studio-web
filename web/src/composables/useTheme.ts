@@ -4,9 +4,9 @@ import { useStorage } from '@vueuse/core'
 const theme = useStorage<'light' | 'dark'>('blog-studio-theme', 'light')
 
 watch(theme, (val) => {
-  document.documentElement.setAttribute('data-theme', val)
+  document.documentElement.classList.toggle('dark', val === 'dark')
   const meta = document.querySelector('meta[name="theme-color"]')
-  if (meta) meta.setAttribute('content', val === 'dark' ? '#18191b' : '#fdfcf8')
+  if (meta) meta.setAttribute('content', val === 'dark' ? '#17181a' : '#fdfcf8')
 }, { immediate: true })
 
 export function useTheme() {

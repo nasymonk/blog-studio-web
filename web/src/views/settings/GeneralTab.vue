@@ -6,6 +6,11 @@ import type { Config } from '@/services/api'
 import { useStore } from '@/store'
 import { useI18n } from '@/i18n'
 import { useNotify } from '@/composables/useNotify'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Skeleton } from '@/components/ui/skeleton'
 
 const store = useStore()
 const { t } = useI18n()
@@ -46,47 +51,46 @@ function validate(): string {
 </script>
 
 <template>
-  <div v-if="cfg" style="max-width:680px;display:grid;gap:16px">
-    <div class="settings-card">
-      <h2>{{ t.generalSettings }}</h2>
-      <div class="settings-grid">
-        <div class="field">
-          <label class="field-label">{{ t.siteId }}</label>
-          <input v-model="cfg.site.id" class="input" @input="dirty=true" />
+  <div v-if="cfg" class="max-w-2xl space-y-4">
+    <Card>
+      <CardHeader><CardTitle class="font-serif">{{ t.generalSettings }}</CardTitle></CardHeader>
+      <CardContent class="grid gap-4 sm:grid-cols-2">
+        <div class="grid gap-1.5">
+          <Label>{{ t.siteId }}</Label>
+          <Input v-model="cfg.site.id" @input="dirty=true" />
         </div>
-        <div class="field">
-          <label class="field-label">{{ t.siteName }}</label>
-          <input v-model="cfg.site.name" class="input" @input="dirty=true" />
+        <div class="grid gap-1.5">
+          <Label>{{ t.siteName }}</Label>
+          <Input v-model="cfg.site.name" @input="dirty=true" />
         </div>
-        <div class="field" style="grid-column:1/-1">
-          <label class="field-label">{{ t.basePath }}</label>
-          <input v-model="cfg.basePath" class="input" @input="dirty=true" />
-          <p class="field-hint">例：/studio</p>
+        <div class="grid gap-1.5 sm:col-span-2">
+          <Label>{{ t.basePath }}</Label>
+          <Input v-model="cfg.basePath" @input="dirty=true" />
+          <p class="text-xs text-muted-foreground">例：/studio</p>
         </div>
-      </div>
-    </div>
+      </CardContent>
+    </Card>
 
-    <div class="settings-card">
-      <h2>预览</h2>
-      <div class="settings-grid">
-        <div class="field">
-          <label class="field-label">{{ t.previewTTL }}</label>
-          <input v-model.number="cfg.preview.ttlMinutes" class="input" type="number" min="10" @input="dirty=true" />
+    <Card>
+      <CardHeader><CardTitle class="font-serif">预览</CardTitle></CardHeader>
+      <CardContent class="grid gap-4 sm:grid-cols-2">
+        <div class="grid gap-1.5">
+          <Label>{{ t.previewTTL }}</Label>
+          <Input v-model.number="cfg.preview.ttlMinutes" type="number" min="10" @input="dirty=true" />
         </div>
-        <div class="field">
-          <label class="field-label">{{ t.maxUploadMb }}</label>
-          <input
-class="input" type="number" min="1" :value="Math.round(cfg.maxUploadBytes / 1024 / 1024)"
-            @input="e => { cfg!.maxUploadBytes = Number((e.target as HTMLInputElement).value) * 1024 * 1024; dirty=true }" />
+        <div class="grid gap-1.5">
+          <Label>{{ t.maxUploadMb }}</Label>
+          <Input type="number" min="1" :model-value="Math.round(cfg.maxUploadBytes / 1024 / 1024)"
+            @update:model-value="(v: string | number) => { cfg!.maxUploadBytes = Number(v) * 1024 * 1024; dirty=true }" />
         </div>
-      </div>
-    </div>
+      </CardContent>
+    </Card>
 
-    <div class="settings-actions">
-      <button class="btn btn-primary" :disabled="saving || !dirty" @click="save">
-        <SaveIcon :size="14" />{{ saving ? t.saving : t.saveSettings }}
-      </button>
+    <div>
+      <Button :disabled="saving || !dirty" @click="save">
+        <SaveIcon class="h-4 w-4 mr-1" />{{ saving ? t.saving : t.saveSettings }}
+      </Button>
     </div>
   </div>
-  <div v-else class="skeleton" style="height:300px"></div>
+  <Skeleton v-else class="h-[300px] max-w-2xl" />
 </template>

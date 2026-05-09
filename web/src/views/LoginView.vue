@@ -6,6 +6,11 @@ import { api } from '@/services/api'
 import { useStore } from '@/store'
 import { useI18n } from '@/i18n'
 import { useTheme } from '@/composables/useTheme'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Card, CardContent, CardHeader } from '@/components/ui/card'
+
 const router = useRouter()
 const store = useStore()
 const { t, lang, setLang } = useI18n()
@@ -33,33 +38,35 @@ async function login() {
 </script>
 
 <template>
-  <div class="login-page">
-    <div class="login-card">
-      <div class="login-toolbar">
-        <button class="btn btn-ghost btn-icon btn-sm" :title="theme === 'dark' ? t.lightMode : t.darkMode" @click="toggle">
-          <MoonIcon v-if="theme === 'light'" :size="16" />
-          <SunIcon v-else :size="16" />
-        </button>
-        <button class="btn btn-ghost btn-sm" @click="setLang(lang === 'zh' ? 'en' : 'zh')">
+  <div class="flex min-h-svh items-center justify-center bg-background p-4">
+    <Card class="w-full max-w-sm relative">
+      <div class="absolute right-3 top-3 flex gap-1">
+        <Button variant="ghost" size="icon" class="h-8 w-8" :title="theme === 'dark' ? t.lightMode : t.darkMode" @click="toggle">
+          <MoonIcon v-if="theme === 'light'" class="h-4 w-4" />
+          <SunIcon v-else class="h-4 w-4" />
+        </Button>
+        <Button variant="ghost" size="sm" class="h-8 px-2 text-xs" @click="setLang(lang === 'zh' ? 'en' : 'zh')">
           {{ lang === 'zh' ? t.langEn : t.langZh }}
-        </button>
+        </Button>
       </div>
-      <div class="login-logo">博</div>
-      <div>
-        <h1>{{ t.loginTitle }}</h1>
-        <p>{{ t.loginDesc }}</p>
-      </div>
-      <form style="display:grid;gap:12px" @submit.prevent="login">
-        <div class="field">
-          <label class="field-label">{{ t.password }}</label>
-          <input v-model="password" class="input" type="password" autocomplete="current-password" autofocus />
-          <p v-if="error" class="field-error">{{ error }}</p>
-        </div>
-        <button class="btn btn-primary btn-lg w-full" type="submit" :disabled="loading || !password">
-          <span v-if="loading" class="spin" style="display:inline-block;width:14px;height:14px;border:2px solid currentColor;border-top-color:transparent;border-radius:50%"></span>
-          {{ loading ? t.loading : t.login }}
-        </button>
-      </form>
-    </div>
+      <CardHeader class="items-center text-center pt-8">
+        <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-xl bg-accent text-accent-foreground font-serif text-2xl font-bold">博</div>
+        <h1 class="font-serif text-xl font-semibold mt-3">{{ t.loginTitle }}</h1>
+        <p class="text-sm text-muted-foreground">{{ t.loginDesc }}</p>
+      </CardHeader>
+      <CardContent>
+        <form class="grid gap-4" @submit.prevent="login">
+          <div class="grid gap-1.5">
+            <Label for="password">{{ t.password }}</Label>
+            <Input id="password" v-model="password" type="password" autocomplete="current-password" autofocus />
+            <p v-if="error" class="text-xs text-destructive">{{ error }}</p>
+          </div>
+          <Button type="submit" class="w-full" :disabled="loading || !password">
+            <span v-if="loading" class="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
+            {{ loading ? t.loading : t.login }}
+          </Button>
+        </form>
+      </CardContent>
+    </Card>
   </div>
 </template>

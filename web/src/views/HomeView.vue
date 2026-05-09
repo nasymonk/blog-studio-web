@@ -4,6 +4,11 @@ import { UploadIcon, SaveIcon } from 'lucide-vue-next'
 import { api } from '@/services/api'
 import { useI18n } from '@/i18n'
 import { useNotify } from '@/composables/useNotify'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card'
 
 const { t } = useI18n()
 const notify = useNotify()
@@ -57,37 +62,41 @@ async function onAvatarSelect(e: Event) {
 </script>
 
 <template>
-  <div class="home-page" style="max-width:640px;display:grid;gap:20px">
-    <div class="card">
-      <div class="card-header"><h2>{{ t.avatar }}</h2></div>
-      <div class="card-body">
-        <div class="avatar-area">
-          <img v-if="profileImage" :src="profileImage" class="avatar-img" alt="avatar" />
-          <div v-else class="avatar-placeholder">🌿</div>
-          <label style="cursor:pointer">
-            <input ref="avatarFileInput" type="file" accept="image/*" style="display:none" @change="onAvatarSelect" />
-            <span class="btn btn-sm" :class="{ 'btn-ghost': !uploadingAvatar }">
-              <UploadIcon :size="14" />{{ uploadingAvatar ? t.loading : t.uploadAvatar }}
-            </span>
-          </label>
-          <p class="field-hint">{{ t.avatar }} · jpg、png、gif、webp</p>
+  <div class="max-w-xl space-y-5">
+    <Card>
+      <CardHeader><CardTitle class="font-serif">{{ t.avatar }}</CardTitle></CardHeader>
+      <CardContent>
+        <div class="flex items-center gap-4">
+          <div class="h-16 w-16 rounded-full bg-muted flex items-center justify-center overflow-hidden shrink-0">
+            <img v-if="profileImage" :src="profileImage" class="h-full w-full object-cover" alt="avatar" />
+            <span v-else class="text-2xl">🌿</span>
+          </div>
+          <div class="space-y-1">
+            <label class="cursor-pointer">
+              <Input ref="avatarFileInput" type="file" accept="image/*" class="hidden" @change="onAvatarSelect" />
+              <Button variant="outline" size="sm" as-child>
+                <span><UploadIcon class="h-3.5 w-3.5 mr-1" />{{ uploadingAvatar ? t.loading : t.uploadAvatar }}</span>
+              </Button>
+            </label>
+            <p class="text-xs text-muted-foreground">jpg、png、gif、webp</p>
+          </div>
         </div>
-      </div>
-    </div>
+      </CardContent>
+    </Card>
 
-    <div class="card">
-      <div class="card-header"><h2>{{ t.tagline }}</h2></div>
-      <div class="card-body">
-        <div class="field">
-          <label class="field-label">{{ t.tagline }}</label>
-          <textarea v-model="description" class="textarea" rows="3" :placeholder="'野有蔓草…'" />
+    <Card>
+      <CardHeader><CardTitle class="font-serif">{{ t.tagline }}</CardTitle></CardHeader>
+      <CardContent>
+        <div class="grid gap-1.5">
+          <Label>{{ t.tagline }}</Label>
+          <Textarea v-model="description" rows="3" placeholder="野有蔓草…" />
         </div>
-      </div>
-      <div class="card-footer">
-        <button class="btn btn-primary" :disabled="saving || loading" @click="save">
-          <SaveIcon :size="14" />{{ saving ? t.saving : t.saveHomepage }}
-        </button>
-      </div>
-    </div>
+      </CardContent>
+      <CardFooter>
+        <Button :disabled="saving || loading" @click="save">
+          <SaveIcon class="h-4 w-4 mr-1" />{{ saving ? t.saving : t.saveHomepage }}
+        </Button>
+      </CardFooter>
+    </Card>
   </div>
 </template>

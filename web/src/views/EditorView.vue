@@ -15,6 +15,13 @@ import { useNotify } from '@/composables/useNotify'
 import { useEditor } from '@/composables/useEditor'
 import MarkdownPreview from '@/components/MarkdownPreview.vue'
 import EditorOutline from '@/components/EditorOutline.vue'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Badge } from '@/components/ui/badge'
+import { Separator } from '@/components/ui/separator'
+import { Skeleton } from '@/components/ui/skeleton'
 
 const route = useRoute()
 const router = useRouter()
@@ -173,7 +180,6 @@ function handleImageUpload() {
     }
   }
   input.click()
-
 }
 
 function onTagKeydown(e: KeyboardEvent) {
@@ -187,122 +193,117 @@ function onTagKeydown(e: KeyboardEvent) {
 </script>
 
 <template>
-  <div class="editor-page">
+  <div class="flex flex-col h-full">
     <!-- Loading state -->
-    <div v-if="loading" class="editor-loading">
-      <Loader2Icon :size="28" class="spin" style="color:var(--tertiary)" />
+    <div v-if="loading" class="flex items-center justify-center py-16">
+      <Loader2Icon class="h-7 w-7 animate-spin text-muted-foreground" />
     </div>
 
     <template v-else-if="draft">
       <!-- Title input -->
-      <input v-model="draft.frontMatter.title" class="title-input" type="text" :placeholder="t.title" @input="store.editor.dirty = true" />
+      <Input
+        v-model="draft.frontMatter.title"
+        class="border-0 shadow-none text-xl font-serif font-semibold focus-visible:ring-0 px-0 h-auto py-2"
+        :placeholder="t.title"
+        @input="store.editor.dirty = true"
+      />
 
       <!-- Meta strip -->
-      <div class="editor-meta">
-        <div class="field">
-          <label class="field-label">{{ t.date }}</label>
-          <input v-model="draft.frontMatter.date" class="input" type="date" @change="store.editor.dirty = true" />
+      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 py-3 border-y border-border">
+        <div class="grid gap-1">
+          <Label class="text-xs text-muted-foreground">{{ t.date }}</Label>
+          <Input v-model="draft.frontMatter.date" type="date" class="h-8 text-sm" @change="store.editor.dirty = true" />
         </div>
-        <div class="field">
-          <label class="field-label">{{ t.description }}</label>
-          <input v-model="draft.frontMatter.description" class="input" @input="store.editor.dirty = true" />
+        <div class="grid gap-1">
+          <Label class="text-xs text-muted-foreground">{{ t.description }}</Label>
+          <Input v-model="draft.frontMatter.description" class="h-8 text-sm" @input="store.editor.dirty = true" />
         </div>
-        <div class="field">
-          <label class="field-label">{{ t.image }}</label>
-          <input v-model="draft.frontMatter.image" class="input" @input="store.editor.dirty = true" />
+        <div class="grid gap-1">
+          <Label class="text-xs text-muted-foreground">{{ t.image }}</Label>
+          <Input v-model="draft.frontMatter.image" class="h-8 text-sm" @input="store.editor.dirty = true" />
         </div>
-        <div class="field">
-          <label class="field-label">{{ t.tags }}</label>
-          <div class="tag-input-box">
-            <span v-for="tag in draft.frontMatter.tags" :key="tag" class="tag-chip tag-chip-removable" @click="removeTag(tag)">
+        <div class="grid gap-1">
+          <Label class="text-xs text-muted-foreground">{{ t.tags }}</Label>
+          <div class="flex flex-wrap items-center gap-1 min-h-[32px] rounded-md border border-input bg-transparent px-2 py-1 text-sm">
+            <Badge v-for="tag in draft.frontMatter.tags" :key="tag" variant="secondary" class="cursor-pointer gap-0.5" @click="removeTag(tag)">
               # {{ tag }} ×
-            </span>
-            <input class="tag-input-field" placeholder="添加…" @keydown="onTagKeydown" />
+            </Badge>
+            <input class="flex-1 min-w-[60px] bg-transparent outline-none text-sm placeholder:text-muted-foreground" placeholder="添加…" @keydown="onTagKeydown" />
           </div>
         </div>
-        <div class="field">
-          <label class="field-label">Slug</label>
-          <input class="input" :value="draft.slug" disabled style="color:var(--tertiary)" />
+        <div class="grid gap-1">
+          <Label class="text-xs text-muted-foreground">Slug</Label>
+          <Input :model-value="draft.slug" disabled class="h-8 text-sm text-muted-foreground" />
         </div>
-        <div class="field">
-          <label class="field-label">&nbsp;</label>
-          <div class="flex items-center gap-3" style="min-height:38px">
-            <label class="check-field">
-              <input v-model="draft.frontMatter.draft" type="checkbox" @change="store.editor.dirty = true" />
-              <span class="field-label" style="margin:0">{{ t.draft }}</span>
-            </label>
-            <label class="check-field">
-              <input v-model="draft.frontMatter.math" type="checkbox" @change="store.editor.dirty = true" />
-              <span class="field-label" style="margin:0">{{ t.math }}</span>
-            </label>
-          </div>
+        <div class="flex items-end gap-3 pb-0.5">
+          <label class="flex items-center gap-1.5 text-sm cursor-pointer">
+            <Checkbox :checked="draft.frontMatter.draft" @update:checked="(v: boolean) => { draft!.frontMatter.draft = v; store.editor.dirty = true }" />
+            <span>{{ t.draft }}</span>
+          </label>
+          <label class="flex items-center gap-1.5 text-sm cursor-pointer">
+            <Checkbox :checked="draft.frontMatter.math" @update:checked="(v: boolean) => { draft!.frontMatter.math = v; store.editor.dirty = true }" />
+            <span>{{ t.math }}</span>
+          </label>
         </div>
       </div>
 
       <!-- Markdown toolbar -->
-      <div class="editor-toolbar">
-        <button class="btn btn-ghost btn-icon btn-sm" :title="'加粗 (⌘B)'" @click="execBold"><BoldIcon :size="14" /></button>
-        <button class="btn btn-ghost btn-icon btn-sm" :title="'斜体 (⌘I)'" @click="execItalic"><ItalicIcon :size="14" /></button>
-        <button class="btn btn-ghost btn-icon btn-sm" :title="'链接 (⌘K)'" @click="execLink"><LinkIcon :size="14" /></button>
-        <button class="btn btn-ghost btn-icon btn-sm" :title="'插入图片'" @click="handleImageUpload"><ImageIcon :size="14" /></button>
-        <button class="btn btn-ghost btn-icon btn-sm" :title="'行内代码'" @click="execCode"><CodeIcon :size="14" /></button>
-        <button class="btn btn-ghost btn-icon btn-sm" :title="'标题'" @click="execHeading"><Heading1Icon :size="14" /></button>
-        <span class="toolbar-sep"></span>
-        <button
-class="btn btn-ghost btn-icon btn-sm" :title="t.splitPreview" :style="{ background: showPreview ? 'var(--hover)' : undefined }"
-          @click="showPreview = !showPreview">
-          <SplitSquareHorizontalIcon :size="14" />
-        </button>
-        <button
-          class="btn btn-ghost btn-icon btn-sm"
-          title="大纲"
-          :style="{ background: showOutline ? 'var(--hover)' : undefined }"
-          @click="showOutline = !showOutline"
-        >
-          <ListIcon :size="14" />
-        </button>
-        <span class="toolbar-spacer"></span>
-        <button class="btn btn-ghost btn-sm btn-danger-text" :title="t.rollback" @click="rollback">
-          <RotateCcwIcon :size="13" />{{ t.rollback }}
-        </button>
+      <div class="flex items-center gap-0.5 py-1.5">
+        <Button variant="ghost" size="icon" class="h-7 w-7" title="加粗 (⌘B)" @click="execBold"><BoldIcon class="h-3.5 w-3.5" /></Button>
+        <Button variant="ghost" size="icon" class="h-7 w-7" title="斜体 (⌘I)" @click="execItalic"><ItalicIcon class="h-3.5 w-3.5" /></Button>
+        <Button variant="ghost" size="icon" class="h-7 w-7" title="链接 (⌘K)" @click="execLink"><LinkIcon class="h-3.5 w-3.5" /></Button>
+        <Button variant="ghost" size="icon" class="h-7 w-7" title="插入图片" @click="handleImageUpload"><ImageIcon class="h-3.5 w-3.5" /></Button>
+        <Button variant="ghost" size="icon" class="h-7 w-7" title="行内代码" @click="execCode"><CodeIcon class="h-3.5 w-3.5" /></Button>
+        <Button variant="ghost" size="icon" class="h-7 w-7" title="标题" @click="execHeading"><Heading1Icon class="h-3.5 w-3.5" /></Button>
+        <Separator orientation="vertical" class="mx-1 h-5" />
+        <Button variant="ghost" size="icon" class="h-7 w-7" :class="{ 'bg-muted': showPreview }" :title="t.splitPreview" @click="showPreview = !showPreview">
+          <SplitSquareHorizontalIcon class="h-3.5 w-3.5" />
+        </Button>
+        <Button variant="ghost" size="icon" class="h-7 w-7" :class="{ 'bg-muted': showOutline }" title="大纲" @click="showOutline = !showOutline">
+          <ListIcon class="h-3.5 w-3.5" />
+        </Button>
+        <div class="flex-1" />
+        <Button variant="ghost" size="sm" class="text-destructive hover:text-destructive h-7" :title="t.rollback" @click="rollback">
+          <RotateCcwIcon class="h-3.5 w-3.5 mr-1" />{{ t.rollback }}
+        </Button>
       </div>
 
       <!-- Editor + preview body -->
-      <div class="editor-body">
-        <div class="editor-pane">
-          <div ref="editorContainer" class="cm-wrap"></div>
+      <div class="flex flex-1 min-h-0 overflow-hidden">
+        <div class="flex-1 overflow-auto">
+          <div ref="editorContainer" class="h-full" />
         </div>
-        <div v-if="showPreview" class="editor-pane preview-pane">
+        <div v-if="showPreview" class="flex-1 overflow-auto border-l border-border bg-background">
           <MarkdownPreview :source="body" />
         </div>
         <EditorOutline v-if="showOutline" :body="body" :on-jump="goToLine" />
       </div>
 
       <!-- Status bar -->
-      <div class="editor-statusbar">
-        <span class="statusbar-stat">{{ wordCount }} {{ t.wordCount }}</span>
-        <span class="sep">·</span>
-        <span class="statusbar-stat">{{ readingTime }} {{ t.readingTime }}</span>
-        <span class="sep">·</span>
-        <span class="statusbar-save" :class="{ 'save-dirty': dirty, 'save-ok': !dirty }">{{ savedLabel() }}</span>
-        <span style="margin-left:auto"></span>
-        <button class="btn btn-sm" :disabled="!dirty" @click="saveDraft">
-          <SaveIcon :size="13" />{{ t.saveDraft }}
-        </button>
-        <button class="btn btn-ghost btn-sm" :title="t.preview" @click="previewPost">
-          <EyeIcon :size="13" />
-        </button>
-        <button class="btn btn-primary btn-sm" :disabled="publishing" @click="publishBlog()">
-          <Loader2Icon v-if="publishing" :size="13" class="spin" />
-          <SendIcon v-else :size="13" />{{ t.publish }}
-        </button>
+      <div class="flex items-center gap-2 py-1.5 text-xs text-muted-foreground border-t border-border">
+        <span>{{ wordCount }} {{ t.wordCount }}</span>
+        <span class="text-border">·</span>
+        <span>{{ readingTime }} {{ t.readingTime }}</span>
+        <span class="text-border">·</span>
+        <span :class="{ 'text-destructive': dirty, 'text-ok': !dirty }">{{ savedLabel() }}</span>
+        <div class="flex-1" />
+        <Button size="sm" variant="outline" class="h-7 text-xs" :disabled="!dirty" @click="saveDraft">
+          <SaveIcon class="h-3 w-3 mr-1" />{{ t.saveDraft }}
+        </Button>
+        <Button variant="ghost" size="sm" class="h-7 text-xs" :title="t.preview" @click="previewPost">
+          <EyeIcon class="h-3 w-3" />
+        </Button>
+        <Button size="sm" class="h-7 text-xs" :disabled="publishing" @click="publishBlog()">
+          <Loader2Icon v-if="publishing" class="h-3 w-3 animate-spin mr-1" />
+          <SendIcon v-else class="h-3 w-3 mr-1" />{{ t.publish }}
+        </Button>
       </div>
     </template>
 
     <!-- Error / not found state -->
-    <div v-else class="empty-state" style="margin:48px auto">
-      <p>文章加载失败</p>
-      <button class="btn btn-primary" @click="loadPost">{{ t.retry }}</button>
+    <div v-else class="text-center py-16 space-y-3">
+      <p class="text-muted-foreground">文章加载失败</p>
+      <Button @click="loadPost">{{ t.retry }}</Button>
     </div>
   </div>
 </template>

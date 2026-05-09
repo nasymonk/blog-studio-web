@@ -4,6 +4,10 @@ import { LockIcon } from 'lucide-vue-next'
 import { api } from '@/services/api'
 import { useI18n } from '@/i18n'
 import { useNotify } from '@/composables/useNotify'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
 const { t } = useI18n()
 const notify = useNotify()
@@ -30,24 +34,28 @@ async function changePassword() {
 </script>
 
 <template>
-  <div style="max-width:480px;display:grid;gap:16px">
-    <div class="settings-card">
-      <h2><LockIcon :size="18" style="vertical-align:middle" /> {{ t.securitySettings }}</h2>
-      <p>修改管理员密码。密码至少 6 位。</p>
-      <div class="field">
-        <label class="field-label">{{ t.currentPassword }}</label>
-        <input v-model="currentPassword" class="input" type="password" autocomplete="current-password" />
-      </div>
-      <div class="field">
-        <label class="field-label">{{ t.newPassword }}</label>
-        <input v-model="newPassword" class="input" type="password" autocomplete="new-password" />
-        <p v-if="error" class="field-error">{{ error }}</p>
-      </div>
-      <div class="settings-actions">
-        <button class="btn btn-primary" :disabled="saving || !currentPassword || !newPassword" @click="changePassword">
+  <div class="max-w-md space-y-4">
+    <Card>
+      <CardHeader>
+        <CardTitle class="flex items-center gap-2 font-serif">
+          <LockIcon class="h-4 w-4" /> {{ t.securitySettings }}
+        </CardTitle>
+        <p class="text-sm text-muted-foreground">修改管理员密码。密码至少 6 位。</p>
+      </CardHeader>
+      <CardContent class="space-y-4">
+        <div class="grid gap-1.5">
+          <Label>{{ t.currentPassword }}</Label>
+          <Input v-model="currentPassword" type="password" autocomplete="current-password" />
+        </div>
+        <div class="grid gap-1.5">
+          <Label>{{ t.newPassword }}</Label>
+          <Input v-model="newPassword" type="password" autocomplete="new-password" />
+          <p v-if="error" class="text-xs text-destructive">{{ error }}</p>
+        </div>
+        <Button :disabled="saving || !currentPassword || !newPassword" @click="changePassword">
           {{ saving ? t.saving : t.changePassword }}
-        </button>
-      </div>
-    </div>
+        </Button>
+      </CardContent>
+    </Card>
   </div>
 </template>

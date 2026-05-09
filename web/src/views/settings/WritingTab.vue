@@ -6,6 +6,12 @@ import type { Config } from '@/services/api'
 import { useStore } from '@/store'
 import { useI18n } from '@/i18n'
 import { useNotify } from '@/composables/useNotify'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Skeleton } from '@/components/ui/skeleton'
 
 const store = useStore()
 const { t } = useI18n()
@@ -34,32 +40,35 @@ async function save() {
 </script>
 
 <template>
-  <div v-if="cfg" style="max-width:680px;display:grid;gap:16px">
-    <div class="settings-card">
-      <h2>{{ t.writingSettings }}</h2>
-      <div class="settings-grid">
-        <div class="field" style="grid-column:1/-1">
-          <label class="field-label">{{ t.blogRoot }}</label>
-          <input v-model="cfg.site.blogRoot" class="input" @input="dirty=true" />
+  <div v-if="cfg" class="max-w-2xl space-y-4">
+    <Card>
+      <CardHeader><CardTitle class="font-serif">{{ t.writingSettings }}</CardTitle></CardHeader>
+      <CardContent class="grid gap-4 sm:grid-cols-2">
+        <div class="grid gap-1.5 sm:col-span-2">
+          <Label>{{ t.blogRoot }}</Label>
+          <Input v-model="cfg.site.blogRoot" @input="dirty=true" />
         </div>
-        <div class="field">
-          <label class="field-label">{{ t.postSection }}</label>
-          <input v-model="cfg.site.postSection" class="input" @input="dirty=true" />
+        <div class="grid gap-1.5">
+          <Label>{{ t.postSection }}</Label>
+          <Input v-model="cfg.site.postSection" @input="dirty=true" />
         </div>
-        <div class="field">
-          <label class="field-label">{{ t.buildCommand }}</label>
-          <select v-model="cfg.site.buildCommand" class="input" @change="dirty=true">
-            <option value="hugo --minify">hugo --minify</option>
-            <option value="hugo">hugo</option>
-          </select>
+        <div class="grid gap-1.5">
+          <Label>{{ t.buildCommand }}</Label>
+          <Select v-model="cfg.site.buildCommand" @update:model-value="dirty=true">
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="hugo --minify">hugo --minify</SelectItem>
+              <SelectItem value="hugo">hugo</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
-      </div>
-    </div>
-    <div class="settings-actions">
-      <button class="btn btn-primary" :disabled="saving || !dirty" @click="save">
-        <SaveIcon :size="14" />{{ saving ? t.saving : t.saveSettings }}
-      </button>
+      </CardContent>
+    </Card>
+    <div>
+      <Button :disabled="saving || !dirty" @click="save">
+        <SaveIcon class="h-4 w-4 mr-1" />{{ saving ? t.saving : t.saveSettings }}
+      </Button>
     </div>
   </div>
-  <div v-else class="skeleton" style="height:200px"></div>
+  <Skeleton v-else class="h-[200px] max-w-2xl" />
 </template>
