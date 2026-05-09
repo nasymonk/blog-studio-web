@@ -174,6 +174,7 @@ const metaSummary = computed(() => {
   if (draft.value.frontMatter.tags.length) parts.push(t.value.tagCount(draft.value.frontMatter.tags.length))
   if (draft.value.frontMatter.draft) parts.push(t.value.draft)
   if (draft.value.frontMatter.math) parts.push(t.value.math)
+  if (draft.value.frontMatter.scheduledAt) parts.push(`${t.value.scheduledAt}: ${draft.value.frontMatter.scheduledAt}`)
   return parts.join(' · ')
 })
 
@@ -200,10 +201,24 @@ function onTagKeydown(e: KeyboardEvent) {
     input.value = ''
   }
 }
+
+function onScheduledAtInput(e: Event) {
+  if (!draft.value) return
+  const val = (e.target as HTMLInputElement).value
+  draft.value.frontMatter.scheduledAt = val || undefined
+  store.editor.dirty = true
+}
+
+function onRootKeydown(e: KeyboardEvent) {
+  if (e.key === '?' && !e.ctrlKey && !e.metaKey && !(e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement)) {
+    e.preventDefault()
+    keybindingHelpOpen.value = true
+  }
+}
 </script>
 
 <template>
-  <div class="flex flex-col h-full max-w-5xl" @keydown="e => { if (e.key === '?' && !e.ctrlKey && !e.metaKey && !(e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement)) { e.preventDefault(); keybindingHelpOpen = true } }">
+  <div class="flex flex-col h-full max-w-5xl" @keydown="onRootKeydown">
     <!-- Loading -->
     <div v-if="loading" class="flex items-center justify-center py-20">
       <Loader2Icon class="h-6 w-6 animate-spin text-muted-foreground" />
@@ -268,6 +283,16 @@ function onTagKeydown(e: KeyboardEvent) {
                 <Checkbox :checked="draft.frontMatter.math" @update:checked="(v: boolean) => { draft!.frontMatter.math = v; store.editor.dirty = true }" />
                 <span>{{ t.math }}</span>
               </label>
+            </div>
+            <div v-if="draft.frontMatter.draft" class="grid gap-1">
+              <Label class="text-[10px] uppercase tracking-wider text-muted-foreground/70">{{ t.scheduledAt }}</Label>
+              <Input
+                :model-value="draft.frontMatter.scheduledAt || ''"
+                type="datetime-local"
+                class="h-8 text-sm"
+                @input="onScheduledAtInput"
+              />
+              <span class="text-[10px] text-muted-foreground/50">{{ t.scheduledAtHint }}</span>
             </div>
           </div>
           <button class="text-[10px] text-muted-foreground/50 hover:text-muted-foreground transition-colors flex items-center gap-1 cursor-pointer" @click="metaExpanded = false">

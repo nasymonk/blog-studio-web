@@ -64,7 +64,7 @@ vi.mock('@tanstack/vue-virtual', () => ({
     return computed(() => {
       const o = typeof options === 'object' && options.value ? options.value : options
       const count = typeof o.count === 'function' ? o.count() : o.count
-      const items = []
+      const items: Array<{ key: number; index: number; start: number; size: number; end: number }> = []
       for (let i = 0; i < count; i++) {
         items.push({ key: i, index: i, start: i * 72, size: 72, end: (i + 1) * 72 })
       }

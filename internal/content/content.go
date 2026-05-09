@@ -25,6 +25,7 @@ type FrontMatter struct {
 	Description string   `json:"description,omitempty" yaml:"description,omitempty"`
 	Image       string   `json:"image,omitempty" yaml:"image,omitempty"`
 	Math        bool     `json:"math,omitempty" yaml:"math,omitempty"`
+	ScheduledAt string   `json:"scheduledAt,omitempty" yaml:"scheduledAt,omitempty"`
 }
 
 type PostDraft struct {

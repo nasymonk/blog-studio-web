@@ -127,8 +127,10 @@ func startBackgroundWorkers(ctx context.Context, server *httpapi.Server, auditLo
 	pruneTrash()
 	dailyTick := time.NewTicker(24 * time.Hour)
 	previewTick := time.NewTicker(10 * time.Minute)
+	scheduledTick := time.NewTicker(60 * time.Second)
 	defer dailyTick.Stop()
 	defer previewTick.Stop()
+	defer scheduledTick.Stop()
 	for {
 		select {
 		case <-ctx.Done():
@@ -138,6 +140,8 @@ func startBackgroundWorkers(ctx context.Context, server *httpapi.Server, auditLo
 			pruneTrash()
 		case <-previewTick.C:
 			cleanPreview()
+		case <-scheduledTick.C:
+			server.PublishScheduledPosts()
 		}
 	}
 }

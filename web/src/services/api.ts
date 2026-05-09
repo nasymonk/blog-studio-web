@@ -31,6 +31,7 @@ export type PostDraft = {
     description?: string
     image?: string
     math?: boolean
+    scheduledAt?: string
   }
   body: string
   assets: Array<{ name: string; size: number }>

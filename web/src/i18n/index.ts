@@ -137,7 +137,6 @@ const dict = {
     addTag: '添加…',
     rollbackConfirm: '确认回滚到上一个版本？此操作不可撤销。',
     postLoadFailed: '文章加载失败',
-    confirmLeave: '文章有未保存的更改，确认离开？',
     adminSubtitle: '管理后台',
     contentGroup: '内容',
     systemGroup: '系统',
@@ -167,6 +166,8 @@ const dict = {
     errorMessage: '错误信息',
     emptyLog: '（空）',
     skipToContent: '跳到主内容',
+    scheduledAt: '定时发布',
+    scheduledAtHint: '到达时间后自动发布',
   },
   en: {
     posts: 'Posts',
@@ -304,7 +305,6 @@ const dict = {
     addTag: 'Add…',
     rollbackConfirm: 'Rollback to previous version? This cannot be undone.',
     postLoadFailed: 'Failed to load post',
-    confirmLeave: 'You have unsaved changes. Leave?',
     adminSubtitle: 'Admin',
     contentGroup: 'Content',
     systemGroup: 'System',
@@ -334,6 +334,8 @@ const dict = {
     errorMessage: 'Error Message',
     emptyLog: '(empty)',
     skipToContent: 'Skip to content',
+    scheduledAt: 'Schedule',
+    scheduledAtHint: 'Auto-publish when time is reached',
   }
 } as const
 

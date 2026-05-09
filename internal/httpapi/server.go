@@ -89,6 +89,54 @@ func (s *Server) TrashStore() *trash.Store {
 	return s.trashStore
 }
 
+// PublishScheduledPosts checks all posts for scheduledAt times that have passed
+// and publishes them. Called by the background worker.
+func (s *Server) PublishScheduledPosts() {
+	pub := s.publisher()
+	posts, err := pub.ListPosts()
+	if err != nil {
+		s.logger.Warn("scheduled publish: failed to list posts", "error", err)
+		return
+	}
+	now := time.Now()
+	for _, p := range posts {
+		if !p.Draft {
+			continue
+		}
+		draft, loadErr := pub.LoadPost(p.Slug)
+		if loadErr != nil {
+			continue
+		}
+		if draft.FrontMatter.ScheduledAt == "" {
+			continue
+		}
+		scheduledTime, parseErr := time.Parse(time.RFC3339, draft.FrontMatter.ScheduledAt)
+		if parseErr != nil {
+			s.logger.Warn("scheduled publish: invalid scheduledAt", "slug", p.Slug, "scheduledAt", draft.FrontMatter.ScheduledAt)
+			continue
+		}
+		if now.Before(scheduledTime) {
+			continue
+		}
+		// Set draft to false and publish
+		draft.FrontMatter.Draft = false
+		draft.FrontMatter.ScheduledAt = ""
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+		req := publish.BlogPublishRequest{
+			Slug:             p.Slug,
+			Draft:            draft,
+			ConfirmOverwrite: true,
+		}
+		result := pub.PublishBlog(ctx, req)
+		cancel()
+		if result.Status == "success" {
+			s.logger.Info("scheduled publish: published", "slug", p.Slug)
+		} else {
+			s.logger.Warn("scheduled publish: failed", "slug", p.Slug, "status", result.Status)
+		}
+	}
+}
+
 
 func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
