@@ -85,14 +85,14 @@ async function save() {
 
     <div v-if="loading" class="flex-1 space-y-3 animate-fade-in">
       <Skeleton class="h-4 w-32" />
-      <Skeleton class="flex-1 min-h-[400px] rounded" />
+      <Skeleton class="flex-1 min-h-[400px] rounded-lg" />
     </div>
     <div v-else class="flex flex-col flex-1 min-h-0">
-      <div ref="editorEl" class="flex-1 overflow-auto rounded border border-border/60" />
+      <div ref="editorEl" class="flex-1 overflow-auto rounded-lg" />
       <div class="py-4 flex items-center justify-center gap-3">
         <span v-if="saving" class="text-[11px] text-muted-foreground/60 animate-pulse">{{ t.saving }}</span>
-        <Button class="rounded-full px-6" :disabled="saving || loading" @click="save">
-          <SaveIcon class="h-4 w-4 mr-1.5" />{{ saving ? t.saving : t.saveNow }}
+        <Button size="sm" class="rounded-full px-5" :disabled="saving || loading" @click="save">
+          <SaveIcon class="h-3.5 w-3.5 mr-1" />{{ saving ? t.saving : t.saveNow }}
         </Button>
       </div>
     </div>

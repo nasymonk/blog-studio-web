@@ -7,7 +7,6 @@ import { useI18n } from '@/i18n'
 import { useNotify } from '@/composables/useNotify'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter
@@ -93,7 +92,7 @@ onMounted(loadPosts)
     <div class="flex items-center gap-3">
       <TagsIcon class="h-5 w-5 text-muted-foreground" />
       <h2 class="font-serif font-semibold text-lg">{{ t.tagManagement }}</h2>
-      <Badge variant="secondary" class="ml-1">{{ tags.length }}</Badge>
+      <span class="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground">{{ tags.length }}</span>
     </div>
 
     <!-- Search -->
@@ -118,14 +117,14 @@ onMounted(loadPosts)
     </div>
 
     <!-- Tag list -->
-    <div v-else class="space-y-2">
+    <div v-else class="space-y-3">
       <div
         v-for="tag in filteredTags" :key="tag.name"
-        class="group flex items-center justify-between gap-3 px-4 py-3 rounded border border-border/60 bg-card hover:border-accent/30 transition-colors"
+        class="group flex items-center justify-between gap-3 px-4 py-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors"
       >
         <div class="flex items-center gap-3 min-w-0">
           <span class="font-deco text-sm font-medium truncate"># {{ tag.name }}</span>
-          <Badge variant="outline" class="text-[10px] h-4 px-1.5 shrink-0">{{ t.tagUsage(tag.count) }}</Badge>
+          <span class="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground">{{ t.tagUsage(tag.count) }}</span>
         </div>
         <div class="flex gap-1 shrink-0 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
           <Button variant="ghost" size="icon" class="h-7 w-7 text-muted-foreground" :title="t.renameTag" @click="startRename(tag.name)">

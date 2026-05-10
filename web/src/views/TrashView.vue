@@ -7,21 +7,12 @@ import { useI18n } from '@/i18n'
 import { useNotify } from '@/composables/useNotify'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
-import DataTable from '@/components/DataTable.vue'
-import type { Column } from '@/components/DataTable.vue'
 import EmptyState from '@/components/EmptyState.vue'
 
 const { t } = useI18n()
 const notify = useNotify()
 const items = ref<TrashItem[]>([])
 const loading = ref(true)
-
-const trashColumns: Column[] = [
-  { key: 'slug', label: t.value.post, sortable: true },
-  { key: 'deletedAt', label: t.value.deletedAt, sortable: true },
-  { key: 'size', label: t.value.size, sortable: true },
-  { key: 'actions', label: '', width: '120px' },
-]
 
 async function load() {
   loading.value = true
@@ -83,8 +74,8 @@ onMounted(load)
       <p class="text-xs text-muted-foreground mt-0.5">{{ loading ? t.loading : `${items.length} ${t.trashSubtitle}` }}</p>
     </div>
 
-    <div v-if="loading" class="stagger space-y-2">
-      <Skeleton v-for="i in 5" :key="i" class="h-[44px] animate-fade-up" />
+    <div v-if="loading" class="stagger space-y-3">
+      <Skeleton v-for="i in 5" :key="i" class="h-[44px] rounded-lg animate-fade-up" />
     </div>
 
     <EmptyState
@@ -93,31 +84,25 @@ onMounted(load)
       :description="t.trashEmptyDesc"
     />
 
-    <DataTable
-      v-else
-      :columns="trashColumns"
-      :data="items"
-      :empty-message="t.trashEmpty"
-    >
-      <template #slug="{ value }">
-        <span class="font-mono text-sm">{{ value }}</span>
-      </template>
-      <template #deletedAt="{ value }">
-        <span class="text-sm text-muted-foreground" :title="String(value)">{{ relDate(String(value)) }}</span>
-      </template>
-      <template #size="{ value }">
-        <span class="text-sm text-muted-foreground">{{ fmtSize(Number(value)) }}</span>
-      </template>
-      <template #actions="{ row }">
-        <div class="flex gap-1 justify-end" @click.stop>
-          <Button variant="ghost" size="sm" class="text-xs h-7 text-muted-foreground" @click="restoreItem(row)">
+    <div v-else class="space-y-3 stagger">
+      <div
+        v-for="item in items" :key="item.id"
+        class="group flex items-center justify-between gap-3 rounded-lg bg-muted/30 px-4 py-3 hover:bg-muted/50 transition-colors animate-fade-up"
+      >
+        <div class="flex items-center gap-3 min-w-0">
+          <span class="font-mono text-sm truncate">{{ item.slug }}</span>
+          <span class="text-xs text-muted-foreground">{{ relDate(String(item.deletedAt)) }}</span>
+          <span class="text-xs text-muted-foreground">{{ fmtSize(Number(item.size)) }}</span>
+        </div>
+        <div class="flex gap-1 shrink-0 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity" @click.stop>
+          <Button variant="ghost" size="sm" class="text-xs h-7 text-muted-foreground" @click="restoreItem(item)">
             <UndoIcon class="h-3 w-3 mr-1" /> {{ t.restore }}
           </Button>
-          <Button variant="ghost" size="sm" class="text-xs h-7 text-destructive hover:bg-destructive/10" @click="purgeItem(row)">
+          <Button variant="ghost" size="sm" class="text-xs h-7 text-destructive/60 hover:text-destructive" @click="purgeItem(item)">
             <Trash2Icon class="h-3 w-3 mr-1" /> {{ t.purge }}
           </Button>
         </div>
-      </template>
-    </DataTable>
+      </div>
+    </div>
   </div>
 </template>

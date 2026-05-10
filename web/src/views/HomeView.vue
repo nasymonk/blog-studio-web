@@ -7,7 +7,6 @@ import { useNotify } from '@/composables/useNotify'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card'
 
 const { t } = useI18n()
 const notify = useNotify()
@@ -61,46 +60,42 @@ async function onAvatarSelect(e: Event) {
     </div>
 
     <div class="stagger space-y-5">
-      <Card class="animate-fade-up">
-        <CardHeader><CardTitle class="font-serif">{{ t.avatar }}</CardTitle></CardHeader>
-        <CardContent>
-          <div class="flex items-center gap-5">
-            <div class="h-20 w-20 rounded-full bg-muted flex items-center justify-center overflow-hidden shrink-0 border-2 border-border/40">
-              <img v-if="profileImage" :src="profileImage" class="h-full w-full object-cover" alt="avatar" />
-              <UserIcon v-else class="h-8 w-8 text-muted-foreground/40" />
-            </div>
-            <div class="space-y-1.5">
-              <label class="cursor-pointer inline-block">
-                <input ref="avatarFileInput" type="file" accept="image/*" class="hidden" @change="onAvatarSelect" />
-                <Button variant="outline" size="sm" class="rounded-full" as-child>
-                  <span><UploadIcon class="h-3.5 w-3.5 mr-1.5" />{{ uploadingAvatar ? t.loading : t.uploadAvatar }}</span>
-                </Button>
-              </label>
-              <p class="text-[11px] text-muted-foreground/60">{{ t.avatarFormats }}</p>
-            </div>
+      <!-- Avatar -->
+      <div class="bg-muted/30 rounded-lg p-4 space-y-3 animate-fade-up">
+        <p class="text-sm font-medium">{{ t.avatar }}</p>
+        <div class="flex items-center gap-5">
+          <div class="h-20 w-20 rounded-full bg-muted flex items-center justify-center overflow-hidden shrink-0">
+            <img v-if="profileImage" :src="profileImage" class="h-full w-full object-cover" alt="avatar" />
+            <UserIcon v-else class="h-8 w-8 text-muted-foreground/40" />
           </div>
-        </CardContent>
-      </Card>
+          <div class="space-y-1.5">
+            <label class="cursor-pointer inline-block">
+              <input ref="avatarFileInput" type="file" accept="image/*" class="hidden" @change="onAvatarSelect" />
+              <Button variant="ghost" size="sm" class="text-xs h-7" as-child>
+                <span><UploadIcon class="h-3 w-3 mr-1" />{{ uploadingAvatar ? t.loading : t.uploadAvatar }}</span>
+              </Button>
+            </label>
+            <p class="text-[11px] text-muted-foreground/60">{{ t.avatarFormats }}</p>
+          </div>
+        </div>
+      </div>
 
-      <Card class="animate-fade-up">
-        <CardHeader><CardTitle class="font-serif">{{ t.tagline }}</CardTitle></CardHeader>
-        <CardContent>
-          <div class="grid gap-1.5">
-            <Label class="text-[10px] uppercase tracking-wider text-muted-foreground/70">{{ t.tagline }}</Label>
-            <Textarea
-              v-model="description"
-              class="font-deco min-h-[80px]"
-              rows="3"
-              placeholder="野有蔓草…"
-            />
-          </div>
-        </CardContent>
-        <CardFooter>
-          <Button class="rounded-full px-5" :disabled="saving || loading" @click="save">
-            <SaveIcon class="h-4 w-4 mr-1.5" />{{ saving ? t.saving : t.saveHomepage }}
-          </Button>
-        </CardFooter>
-      </Card>
+      <!-- Tagline -->
+      <div class="bg-muted/30 rounded-lg p-4 space-y-3 animate-fade-up">
+        <p class="text-sm font-medium">{{ t.tagline }}</p>
+        <div class="grid gap-1.5">
+          <Label class="text-[10px] uppercase tracking-wider text-muted-foreground/70">{{ t.tagline }}</Label>
+          <Textarea
+            v-model="description"
+            class="font-deco min-h-[80px] bg-transparent"
+            rows="3"
+            placeholder="野有蔓草…"
+          />
+        </div>
+        <Button size="sm" class="rounded-full px-4" :disabled="saving || loading" @click="save">
+          <SaveIcon class="h-3.5 w-3.5 mr-1" />{{ saving ? t.saving : t.saveHomepage }}
+        </Button>
+      </div>
     </div>
   </div>
 </template>

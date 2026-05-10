@@ -110,28 +110,28 @@ onMounted(loadAll)
 
     <!-- Metrics Dashboard -->
     <div v-if="metrics" class="grid grid-cols-2 gap-3">
-      <div class="rounded border border-border/60 bg-card p-4 animate-fade-up">
+      <div class="bg-muted/30 rounded-lg p-4 animate-fade-up">
         <div class="flex items-center gap-2 text-muted-foreground mb-1">
           <ActivityIcon class="h-3.5 w-3.5" />
           <span class="text-xs">{{ t.totalRequests }}</span>
         </div>
         <p class="text-2xl font-semibold tabular-nums">{{ metrics.totalRequests.toLocaleString() }}</p>
       </div>
-      <div class="rounded border border-border/60 bg-card p-4 animate-fade-up">
+      <div class="bg-muted/30 rounded-lg p-4 animate-fade-up">
         <div class="flex items-center gap-2 text-muted-foreground mb-1">
           <AlertCircleIcon class="h-3.5 w-3.5" />
           <span class="text-xs">{{ t.errorRate }}</span>
         </div>
         <p class="text-2xl font-semibold tabular-nums" :class="metrics.errorRate > 5 ? 'text-destructive' : ''">{{ metrics.errorRate.toFixed(1) }}%</p>
       </div>
-      <div class="rounded border border-border/60 bg-card p-4 animate-fade-up">
+      <div class="bg-muted/30 rounded-lg p-4 animate-fade-up">
         <div class="flex items-center gap-2 text-muted-foreground mb-1">
           <ClockIcon class="h-3.5 w-3.5" />
           <span class="text-xs">{{ t.avgBuildDuration }}</span>
         </div>
         <p class="text-2xl font-semibold tabular-nums">{{ metrics.avgBuildDuration > 0 ? (metrics.avgBuildDuration * 1000).toFixed(0) + 'ms' : '—' }}</p>
       </div>
-      <div class="rounded border border-border/60 bg-card p-4 animate-fade-up">
+      <div class="bg-muted/30 rounded-lg p-4 animate-fade-up">
         <div class="flex items-center gap-2 text-muted-foreground mb-1">
           <EyeIcon class="h-3.5 w-3.5" />
           <span class="text-xs">{{ t.activePreviews }}</span>
@@ -140,16 +140,15 @@ onMounted(loadAll)
       </div>
     </div>
     <div v-else-if="metricsLoading" class="grid grid-cols-2 gap-3">
-      <div v-for="i in 4" :key="i" class="rounded border border-border/60 bg-card p-4">
+      <div v-for="i in 4" :key="i" class="bg-muted/30 rounded-lg p-4">
         <Skeleton class="h-3 w-20 mb-2" />
         <Skeleton class="h-7 w-16" />
       </div>
     </div>
 
-    <div v-if="loading" class="space-y-2">
-      <div v-for="i in 3" :key="i" class="relative flex items-start gap-3 rounded border border-border/60 bg-card px-4 py-3 animate-fade-up">
-        <div class="absolute left-0 top-2 bottom-2 w-0.5 rounded-full bg-primary/10" />
-        <div class="pl-2 space-y-2 flex-1">
+    <div v-if="loading" class="space-y-3">
+      <div v-for="i in 3" :key="i" class="bg-muted/30 rounded-lg p-4 animate-fade-up">
+        <div class="space-y-2">
           <Skeleton class="h-4 w-28" />
           <Skeleton class="h-3 w-full max-w-xs" />
         </div>
@@ -164,15 +163,13 @@ onMounted(loadAll)
       @action="load"
     />
 
-    <div v-else class="space-y-2 stagger">
+    <div v-else class="space-y-3 stagger">
       <div
         v-for="check in health.checks"
         :key="check.name"
-        class="relative flex items-start gap-3 rounded border border-border/60 bg-card px-4 py-3 animate-fade-up"
+        class="bg-muted/30 rounded-lg p-4 animate-fade-up"
       >
-        <!-- Status bar -->
-        <div class="absolute left-0 top-2 bottom-2 w-0.5 rounded-full" :class="check.status === 'ok' ? 'bg-ok' : check.status === 'warn' ? 'bg-yellow-500' : 'bg-destructive'" />
-        <div class="pl-2 space-y-1 min-w-0">
+        <div class="space-y-1">
           <div class="flex items-center gap-2">
             <CheckCircleIcon v-if="check.status === 'ok'" class="h-4 w-4 text-ok shrink-0" />
             <TriangleAlertIcon v-else-if="check.status === 'warn'" class="h-4 w-4 text-yellow-500 shrink-0" />
