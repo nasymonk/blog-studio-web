@@ -75,31 +75,29 @@ onMounted(load)
 </script>
 
 <template>
-  <div class="space-y-4">
-    <div class="flex items-center gap-2">
-      <h2 class="font-serif text-lg font-semibold m-0">{{ t.auditLog }}</h2>
-      <Button variant="ghost" size="icon" class="h-7 w-7 text-muted-foreground" :disabled="loading" @click="load">
-        <RefreshCwIcon class="h-3.5 w-3.5" :class="{ 'animate-spin': loading }" />
-      </Button>
-    </div>
-
-    <!-- Search and filter controls -->
-    <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
-      <div class="relative flex-1">
-        <SearchIcon class="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-        <Input
-          v-model="searchQuery"
-          :placeholder="t.searchAudit"
-          class="pl-8 h-8 text-sm"
-        />
+  <div class="space-y-5">
+    <div class="flex flex-col md:flex-row md:items-end gap-3">
+      <div class="flex items-end gap-3 flex-1 min-w-0">
+        <div class="relative flex-1 max-w-[360px]">
+          <SearchIcon class="absolute left-0 bottom-3 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+          <Input
+            v-model="searchQuery"
+            :placeholder="t.searchAudit"
+            class="border-0 border-b border-border rounded-none bg-transparent pl-6 pb-2 h-auto focus-visible:ring-0 focus-visible:border-accent transition-colors"
+          />
+        </div>
+        <Button variant="ghost" size="icon" class="h-8 w-8 text-muted-foreground mb-0.5" :disabled="loading" @click="load">
+          <RefreshCwIcon class="h-4 w-4" :class="{ 'animate-spin': loading }" />
+        </Button>
       </div>
       <div class="flex items-center gap-1 flex-wrap">
         <Button
           v-for="op in operations"
           :key="op"
-          :variant="operationFilter === op ? 'default' : 'outline'"
+          variant="ghost"
           size="sm"
-          class="h-7 text-xs rounded-full px-3"
+          class="text-xs h-8 md:h-7"
+          :class="operationFilter === op ? 'bg-accent text-accent-foreground' : 'text-muted-foreground'"
           @click="operationFilter = op"
         >
           {{ opLabel(op) }}
@@ -139,20 +137,20 @@ onMounted(load)
     <Sheet :open="!!selected" @update:open="(v: boolean) => { if (!v) selected = null }">
       <SheetContent>
         <SheetHeader>
-          <SheetTitle class="font-serif">{{ selected?.slug }} · {{ selected?.operation }}</SheetTitle>
+          <SheetTitle class="text-sm font-medium">{{ selected?.slug }} · {{ selected?.operation }}</SheetTitle>
         </SheetHeader>
         <div v-if="selected" class="mt-4 space-y-4">
           <dl class="grid gap-3 text-sm" style="grid-template-columns:100px 1fr">
-            <dt class="text-muted-foreground text-xs">{{ t.time }}</dt><dd class="font-mono text-[11px]">{{ fmtTime(selected.timestamp) }}</dd>
-            <dt class="text-muted-foreground text-xs">{{ t.auditId }}</dt><dd class="font-mono text-[11px]">{{ selected.auditId }}</dd>
-            <dt class="text-muted-foreground text-xs">{{ t.op }}</dt><dd>{{ selected.operation }}</dd>
-            <dt class="text-muted-foreground text-xs">{{ t.result }}</dt><dd><Badge :variant="selected.result === 'success' ? 'default' : 'destructive'" class="text-[10px]">{{ selected.result }}</Badge></dd>
-            <dt class="text-muted-foreground text-xs">{{ t.backupId }}</dt><dd>{{ selected.backupId || '—' }}</dd>
-            <dt class="text-muted-foreground text-xs">{{ t.errorCode }}</dt><dd>{{ selected.errorCode || '—' }}</dd>
-            <dt class="text-muted-foreground text-xs">{{ t.errorMessage }}</dt><dd>{{ selected.errorBrief || '—' }}</dd>
+            <dt class="text-xs uppercase tracking-wider text-muted-foreground">{{ t.time }}</dt><dd class="font-mono text-[11px]">{{ fmtTime(selected.timestamp) }}</dd>
+            <dt class="text-xs uppercase tracking-wider text-muted-foreground">{{ t.auditId }}</dt><dd class="font-mono text-[11px]">{{ selected.auditId }}</dd>
+            <dt class="text-xs uppercase tracking-wider text-muted-foreground">{{ t.op }}</dt><dd>{{ selected.operation }}</dd>
+            <dt class="text-xs uppercase tracking-wider text-muted-foreground">{{ t.result }}</dt><dd><Badge :variant="selected.result === 'success' ? 'default' : 'destructive'" class="text-[10px]">{{ selected.result }}</Badge></dd>
+            <dt class="text-xs uppercase tracking-wider text-muted-foreground">{{ t.backupId }}</dt><dd>{{ selected.backupId || '—' }}</dd>
+            <dt class="text-xs uppercase tracking-wider text-muted-foreground">{{ t.errorCode }}</dt><dd>{{ selected.errorCode || '—' }}</dd>
+            <dt class="text-xs uppercase tracking-wider text-muted-foreground">{{ t.errorMessage }}</dt><dd>{{ selected.errorBrief || '—' }}</dd>
           </dl>
           <div v-if="selected.buildResult">
-            <p class="text-xs font-medium mb-1.5">{{ t.buildLog }}</p>
+            <p class="text-xs uppercase tracking-wider text-muted-foreground font-medium mb-1.5">{{ t.buildLog }}</p>
             <pre class="text-[11px] font-mono bg-muted/50 p-3 rounded max-h-[300px] overflow-auto whitespace-pre-wrap border border-border/40">{{ selected.buildResult.stderr || selected.buildResult.stdout || t.emptyLog }}</pre>
           </div>
         </div>

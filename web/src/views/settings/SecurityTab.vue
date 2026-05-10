@@ -31,22 +31,22 @@ async function changePassword() {
 </script>
 
 <template>
-  <div class="max-w-md space-y-4">
+  <div class="max-w-md space-y-6">
     <Card>
       <CardHeader>
-        <CardTitle class="flex items-center gap-2 font-serif text-base">
+        <CardTitle class="flex items-center gap-2 text-sm font-medium">
           <LockIcon class="h-4 w-4 text-accent" /> {{ t.securitySettings }}
         </CardTitle>
         <p class="text-xs text-muted-foreground">{{ t.passwordDesc }}</p>
       </CardHeader>
       <CardContent class="space-y-4">
         <div class="grid gap-1.5">
-          <Label class="text-[10px] uppercase tracking-wider text-muted-foreground/70">{{ t.currentPassword }}</Label>
-          <Input v-model="currentPassword" type="password" autocomplete="current-password" />
+          <Label class="text-xs uppercase tracking-wider text-muted-foreground">{{ t.currentPassword }}</Label>
+          <Input v-model="currentPassword" type="password" class="h-9" autocomplete="current-password" />
         </div>
         <div class="grid gap-1.5">
-          <Label class="text-[10px] uppercase tracking-wider text-muted-foreground/70">{{ t.newPassword }}</Label>
-          <Input v-model="newPassword" type="password" autocomplete="new-password" />
+          <Label class="text-xs uppercase tracking-wider text-muted-foreground">{{ t.newPassword }}</Label>
+          <Input v-model="newPassword" type="password" class="h-9" autocomplete="new-password" />
           <p v-if="error" class="text-xs text-destructive">{{ error }}</p>
         </div>
         <Button class="rounded-full px-5" :disabled="saving || !currentPassword || !newPassword" @click="changePassword">

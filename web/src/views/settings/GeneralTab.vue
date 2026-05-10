@@ -49,36 +49,36 @@ function validate(): string {
 </script>
 
 <template>
-  <div v-if="cfg" class="space-y-4">
+  <div v-if="cfg" class="space-y-6">
     <Card>
-      <CardHeader><CardTitle class="font-serif text-base">{{ t.generalSettings }}</CardTitle></CardHeader>
+      <CardHeader><CardTitle class="text-sm font-medium">{{ t.generalSettings }}</CardTitle></CardHeader>
       <CardContent class="grid gap-4 sm:grid-cols-2">
         <div class="grid gap-1.5">
-          <Label class="text-[10px] uppercase tracking-wider text-muted-foreground/70">{{ t.siteId }}</Label>
-          <Input v-model="cfg.site.id" @input="dirty=true" />
+          <Label class="text-xs uppercase tracking-wider text-muted-foreground">{{ t.siteId }}</Label>
+          <Input v-model="cfg.site.id" class="h-9" @input="dirty=true" />
         </div>
         <div class="grid gap-1.5">
-          <Label class="text-[10px] uppercase tracking-wider text-muted-foreground/70">{{ t.siteName }}</Label>
-          <Input v-model="cfg.site.name" @input="dirty=true" />
+          <Label class="text-xs uppercase tracking-wider text-muted-foreground">{{ t.siteName }}</Label>
+          <Input v-model="cfg.site.name" class="h-9" @input="dirty=true" />
         </div>
         <div class="grid gap-1.5 sm:col-span-2">
-          <Label class="text-[10px] uppercase tracking-wider text-muted-foreground/70">{{ t.basePath }}</Label>
-          <Input v-model="cfg.basePath" @input="dirty=true" />
-          <p class="text-[11px] text-muted-foreground/50">{{ t.basePathExample }}</p>
+          <Label class="text-xs uppercase tracking-wider text-muted-foreground">{{ t.basePath }}</Label>
+          <Input v-model="cfg.basePath" class="h-9" @input="dirty=true" />
+          <p class="text-xs text-muted-foreground/60">{{ t.basePathExample }}</p>
         </div>
       </CardContent>
     </Card>
 
     <Card>
-      <CardHeader><CardTitle class="font-serif text-base">{{ t.previewSettings }}</CardTitle></CardHeader>
+      <CardHeader><CardTitle class="text-sm font-medium">{{ t.previewSettings }}</CardTitle></CardHeader>
       <CardContent class="grid gap-4 sm:grid-cols-2">
         <div class="grid gap-1.5">
-          <Label class="text-[10px] uppercase tracking-wider text-muted-foreground/70">{{ t.previewTTL }}</Label>
-          <Input v-model.number="cfg.preview.ttlMinutes" type="number" min="10" @input="dirty=true" />
+          <Label class="text-xs uppercase tracking-wider text-muted-foreground">{{ t.previewTTL }}</Label>
+          <Input v-model.number="cfg.preview.ttlMinutes" type="number" min="10" class="h-9" @input="dirty=true" />
         </div>
         <div class="grid gap-1.5">
-          <Label class="text-[10px] uppercase tracking-wider text-muted-foreground/70">{{ t.maxUploadMb }}</Label>
-          <Input type="number" min="1" :model-value="Math.round(cfg.maxUploadBytes / 1024 / 1024)"
+          <Label class="text-xs uppercase tracking-wider text-muted-foreground">{{ t.maxUploadMb }}</Label>
+          <Input type="number" min="1" class="h-9" :model-value="Math.round(cfg.maxUploadBytes / 1024 / 1024)"
             @update:model-value="(v: string | number) => { cfg!.maxUploadBytes = Number(v) * 1024 * 1024; dirty=true }" />
         </div>
       </CardContent>

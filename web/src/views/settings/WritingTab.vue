@@ -40,24 +40,24 @@ async function save() {
 </script>
 
 <template>
-  <div v-if="cfg" class="space-y-4">
+  <div v-if="cfg" class="space-y-6">
     <Card>
-      <CardHeader><CardTitle class="font-serif text-base">{{ t.writingSettings }}</CardTitle></CardHeader>
+      <CardHeader><CardTitle class="text-sm font-medium">{{ t.writingSettings }}</CardTitle></CardHeader>
       <CardContent class="grid gap-4 sm:grid-cols-2">
         <div class="grid gap-1.5 sm:col-span-2">
-          <Label class="text-[10px] uppercase tracking-wider text-muted-foreground/70">{{ t.blogRoot }}</Label>
-          <Input v-model="cfg.site.blogRoot" @input="dirty=true" />
-          <p class="text-[11px] text-muted-foreground/50">{{ t.blogRootHint }}</p>
+          <Label class="text-xs uppercase tracking-wider text-muted-foreground">{{ t.blogRoot }}</Label>
+          <Input v-model="cfg.site.blogRoot" class="h-9" @input="dirty=true" />
+          <p class="text-xs text-muted-foreground/60">{{ t.blogRootHint }}</p>
         </div>
         <div class="grid gap-1.5">
-          <Label class="text-[10px] uppercase tracking-wider text-muted-foreground/70">{{ t.postSection }}</Label>
-          <Input v-model="cfg.site.postSection" @input="dirty=true" />
-          <p class="text-[11px] text-muted-foreground/50">{{ t.postSectionHint }}</p>
+          <Label class="text-xs uppercase tracking-wider text-muted-foreground">{{ t.postSection }}</Label>
+          <Input v-model="cfg.site.postSection" class="h-9" @input="dirty=true" />
+          <p class="text-xs text-muted-foreground/60">{{ t.postSectionHint }}</p>
         </div>
         <div class="grid gap-1.5">
-          <Label class="text-[10px] uppercase tracking-wider text-muted-foreground/70">{{ t.buildCommand }}</Label>
+          <Label class="text-xs uppercase tracking-wider text-muted-foreground">{{ t.buildCommand }}</Label>
           <Select v-model="cfg.site.buildCommand" @update:model-value="dirty=true">
-            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectTrigger class="h-9"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="hugo --minify">hugo --minify</SelectItem>
               <SelectItem value="hugo">hugo</SelectItem>
