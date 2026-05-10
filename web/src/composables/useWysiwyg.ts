@@ -1,5 +1,4 @@
 import { EditorView, Decoration, ViewPlugin, WidgetType, type DecorationSet, type ViewUpdate } from '@codemirror/view'
-import type { Range } from '@codemirror/state'
 import { RangeSetBuilder } from '@codemirror/state'
 import { syntaxTree } from '@codemirror/language'
 import type { InlineParser, BlockParser, MarkdownExtension } from '@lezer/markdown'

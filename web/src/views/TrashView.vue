@@ -102,7 +102,7 @@ onMounted(load)
       <template #slug="{ value }">
         <span class="font-mono text-sm">{{ value }}</span>
       </template>
-      <template #deletedAt="{ row, value }">
+      <template #deletedAt="{ value }">
         <span class="text-sm text-muted-foreground" :title="value">{{ relDate(value) }}</span>
       </template>
       <template #size="{ value }">

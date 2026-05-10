@@ -60,7 +60,7 @@ async function confirmRename() {
   if (!renamingTag.value || !newName.value || renamingTag.value === newName.value) return
   processing.value = true
   try {
-    const result = await api.renameTag(renamingTag.value, newName.value)
+    await api.renameTag(renamingTag.value, newName.value)
     notify.success(t.value.tagRenamed(renamingTag.value, newName.value))
     renamingTag.value = null
     await loadPosts()
@@ -76,7 +76,7 @@ async function confirmDelete() {
   if (!deletingTag.value) return
   processing.value = true
   try {
-    const result = await api.deleteTag(deletingTag.value)
+    await api.deleteTag(deletingTag.value)
     notify.success(t.value.tagDeleted(deletingTag.value))
     deletingTag.value = null
     await loadPosts()

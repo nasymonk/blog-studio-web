@@ -60,7 +60,7 @@ vi.mock('lucide-vue-next', () => ({
 }))
 
 vi.mock('@vueuse/core', () => ({
-  useDebounceFn: (fn: Function) => fn,
+  useDebounceFn: (fn: (...args: unknown[]) => unknown) => fn,
   useStorage: (_key: string, defaultValue: unknown) => ref(defaultValue),
   reactiveOmit: (obj: Record<string, unknown>, ..._keys: string[]) => obj,
 }))

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { PlusIcon, SearchIcon, RefreshCwIcon, EditIcon, EyeIcon, AlertTriangleIcon, FileTextIcon, Trash2Icon, CheckSquareIcon, SquareIcon, SendIcon, DownloadIcon, UploadIcon } from 'lucide-vue-next'
+import { PlusIcon, SearchIcon, RefreshCwIcon, EditIcon, EyeIcon, AlertTriangleIcon, Trash2Icon, CheckSquareIcon, SquareIcon, SendIcon, DownloadIcon, UploadIcon } from 'lucide-vue-next'
 import { useDebounceFn } from '@vueuse/core'
 import { useVirtualizer } from '@tanstack/vue-virtual'
 import { api } from '@/services/api'

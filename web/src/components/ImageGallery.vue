@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
-import { ImageIcon, CopyIcon, Trash2Icon, UploadIcon, CheckIcon } from 'lucide-vue-next'
+import { ref } from 'vue'
+import { ImageIcon, CopyIcon, UploadIcon, CheckIcon } from 'lucide-vue-next'
 import { useI18n } from '@/i18n'
 import { useNotify } from '@/composables/useNotify'
 import { api } from '@/services/api'
 import type { PostDraft } from '@/services/api'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 
 const props = defineProps<{
@@ -62,7 +62,7 @@ async function handleUpload() {
     for (const file of Array.from(files)) {
       try {
         await api.uploadAsset(props.slug, file)
-      } catch (e: any) {
+      } catch (e: unknown) {
         notify.error(e)
       }
     }

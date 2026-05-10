@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { SplitMode } from '@/composables/useSplitView'
 
-const props = defineProps<{
+defineProps<{
   mode: SplitMode
   splitRatio: number
   isDragging: boolean

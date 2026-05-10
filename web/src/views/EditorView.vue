@@ -82,8 +82,8 @@ const { settings: editorSettings, applyPreset } = useEditorSettings()
 const { versions, isOpen: historyOpen, saveVersion, loadHistory: loadVersionHistory, toggle: toggleHistory } = useVersionHistory()
 
 const editorContainer = ref<HTMLElement | null>(null)
-const { body, dirty, saving, savedAt, saveStatus, lastSavedTime, wordCount, cursorLine, cursorCol, charCount, lineCount, readingTime, mode, headings, activeLine, mount,
-        execBold, execItalic, execLink, execCode, execHeading, execStrikethrough, execBlockquote, execUnorderedList, execOrderedList, execTaskList, execTable, execHr, insertText, goToLine, toggleMode, applySettings, findReplace } = useEditor(
+const { body, dirty, saving, savedAt, saveStatus, lastSavedTime, wordCount, cursorLine, cursorCol, charCount, lineCount, readingTime, headings, activeLine, mount,
+        execBold, execItalic, execLink, execCode, execHeading, execStrikethrough, execBlockquote, execUnorderedList, execOrderedList, execTaskList, execTable, execHr, insertText, goToLine, applySettings, findReplace } = useEditor(
   editorContainer,
   '',
   theme,
@@ -277,10 +277,11 @@ function restoreVersion(restoreBody: string) {
 
     <template v-else-if="draft">
       <!-- Breadcrumb -->
-      <Breadcrumb :items="[
-        { label: t.posts, to: '/posts' },
-        { label: draft.frontMatter.title || slug },
-      ]" />
+      <Breadcrumb
+        :items="[
+          { label: t.posts, to: '/posts' },
+          { label: draft.frontMatter.title || slug },
+        ]" />
 
       <!-- Title -->
       <input

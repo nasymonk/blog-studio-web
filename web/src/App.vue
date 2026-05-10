@@ -101,7 +101,7 @@ async function logout() {
 async function syncPosts() {
   store.postsLoading = true
   try { store.posts = await api.posts() }
-  catch (e: any) { notify.error(e) }
+  catch (e: unknown) { notify.error(e) }
   finally { store.postsLoading = false }
 }
 
@@ -126,7 +126,7 @@ onMounted(async () => {
       store.posts = posts
       try { store.health = await api.health() } catch { /* non-critical */ }
     }
-  } catch (e: any) { notify.error(e) }
+  } catch (e: unknown) { notify.error(e) }
 })
 </script>
 
@@ -171,7 +171,8 @@ onMounted(async () => {
                     class="group relative flex items-center gap-2.5 rounded px-2.5 py-2.5 text-sm text-sidebar-foreground transition-all duration-200"
                     :class="route.path === item.to || route.path.startsWith(item.to + '/') ? 'bg-sidebar-accent text-sidebar-accent-foreground font-medium' : 'hover:bg-sidebar-accent/50'"
                   >
-                    <div v-if="route.path === item.to || route.path.startsWith(item.to + '/')"
+                    <div
+                      v-if="route.path === item.to || route.path.startsWith(item.to + '/')"
                       class="absolute left-0 top-1 bottom-1 w-0.5 bg-accent rounded-full origin-top animate-fade-in" />
                     <component :is="item.icon" class="h-4 w-4 shrink-0 opacity-70" aria-hidden="true" />
                     <span class="flex-1">{{ item.label() }}</span>
@@ -192,7 +193,8 @@ onMounted(async () => {
                     class="group relative flex items-center gap-2.5 rounded px-2.5 py-2.5 text-sm text-sidebar-foreground transition-all duration-200"
                     :class="route.path === item.to || route.path.startsWith(item.to + '/') ? 'bg-sidebar-accent text-sidebar-accent-foreground font-medium' : 'hover:bg-sidebar-accent/50'"
                   >
-                    <div v-if="route.path === item.to || route.path.startsWith(item.to + '/')"
+                    <div
+                      v-if="route.path === item.to || route.path.startsWith(item.to + '/')"
                       class="absolute left-0 top-1 bottom-1 w-0.5 bg-accent rounded-full origin-top animate-fade-in" />
                     <component :is="item.icon" class="h-4 w-4 shrink-0 opacity-70" aria-hidden="true" />
                     <span class="flex-1">{{ item.label() }}</span>
@@ -252,7 +254,8 @@ onMounted(async () => {
                       ]"
                     >
                       <!-- Active indicator bar -->
-                      <div v-if="route.path === item.to || route.path.startsWith(item.to + '/')"
+                      <div
+                        v-if="route.path === item.to || route.path.startsWith(item.to + '/')"
                         class="absolute left-0 top-1 bottom-1 w-0.5 bg-accent rounded-full origin-top animate-fade-in" />
                       <component :is="item.icon" class="h-4 w-4 shrink-0 opacity-70" aria-hidden="true" />
                       <span v-if="!sidebarCollapsed" class="flex-1">{{ item.label() }}</span>
@@ -280,7 +283,8 @@ onMounted(async () => {
                         sidebarCollapsed && 'justify-center px-0',
                       ]"
                     >
-                      <div v-if="route.path === item.to || route.path.startsWith(item.to + '/')"
+                      <div
+                        v-if="route.path === item.to || route.path.startsWith(item.to + '/')"
                         class="absolute left-0 top-1 bottom-1 w-0.5 bg-accent rounded-full origin-top animate-fade-in" />
                       <component :is="item.icon" class="h-4 w-4 shrink-0 opacity-70" aria-hidden="true" />
                       <span v-if="!sidebarCollapsed" class="flex-1">{{ item.label() }}</span>

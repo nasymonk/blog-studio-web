@@ -3,7 +3,7 @@ import type { Version } from '@/composables/useVersionHistory'
 import { Button } from '@/components/ui/button'
 import { XIcon, RotateCcwIcon, ClockIcon, FileTextIcon } from 'lucide-vue-next'
 
-const props = defineProps<{
+defineProps<{
   versions: Version[]
   open: boolean
 }>()
@@ -27,7 +27,7 @@ function relativeTime(date: Date): string {
 }
 
 function preview(body: string): string {
-  const text = body.replace(/[#*_`~\[\]()!>|]/g, '').trim()
+  const text = body.replace(/[#*_`~[()]!>|]/g, '').trim()
   return text.length > 100 ? text.slice(0, 100) + '...' : text
 }
 </script>

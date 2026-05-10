@@ -120,6 +120,7 @@ watch(html, () => {
 </script>
 
 <template>
+  <!-- eslint-disable-next-line vue/no-v-html -->
   <div ref="preview" class="markdown-body" v-html="html"></div>
 </template>
 

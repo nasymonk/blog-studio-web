@@ -11,12 +11,12 @@ export interface Column {
 
 const props = defineProps<{
   columns: Column[]
-  data: Record<string, any>[]
+  data: Record<string, unknown>[]
   emptyMessage?: string
 }>()
 
 const emit = defineEmits<{
-  rowClick: [row: Record<string, any>]
+  rowClick: [row: Record<string, unknown>]
 }>()
 
 const sortKey = ref('')
