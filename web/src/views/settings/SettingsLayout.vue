@@ -1,6 +1,8 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { RouterLink, RouterView, useRoute } from 'vue-router'
 import { useI18n } from '@/i18n'
+import Breadcrumb from '@/components/Breadcrumb.vue'
 
 const { t } = useI18n()
 const route = useRoute()
@@ -11,10 +13,19 @@ const tabs = [
   { to: '/settings/security', label: () => t.value.securitySettings },
   { to: '/settings/audit', label: () => t.value.auditLog },
 ]
+
+const breadcrumbItems = computed(() => {
+  const currentTab = tabs.find(tab => route.path === tab.to)
+  return [
+    { label: t.value.settings },
+    ...(currentTab ? [{ label: currentTab.label() }] : []),
+  ]
+})
 </script>
 
 <template>
   <div class="flex flex-col gap-6 max-w-3xl">
+    <Breadcrumb :items="breadcrumbItems" />
     <nav class="flex gap-1 border-b border-border/60" role="tablist">
       <RouterLink
         v-for="tab in tabs"

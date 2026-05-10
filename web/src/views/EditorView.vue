@@ -31,6 +31,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import SkeletonLines from '@/components/SkeletonLines.vue'
+import Breadcrumb from '@/components/Breadcrumb.vue'
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuGroup,
   DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator,
@@ -243,6 +244,12 @@ function onRootKeydown(e: KeyboardEvent) {
     </div>
 
     <template v-else-if="draft">
+      <!-- Breadcrumb -->
+      <Breadcrumb :items="[
+        { label: t.posts, to: '/posts' },
+        { label: draft.frontMatter.title || slug },
+      ]" />
+
       <!-- Title -->
       <input
         v-model="draft.frontMatter.title"
