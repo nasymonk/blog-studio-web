@@ -59,6 +59,8 @@
   --color-link-bg: var(--link-bg);
   --color-hover: var(--hover);
   --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-info: var(--info);
 }
 
 :root {
@@ -553,4 +555,53 @@ textarea.auto-resize {
 }
 .modal-padding {
   padding: var(--space-6);
+}
+
+/* ============================================
+   Feedback & Notification System
+   ============================================ */
+
+/* Progress bar */
+.progress-bar {
+  height: 4px;
+  border-radius: var(--radius-full);
+  background: var(--color-muted);
+  overflow: hidden;
+}
+.progress-bar-fill {
+  height: 100%;
+  border-radius: var(--radius-full);
+  background: var(--color-primary);
+  transition: width var(--duration-normal);
+}
+.progress-bar-indeterminate .progress-bar-fill {
+  width: 30%;
+  animation: progress-indeterminate 1.5s ease-in-out infinite;
+}
+@keyframes progress-indeterminate {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(400%); }
+}
+
+/* Badge semantic variants */
+.badge-success {
+  background: oklch(from var(--color-success) l c h / 0.15);
+  color: var(--color-success);
+}
+.badge-warning {
+  background: oklch(from var(--color-warning) l c h / 0.15);
+  color: var(--color-warning);
+}
+.badge-error {
+  background: oklch(from var(--color-destructive) l c h / 0.15);
+  color: var(--color-destructive);
+}
+.badge-info {
+  background: oklch(from var(--color-info) l c h / 0.15);
+  color: var(--color-info);
+}
+
+/* Tooltip animation */
+[data-state="delayed-open"][data-slot="tooltip-content"] {
+  animation: fade-up var(--duration-fast) var(--ease-smooth);
 }
