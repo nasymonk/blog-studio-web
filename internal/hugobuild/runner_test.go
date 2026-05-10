@@ -46,9 +46,9 @@ func TestRunner_FailedBuild(t *testing.T) {
 }
 
 func TestRunner_Serialization(t *testing.T) {
-	// Each fake hugo sleeps 50ms. If serialized, 2 runs take ≥100ms total.
-	// If they ran concurrently, total would be ~50ms.
-	injectFakeHugo(t, "sleep 0.05")
+	// Each fake hugo sleeps 200ms. If serialized, 2 runs take ≥400ms total.
+	// If they ran concurrently, total would be ~200ms.
+	injectFakeHugo(t, "sleep 0.2")
 	r := NewRunner(nil)
 	workDir := t.TempDir()
 
@@ -64,8 +64,8 @@ func TestRunner_Serialization(t *testing.T) {
 	wg.Wait()
 	elapsed := time.Since(start)
 
-	if elapsed < 90*time.Millisecond {
-		t.Errorf("runs appear to have overlapped (elapsed %v < 90ms, expected serialized ≥100ms)", elapsed)
+	if elapsed < 350*time.Millisecond {
+		t.Errorf("runs appear to have overlapped (elapsed %v < 350ms, expected serialized ≥400ms)", elapsed)
 	}
 }
 
