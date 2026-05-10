@@ -121,6 +121,24 @@
     --sidebar-foreground: oklch(0.205 0.012 70);
     --sidebar-accent: oklch(0.55 0.08 240 / 0.08);
     --sidebar-accent-foreground: oklch(0.205 0.012 70);
+
+    /* Semantic status colors */
+    --color-status-draft: oklch(0.75 0.15 75);
+    --color-status-draft-foreground: oklch(0.20 0 0);
+    --color-status-published: oklch(0.60 0.18 145);
+    --color-status-published-foreground: oklch(0.98 0 0);
+    --color-status-error: oklch(0.55 0.2 25);
+    --color-status-error-foreground: oklch(0.98 0 0);
+    --color-status-info: oklch(0.60 0.12 250);
+    --color-status-info-foreground: oklch(0.98 0 0);
+
+    /* Chart palette for metrics (6 harmonious colors) */
+    --chart-1: oklch(0.60 0.15 250);
+    --chart-2: oklch(0.65 0.18 145);
+    --chart-3: oklch(0.70 0.15 75);
+    --chart-4: oklch(0.55 0.2 25);
+    --chart-5: oklch(0.60 0.12 300);
+    --chart-6: oklch(0.50 0.10 200);
   }
 
   /* ============================================
@@ -163,6 +181,20 @@
     --sidebar-foreground: oklch(0.935 0.01 80);
     --sidebar-accent: oklch(0.72 0.08 240 / 0.1);
     --sidebar-accent-foreground: oklch(0.935 0.01 80);
+
+    /* Semantic status colors (dark) */
+    --color-status-draft: oklch(0.80 0.15 75);
+    --color-status-published: oklch(0.65 0.18 145);
+    --color-status-error: oklch(0.60 0.2 25);
+    --color-status-info: oklch(0.65 0.12 250);
+
+    /* Chart palette (dark) */
+    --chart-1: oklch(0.65 0.15 250);
+    --chart-2: oklch(0.70 0.18 145);
+    --chart-3: oklch(0.75 0.15 75);
+    --chart-4: oklch(0.60 0.2 25);
+    --chart-5: oklch(0.65 0.12 300);
+    --chart-6: oklch(0.55 0.10 200);
 
     --shadow-sm: 0 1px 2px 0 oklch(0% 0 0 / 0.2);
     --shadow-md: 0 4px 6px -1px oklch(0% 0 0 / 0.25),

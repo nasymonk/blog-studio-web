@@ -218,6 +218,11 @@
   }
 }
 
+/* Gradient brand accent */
+.gradient-brand {
+  background: linear-gradient(135deg, var(--color-primary), oklch(from var(--color-primary) calc(l + 0.1) c h));
+}
+
 /* Utility animation classes */
 .animate-fade-up {
   animation: fade-up 0.4s ease-out both;
