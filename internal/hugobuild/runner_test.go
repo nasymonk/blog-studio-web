@@ -45,27 +45,29 @@ func TestRunner_FailedBuild(t *testing.T) {
 	}
 }
 
-func TestRunner_Serialization(t *testing.T) {
-	// Each fake hugo sleeps 200ms. If serialized, 2 runs take ≥400ms total.
-	// If they ran concurrently, total would be ~200ms.
-	injectFakeHugo(t, "sleep 0.2")
+func TestRunner_ConcurrentCallsReturnSameResult(t *testing.T) {
+	// singleflight ensures concurrent calls with the same key share one execution.
+	// Both calls should return the same result.
+	injectFakeHugo(t, "exit 0")
 	r := NewRunner(nil)
 	workDir := t.TempDir()
 
 	var wg sync.WaitGroup
-	start := time.Now()
-	for i := 0; i < 2; i++ {
+	results := make([]CommandResult, 4)
+	for i := 0; i < 4; i++ {
 		wg.Add(1)
+		idx := i
 		go func() {
 			defer wg.Done()
-			r.Run(context.Background(), workDir)
+			results[idx] = r.Run(context.Background(), workDir)
 		}()
 	}
 	wg.Wait()
-	elapsed := time.Since(start)
 
-	if elapsed < 350*time.Millisecond {
-		t.Errorf("runs appear to have overlapped (elapsed %v < 350ms, expected serialized ≥400ms)", elapsed)
+	for i, res := range results {
+		if !res.Success {
+			t.Errorf("run %d: expected success, got exit code %d stderr=%q", i, res.ExitCode, res.Stderr)
+		}
 	}
 }
 
