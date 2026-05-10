@@ -76,8 +76,8 @@
   --secondary: #f5f0e6;
   --secondary-foreground: #1e1c18;
   --muted: #f5f0e6;
-  --muted-foreground: #6b6457;
-  --accent: #4f6f82;
+  --muted-foreground: #6b7280;
+  --accent: #3b82c4;
   --accent-foreground: #fdfcf8;
   --destructive: #8c3e37;
   --border: rgba(30, 24, 16, 0.1);
@@ -118,8 +118,8 @@
   --secondary: #24262a;
   --secondary-foreground: #eeeae3;
   --muted: #24262a;
-  --muted-foreground: #b5ada0;
-  --accent: #9dc2d6;
+  --muted-foreground: #9ca3af;
+  --accent: #6ba3d6;
   --accent-foreground: #17181a;
   --destructive: #d47c74;
   --border: rgba(255, 255, 255, 0.09);
@@ -177,13 +177,11 @@
     @apply bg-background text-foreground;
     /* Smooth theme transition */
     transition: background-color var(--duration-normal), color var(--duration-normal);
-    /* Subtle paper texture */
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4'%3E%3Crect width='4' height='4' fill='%23fdfcf8'/%3E%3Crect width='1' height='1' fill='%23f0ede5' opacity='0.3'/%3E%3C/svg%3E");
-    background-size: 4px 4px;
+    background-image: none;
   }
 
   .dark body {
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4'%3E%3Crect width='4' height='4' fill='%2317181a'/%3E%3Crect width='1' height='1' fill='%23222428' opacity='0.4'/%3E%3C/svg%3E");
+    background-image: none;
   }
 
   /* Dark mode image brightness to prevent brightness shock */
