@@ -5,7 +5,7 @@ import {
   SaveIcon, SendIcon, EyeIcon, Loader2Icon, AlertCircleIcon,
   BoldIcon, ItalicIcon, LinkIcon, ImageIcon, CodeIcon, Heading1Icon,
   RotateCcwIcon, ListIcon, ChevronDownIcon, ChevronUpIcon, PenLineIcon,
-  GalleryHorizontalEndIcon
+  GalleryHorizontalEndIcon, Columns2Icon, FileCodeIcon, MonitorIcon
 } from 'lucide-vue-next'
 import { api } from '@/services/api'
 import type { PostDraft, PostStats } from '@/services/api'
@@ -17,6 +17,9 @@ import { useEditor } from '@/composables/useEditor'
 import EditorOutline from '@/components/EditorOutline.vue'
 import ImageGallery from '@/components/ImageGallery.vue'
 import KeybindingHelp from '@/components/KeybindingHelp.vue'
+import SplitView from '@/components/SplitView.vue'
+import MarkdownPreview from '@/components/MarkdownPreview.vue'
+import { useSplitView } from '@/composables/useSplitView'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -31,6 +34,7 @@ const store = useStore()
 const { t } = useI18n()
 const { theme } = useTheme()
 const notify = useNotify()
+const { mode: splitMode, splitRatio, isDragging, setMode: setSplitMode, onDragStart } = useSplitView()
 
 const slug = computed(() => decodeURIComponent(route.params.slug as string))
 const loading = ref(true)
@@ -323,6 +327,16 @@ function onRootKeydown(e: KeyboardEvent) {
         <Button variant="ghost" size="icon" class="h-7 w-7" :class="showOutline ? 'bg-accent/10 text-accent' : 'text-muted-foreground'" aria-label="Toggle outline" title="大纲" @click="showOutline = !showOutline">
           <ListIcon class="h-3.5 w-3.5" />
         </Button>
+        <Separator orientation="vertical" class="mx-1 h-4" />
+        <Button variant="ghost" size="icon" class="h-7 w-7" :class="splitMode === 'source' ? 'bg-accent/10 text-accent' : 'text-muted-foreground'" :aria-label="t.sourceOnly" :title="t.sourceOnly" @click="setSplitMode('source')">
+          <FileCodeIcon class="h-3.5 w-3.5" />
+        </Button>
+        <Button variant="ghost" size="icon" class="h-7 w-7" :class="splitMode === 'split' ? 'bg-accent/10 text-accent' : 'text-muted-foreground'" :aria-label="t.splitMode" :title="t.splitMode" @click="setSplitMode('split')">
+          <Columns2Icon class="h-3.5 w-3.5" />
+        </Button>
+        <Button variant="ghost" size="icon" class="h-7 w-7" :class="splitMode === 'preview' ? 'bg-accent/10 text-accent' : 'text-muted-foreground'" :aria-label="t.previewOnly" :title="t.previewOnly" @click="setSplitMode('preview')">
+          <MonitorIcon class="h-3.5 w-3.5" />
+        </Button>
         <div class="flex-1" />
         <Separator orientation="vertical" class="mx-1 h-4" />
         <Button variant="ghost" size="sm" class="text-xs h-7 text-destructive/60 hover:text-destructive" :aria-label="t.rollback" :title="t.rollback" @click="rollback">
@@ -332,9 +346,24 @@ function onRootKeydown(e: KeyboardEvent) {
 
       <!-- Editor body -->
       <div class="flex flex-1 min-h-0 overflow-hidden rounded border border-border/60">
-        <div class="flex-1 overflow-auto p-6">
-          <div ref="editorContainer" class="h-full" />
-        </div>
+        <SplitView
+          :mode="splitMode"
+          :split-ratio="splitRatio"
+          :is-dragging="isDragging"
+          class="flex-1 min-w-0"
+          @drag-start="onDragStart"
+        >
+          <template #source>
+            <div class="h-full overflow-auto p-6">
+              <div ref="editorContainer" class="h-full" />
+            </div>
+          </template>
+          <template #preview>
+            <div class="h-full overflow-auto p-6">
+              <MarkdownPreview :source="body" />
+            </div>
+          </template>
+        </SplitView>
         <EditorOutline v-if="showOutline" :body="body" :on-jump="goToLine" />
       </div>
 
