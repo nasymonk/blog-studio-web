@@ -47,7 +47,7 @@ const postStats = ref<PostStats | null>(null)
 const galleryOpen = ref(false)
 
 const editorContainer = ref<HTMLElement | null>(null)
-const { body, dirty, saving, savedAt, wordCount, mode, mount,
+const { body, dirty, saving, savedAt, wordCount, mode, headings, activeLine, mount,
         execBold, execItalic, execLink, execCode, execHeading, insertText, goToLine, toggleMode } = useEditor(
   editorContainer,
   '',
@@ -364,7 +364,7 @@ function onRootKeydown(e: KeyboardEvent) {
             </div>
           </template>
         </SplitView>
-        <EditorOutline v-if="showOutline" :body="body" :on-jump="goToLine" />
+        <EditorOutline v-if="showOutline" :headings="headings" :active-line="activeLine" @jump="goToLine" />
       </div>
 
       <!-- Status bar -->

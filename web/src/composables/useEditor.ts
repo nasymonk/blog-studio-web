@@ -49,6 +49,8 @@ export function useEditor(
   const savedAt = ref<Date | null>(null)
   const wordCount = ref(0)
   const mode = ref<'wysiwyg' | 'source'>('wysiwyg')
+  const headings = ref<Array<{ level: number; text: string; line: number }>>([])
+  const activeLine = ref(0)
   let view: EditorView | null = null
   const themeCompartment = new Compartment()
   const wysiwygCompartment = new Compartment()
@@ -67,6 +69,24 @@ export function useEditor(
         saving.value = false
       }
     }, 1500)
+  }
+
+  function extractHeadings(doc: string) {
+    const result: Array<{ level: number; text: string; line: number }> = []
+    const lines = doc.split('\n')
+    for (let i = 0; i < lines.length; i++) {
+      const match = lines[i].match(/^(#{1,6})\s+(.+)$/)
+      if (match) {
+        result.push({ level: match[1].length, text: match[2].trim(), line: i + 1 })
+      }
+    }
+    headings.value = result
+  }
+
+  function updateActiveLine() {
+    if (!view) return
+    const pos = view.state.selection.main.head
+    activeLine.value = view.state.doc.lineAt(pos).number
   }
 
   async function save() {
@@ -92,7 +112,9 @@ export function useEditor(
         wordCount.value = countWords(body.value)
         dirty.value = true
         scheduleAutoSave()
+        extractHeadings(body.value)
       }
+      updateActiveLine()
     })
 
     const pasteHandler = EditorView.domEventHandlers({
@@ -170,6 +192,7 @@ export function useEditor(
 
     view = new EditorView({ state, parent: el })
     wordCount.value = countWords(initialBody)
+    extractHeadings(initialBody)
   }
 
   watch(theme, (val) => {
@@ -241,5 +264,5 @@ export function useEditor(
     view.focus()
   }
 
-  return { body, dirty, saving, savedAt, wordCount, mode, mount, destroy, save, toggleMode, execBold, execItalic, execLink, execImage, execCode, execHeading, insertText, goToLine }
+  return { body, dirty, saving, savedAt, wordCount, mode, headings, activeLine, mount, destroy, save, toggleMode, execBold, execItalic, execLink, execImage, execCode, execHeading, insertText, goToLine }
 }
