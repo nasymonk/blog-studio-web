@@ -242,6 +242,46 @@ export function useEditor(
           ...defaultKeymap,
           ...historyKeymap,
           ...searchMod.searchKeymap,
+          {
+            key: 'Tab',
+            run: (v) => {
+              const pos = v.state.selection.main.head
+              const line = v.state.doc.lineAt(pos)
+              if (line.text.includes('|')) {
+                const linePos = pos - line.from
+                const nextPipe = line.text.indexOf('|', linePos + 1)
+                if (nextPipe !== -1) {
+                  v.dispatch({ selection: { anchor: line.from + nextPipe + 1 } })
+                  return true
+                }
+                // At end of line — try next line if it's also a table row
+                if (line.number < v.state.doc.lines) {
+                  const nextLine = v.state.doc.line(line.number + 1)
+                  if (nextLine.text.includes('|')) {
+                    const firstPipe = nextLine.text.indexOf('|')
+                    if (firstPipe !== -1) {
+                      v.dispatch({ selection: { anchor: nextLine.from + firstPipe + 1 } })
+                      return true
+                    }
+                  }
+                }
+              }
+              return false
+            },
+            shift: (v) => {
+              const pos = v.state.selection.main.head
+              const line = v.state.doc.lineAt(pos)
+              if (line.text.includes('|')) {
+                const linePos = pos - line.from
+                const prevPipe = line.text.lastIndexOf('|', linePos - 2)
+                if (prevPipe > 0) {
+                  v.dispatch({ selection: { anchor: line.from + prevPipe + 1 } })
+                  return true
+                }
+              }
+              return false
+            }
+          },
           indentWithTab,
           { key: 'Mod-s', run: () => { save(); return true } },
           { key: 'Mod-b', run: (v) => wrapSelection(v, '**', '**') },
