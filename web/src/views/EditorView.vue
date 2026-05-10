@@ -320,39 +320,39 @@ function onRootKeydown(e: KeyboardEvent) {
       </div>
 
       <!-- Toolbar -->
-      <div class="flex items-center gap-1 py-2">
-        <Button variant="ghost" size="icon" class="h-7 w-7 text-muted-foreground hover:text-foreground" aria-label="Bold (⌘B)" title="加粗 (⌘B)" @click="execBold"><BoldIcon class="h-3.5 w-3.5" /></Button>
-        <Button variant="ghost" size="icon" class="h-7 w-7 text-muted-foreground hover:text-foreground" aria-label="Italic (⌘I)" title="斜体 (⌘I)" @click="execItalic"><ItalicIcon class="h-3.5 w-3.5" /></Button>
-        <Button variant="ghost" size="icon" class="h-7 w-7 text-muted-foreground hover:text-foreground" aria-label="Link (⌘K)" title="链接 (⌘K)" @click="execLink"><LinkIcon class="h-3.5 w-3.5" /></Button>
-        <Button variant="ghost" size="icon" class="h-7 w-7 text-muted-foreground hover:text-foreground" aria-label="Insert image" title="插入图片" @click="handleImageUpload"><ImageIcon class="h-3.5 w-3.5" /></Button>
-        <Button variant="ghost" size="icon" class="h-7 w-7 text-muted-foreground hover:text-foreground" aria-label="Image gallery" :title="t.gallery" @click="galleryOpen = true"><GalleryHorizontalEndIcon class="h-3.5 w-3.5" /></Button>
-        <Button variant="ghost" size="icon" class="h-7 w-7 text-muted-foreground hover:text-foreground" aria-label="Inline code" title="行内代码" @click="execCode"><CodeIcon class="h-3.5 w-3.5" /></Button>
-        <Button variant="ghost" size="icon" class="h-7 w-7 text-muted-foreground hover:text-foreground" aria-label="Heading" title="标题" @click="execHeading"><Heading1Icon class="h-3.5 w-3.5" /></Button>
-        <Separator orientation="vertical" class="mx-1 h-4" />
-        <Button variant="ghost" size="icon" class="h-7 w-7" :class="mode === 'source' ? 'bg-accent/10 text-accent' : 'text-muted-foreground'" :aria-label="mode === 'wysiwyg' ? 'Switch to source mode' : 'Switch to WYSIWYG'" :title="mode === 'wysiwyg' ? '切换源码模式' : '切换所见即所得'" @click="toggleMode">
+      <div class="flex items-center flex-wrap gap-1 py-2">
+        <Button variant="ghost" size="icon" class="h-8 w-8 md:h-7 md:w-7 text-muted-foreground hover:text-foreground" aria-label="Bold (⌘B)" title="加粗 (⌘B)" @click="execBold"><BoldIcon class="h-3.5 w-3.5" /></Button>
+        <Button variant="ghost" size="icon" class="h-8 w-8 md:h-7 md:w-7 text-muted-foreground hover:text-foreground" aria-label="Italic (⌘I)" title="斜体 (⌘I)" @click="execItalic"><ItalicIcon class="h-3.5 w-3.5" /></Button>
+        <Button variant="ghost" size="icon" class="h-8 w-8 md:h-7 md:w-7 text-muted-foreground hover:text-foreground" aria-label="Link (⌘K)" title="链接 (⌘K)" @click="execLink"><LinkIcon class="h-3.5 w-3.5" /></Button>
+        <Button variant="ghost" size="icon" class="h-8 w-8 md:h-7 md:w-7 text-muted-foreground hover:text-foreground" aria-label="Insert image" title="插入图片" @click="handleImageUpload"><ImageIcon class="h-3.5 w-3.5" /></Button>
+        <Button variant="ghost" size="icon" class="h-8 w-8 md:h-7 md:w-7 text-muted-foreground hover:text-foreground" aria-label="Image gallery" :title="t.gallery" @click="galleryOpen = true"><GalleryHorizontalEndIcon class="h-3.5 w-3.5" /></Button>
+        <Button variant="ghost" size="icon" class="h-8 w-8 md:h-7 md:w-7 text-muted-foreground hover:text-foreground" aria-label="Inline code" title="行内代码" @click="execCode"><CodeIcon class="h-3.5 w-3.5" /></Button>
+        <Button variant="ghost" size="icon" class="h-8 w-8 md:h-7 md:w-7 text-muted-foreground hover:text-foreground" aria-label="Heading" title="标题" @click="execHeading"><Heading1Icon class="h-3.5 w-3.5" /></Button>
+        <Separator orientation="vertical" class="mx-1 h-4 hidden md:block" />
+        <Button variant="ghost" size="icon" class="h-8 w-8 md:h-7 md:w-7" :class="mode === 'source' ? 'bg-accent/10 text-accent' : 'text-muted-foreground'" :aria-label="mode === 'wysiwyg' ? 'Switch to source mode' : 'Switch to WYSIWYG'" :title="mode === 'wysiwyg' ? '切换源码模式' : '切换所见即所得'" @click="toggleMode">
           <CodeIcon v-if="mode === 'wysiwyg'" class="h-3.5 w-3.5" />
           <PenLineIcon v-else class="h-3.5 w-3.5" />
         </Button>
-        <Button variant="ghost" size="icon" class="h-7 w-7" :class="showOutline ? 'bg-accent/10 text-accent' : 'text-muted-foreground'" aria-label="Toggle outline" title="大纲" @click="showOutline = !showOutline">
+        <Button variant="ghost" size="icon" class="h-8 w-8 md:h-7 md:w-7 hidden md:inline-flex" :class="showOutline ? 'bg-accent/10 text-accent' : 'text-muted-foreground'" aria-label="Toggle outline" title="大纲" @click="showOutline = !showOutline">
           <ListIcon class="h-3.5 w-3.5" />
         </Button>
         <Separator orientation="vertical" class="mx-1 h-4" />
-        <Button variant="ghost" size="icon" class="h-7 w-7" :class="splitMode === 'source' ? 'bg-accent/10 text-accent' : 'text-muted-foreground'" :aria-label="t.sourceOnly" :title="t.sourceOnly" @click="setSplitMode('source')">
+        <Button variant="ghost" size="icon" class="h-8 w-8 md:h-7 md:w-7" :class="splitMode === 'source' ? 'bg-accent/10 text-accent' : 'text-muted-foreground'" :aria-label="t.sourceOnly" :title="t.sourceOnly" @click="setSplitMode('source')">
           <FileCodeIcon class="h-3.5 w-3.5" />
         </Button>
-        <Button variant="ghost" size="icon" class="h-7 w-7" :class="splitMode === 'split' ? 'bg-accent/10 text-accent' : 'text-muted-foreground'" :aria-label="t.splitMode" :title="t.splitMode" @click="setSplitMode('split')">
+        <Button variant="ghost" size="icon" class="h-8 w-8 md:h-7 md:w-7" :class="splitMode === 'split' ? 'bg-accent/10 text-accent' : 'text-muted-foreground'" :aria-label="t.splitMode" :title="t.splitMode" @click="setSplitMode('split')">
           <Columns2Icon class="h-3.5 w-3.5" />
         </Button>
-        <Button variant="ghost" size="icon" class="h-7 w-7" :class="splitMode === 'preview' ? 'bg-accent/10 text-accent' : 'text-muted-foreground'" :aria-label="t.previewOnly" :title="t.previewOnly" @click="setSplitMode('preview')">
+        <Button variant="ghost" size="icon" class="h-8 w-8 md:h-7 md:w-7" :class="splitMode === 'preview' ? 'bg-accent/10 text-accent' : 'text-muted-foreground'" :aria-label="t.previewOnly" :title="t.previewOnly" @click="setSplitMode('preview')">
           <MonitorIcon class="h-3.5 w-3.5" />
         </Button>
-        <div class="flex-1" />
-        <Separator orientation="vertical" class="mx-1 h-4" />
+        <div class="flex-1 hidden md:block" />
+        <Separator orientation="vertical" class="mx-1 h-4 hidden md:block" />
 
         <!-- Editor settings dropdown -->
         <DropdownMenu>
           <DropdownMenuTrigger as-child>
-            <Button variant="ghost" size="icon" class="h-7 w-7 text-muted-foreground hover:text-foreground" :aria-label="t.editorSettings" :title="t.editorSettings">
+            <Button variant="ghost" size="icon" class="h-8 w-8 md:h-7 md:w-7 text-muted-foreground hover:text-foreground" :aria-label="t.editorSettings" :title="t.editorSettings">
               <SettingsIcon class="h-3.5 w-3.5" />
             </Button>
           </DropdownMenuTrigger>
@@ -449,7 +449,7 @@ function onRootKeydown(e: KeyboardEvent) {
           </DropdownMenuContent>
         </DropdownMenu>
 
-        <Button variant="ghost" size="sm" class="text-xs h-7 text-destructive/60 hover:text-destructive" :aria-label="t.rollback" :title="t.rollback" @click="rollback">
+        <Button variant="ghost" size="sm" class="text-xs h-8 md:h-7 text-destructive/60 hover:text-destructive" :aria-label="t.rollback" :title="t.rollback" @click="rollback">
           <RotateCcwIcon class="h-3 w-3 mr-1" />{{ t.rollback }}
         </Button>
       </div>
@@ -496,7 +496,7 @@ function onRootKeydown(e: KeyboardEvent) {
             </div>
           </template>
         </SplitView>
-        <EditorOutline v-if="showOutline" :headings="headings" :active-line="activeLine" @jump="goToLine" />
+        <EditorOutline v-if="showOutline" :headings="headings" :active-line="activeLine" class="hidden md:block" @jump="goToLine" />
       </div>
 
       <EditorStatusBar
@@ -509,13 +509,13 @@ function onRootKeydown(e: KeyboardEvent) {
       />
 
       <!-- Status bar -->
-      <div class="flex items-center gap-2 py-2 text-[11px] text-muted-foreground/70">
-        <span>{{ wordCount }} {{ t.wordCount }}</span>
-        <span class="text-border/40">·</span>
-        <span>{{ readingTime }}</span>
-        <span v-if="postStats" class="text-border/40">·</span>
-        <span v-if="postStats">{{ t.views }}: {{ postStats.views }}</span>
-        <span class="text-border/40">·</span>
+      <div class="flex items-center gap-2 py-2 text-[11px] text-muted-foreground/70 flex-wrap">
+        <span class="hidden sm:inline">{{ wordCount }} {{ t.wordCount }}</span>
+        <span class="hidden sm:inline text-border/40">·</span>
+        <span class="hidden sm:inline">{{ readingTime }}</span>
+        <span v-if="postStats" class="hidden sm:inline text-border/40">·</span>
+        <span v-if="postStats" class="hidden sm:inline">{{ t.views }}: {{ postStats.views }}</span>
+        <span class="hidden sm:inline text-border/40">·</span>
         <div class="flex items-center gap-2 text-xs" :class="{ 'save-flash': flashSave }">
           <template v-if="saveStatus === 'saving'">
             <Loader2Icon class="h-3 w-3 animate-spin text-muted-foreground" />
@@ -531,13 +531,13 @@ function onRootKeydown(e: KeyboardEvent) {
           </template>
         </div>
         <div class="flex-1" />
-        <Button size="sm" variant="ghost" class="h-7 text-xs text-muted-foreground" :aria-label="t.saveDraft" :disabled="!dirty" @click="saveDraft">
+        <Button size="sm" variant="ghost" class="h-8 md:h-7 text-xs text-muted-foreground" :aria-label="t.saveDraft" :disabled="!dirty" @click="saveDraft">
           <SaveIcon class="h-3 w-3 mr-1" />{{ t.saveDraft }}
         </Button>
-        <Button variant="ghost" size="icon" class="h-7 w-7 text-muted-foreground" :aria-label="t.preview" :title="t.preview" @click="previewPost">
+        <Button variant="ghost" size="icon" class="h-8 w-8 md:h-7 md:w-7 text-muted-foreground" :aria-label="t.preview" :title="t.preview" @click="previewPost">
           <EyeIcon class="h-3 w-3" />
         </Button>
-        <Button size="sm" class="h-7 text-xs rounded-full px-4" :aria-label="t.publish" :disabled="publishing" @click="publishBlog()">
+        <Button size="sm" class="h-8 md:h-7 text-xs rounded-full px-4" :aria-label="t.publish" :disabled="publishing" @click="publishBlog()">
           <Loader2Icon v-if="publishing" class="h-3 w-3 animate-spin mr-1" />
           <SendIcon v-else class="h-3 w-3 mr-1" />{{ t.publish }}
         </Button>

@@ -225,47 +225,50 @@ onMounted(loadPosts)
 <template>
   <div class="flex flex-col gap-5 max-w-4xl">
     <!-- Search bar: underline style -->
-    <div class="flex items-end gap-3">
-      <div class="relative flex-1 max-w-[360px]">
-        <SearchIcon class="absolute left-0 bottom-3 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
-        <Input
-          ref="searchInputRef"
-          v-model="searchQuery"
-          class="border-0 border-b border-border rounded-none bg-transparent pl-6 pb-2 h-auto focus-visible:ring-0 focus-visible:border-accent transition-colors"
-          :placeholder="t.search"
-        />
+    <div class="flex flex-col md:flex-row md:items-end gap-3">
+      <div class="flex items-end gap-3 flex-1 min-w-0">
+        <div class="relative flex-1 max-w-[360px]">
+          <SearchIcon class="absolute left-0 bottom-3 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+          <Input
+            ref="searchInputRef"
+            v-model="searchQuery"
+            class="border-0 border-b border-border rounded-none bg-transparent pl-6 pb-2 h-auto focus-visible:ring-0 focus-visible:border-accent transition-colors"
+            :placeholder="t.search"
+          />
+        </div>
+        <Select v-model="sortBy">
+          <SelectTrigger class="w-auto min-w-[120px] h-8 text-xs border-0 border-b border-border rounded-none bg-transparent"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="date-desc">{{ t.sortDate }} ↓</SelectItem>
+            <SelectItem value="date-asc">{{ t.sortDate }} ↑</SelectItem>
+            <SelectItem value="title">{{ t.sortTitle }}</SelectItem>
+            <SelectItem value="status">{{ t.sortStatus }}</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
-      <Select v-model="sortBy">
-        <SelectTrigger class="w-auto min-w-[120px] h-8 text-xs border-0 border-b border-border rounded-none bg-transparent"><SelectValue /></SelectTrigger>
-        <SelectContent>
-          <SelectItem value="date-desc">{{ t.sortDate }} ↓</SelectItem>
-          <SelectItem value="date-asc">{{ t.sortDate }} ↑</SelectItem>
-          <SelectItem value="title">{{ t.sortTitle }}</SelectItem>
-          <SelectItem value="status">{{ t.sortStatus }}</SelectItem>
-        </SelectContent>
-      </Select>
-      <div class="flex gap-1 flex-wrap ml-auto">
+      <div class="flex items-center gap-1 flex-wrap">
         <Button
           v-for="s in ['all','drafts','published','conflicts','stale']" :key="s"
-          variant="ghost" size="sm" class="text-xs h-7"
+          variant="ghost" size="sm" class="text-xs h-8 md:h-7"
           :class="statusFilter === s ? 'bg-accent text-accent-foreground' : 'text-muted-foreground'"
           @click="statusFilter = s">
           {{ t[s as keyof typeof t] || s }}
         </Button>
+        <Separator orientation="vertical" class="h-5 mx-1 hidden md:block" />
+        <Button size="sm" class="rounded-full px-4 h-8" @click="newPost">
+          <PlusIcon class="h-3.5 w-3.5 mr-1" />{{ t.newPost }}
+        </Button>
+        <Button variant="ghost" size="icon" class="h-8 w-8 text-muted-foreground" :disabled="store.postsLoading" @click="loadPosts">
+          <RefreshCwIcon class="h-4 w-4" :class="{ 'animate-spin': store.postsLoading }" />
+        </Button>
+        <Separator orientation="vertical" class="h-5 hidden md:block" />
+        <Button variant="ghost" size="sm" class="text-xs h-8 text-muted-foreground hidden md:inline-flex" :title="t.exportAll" @click="exportAll">
+          <DownloadIcon class="h-3.5 w-3.5 mr-1" />{{ t.exportAll }}
+        </Button>
+        <Button variant="ghost" size="sm" class="text-xs h-8 text-muted-foreground hidden md:inline-flex" :title="t.importZip" @click="importZip">
+          <UploadIcon class="h-3.5 w-3.5 mr-1" />{{ t.importZip }}
+        </Button>
       </div>
-      <Button size="sm" class="rounded-full px-4 h-8" @click="newPost">
-        <PlusIcon class="h-3.5 w-3.5 mr-1" />{{ t.newPost }}
-      </Button>
-      <Button variant="ghost" size="icon" class="h-8 w-8 text-muted-foreground" :disabled="store.postsLoading" @click="loadPosts">
-        <RefreshCwIcon class="h-4 w-4" :class="{ 'animate-spin': store.postsLoading }" />
-      </Button>
-      <Separator orientation="vertical" class="h-5" />
-      <Button variant="ghost" size="sm" class="text-xs h-8 text-muted-foreground" :title="t.exportAll" @click="exportAll">
-        <DownloadIcon class="h-3.5 w-3.5 mr-1" />{{ t.exportAll }}
-      </Button>
-      <Button variant="ghost" size="sm" class="text-xs h-8 text-muted-foreground" :title="t.importZip" @click="importZip">
-        <UploadIcon class="h-3.5 w-3.5 mr-1" />{{ t.importZip }}
-      </Button>
     </div>
 
     <!-- Tag chips -->
@@ -340,7 +343,7 @@ onMounted(loadPosts)
           >
             <!-- Selection checkbox -->
             <button
-              class="flex items-center justify-center w-8 shrink-0 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+              class="flex items-center justify-center w-10 md:w-8 shrink-0 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
               :aria-label="selectedSlugs.has(filtered[virtualRow.index]!.slug) ? t.deselectAll : t.selectAll"
               @click.stop="toggleSelect(filtered[virtualRow.index]!.slug)"
             >
@@ -367,13 +370,13 @@ onMounted(loadPosts)
               <!-- Actions (visible on focus/hover) -->
               <div class="flex gap-0.5 shrink-0 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100"
                 :class="{ 'opacity-100': focusedIndex === virtualRow.index }">
-                <Button variant="ghost" size="icon" class="h-7 w-7 text-muted-foreground" :title="t.edit" @click.stop="router.push(`/posts/${encodeURIComponent(filtered[virtualRow.index]!.slug)}`)">
+                <Button variant="ghost" size="icon" class="h-8 w-8 md:h-7 md:w-7 text-muted-foreground" :title="t.edit" @click.stop="router.push(`/posts/${encodeURIComponent(filtered[virtualRow.index]!.slug)}`)">
                   <EditIcon class="h-3.5 w-3.5" />
                 </Button>
-                <Button variant="ghost" size="icon" class="h-7 w-7 text-muted-foreground" :title="t.preview" @click.stop="router.push(`/posts/${encodeURIComponent(filtered[virtualRow.index]!.slug)}/preview`)">
+                <Button variant="ghost" size="icon" class="h-8 w-8 md:h-7 md:w-7 text-muted-foreground" :title="t.preview" @click.stop="router.push(`/posts/${encodeURIComponent(filtered[virtualRow.index]!.slug)}/preview`)">
                   <EyeIcon class="h-3.5 w-3.5" />
                 </Button>
-                <Button variant="ghost" size="icon" class="h-7 w-7 text-destructive/60 hover:text-destructive" :title="t.moveToTrash" @click.stop="deletePost(filtered[virtualRow.index]!)">
+                <Button variant="ghost" size="icon" class="h-8 w-8 md:h-7 md:w-7 text-destructive/60 hover:text-destructive" :title="t.moveToTrash" @click.stop="deletePost(filtered[virtualRow.index]!)">
                   <Trash2Icon class="h-3.5 w-3.5" />
                 </Button>
               </div>
@@ -386,7 +389,7 @@ onMounted(loadPosts)
     <!-- Bulk action bar -->
     <div
       v-if="selectedSlugs.size > 0"
-      class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-5 py-3 bg-card border border-border rounded-xl shadow-lg animate-fade-up"
+      class="fixed bottom-4 left-4 right-4 md:bottom-6 md:left-1/2 md:right-auto md:-translate-x-1/2 z-50 flex items-center gap-2 md:gap-3 px-4 md:px-5 py-3 bg-card border border-border rounded-xl shadow-lg animate-fade-up"
     >
       <span class="text-sm text-muted-foreground">{{ t.selectedCount(selectedSlugs.size) }}</span>
       <Separator orientation="vertical" class="h-5" />
