@@ -172,6 +172,8 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     @apply bg-background text-foreground;
+    /* Smooth theme transition */
+    transition: background-color var(--duration-normal), color var(--duration-normal);
     /* Subtle paper texture */
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4'%3E%3Crect width='4' height='4' fill='%23fdfcf8'/%3E%3Crect width='1' height='1' fill='%23f0ede5' opacity='0.3'/%3E%3C/svg%3E");
     background-size: 4px 4px;
@@ -179,6 +181,16 @@
 
   .dark body {
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4'%3E%3Crect width='4' height='4' fill='%2317181a'/%3E%3Crect width='1' height='1' fill='%23222428' opacity='0.4'/%3E%3C/svg%3E");
+  }
+
+  /* Dark mode image brightness to prevent brightness shock */
+  .dark img:not([src*="svg"]) {
+    filter: brightness(0.9);
+  }
+
+  /* Dark mode sidebar — slightly different bg for depth */
+  .dark .bg-sidebar {
+    background-color: oklch(0.15 0.01 250);
   }
 
   h1, h2, h3, h4 {
