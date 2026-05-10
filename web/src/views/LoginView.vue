@@ -84,7 +84,7 @@ async function login() {
         <p class="font-deco text-sm mt-2 text-muted-foreground tracking-widest">{{ t.writingQuote }}</p>
       </div>
 
-      <div class="w-full max-w-[400px] space-y-8">
+      <div class="w-full max-w-[400px] p-8 rounded-2xl bg-card shadow-lg space-y-8">
         <div class="space-y-2">
           <h1 class="font-serif text-2xl font-semibold tracking-tight">{{ t.loginTitle }}</h1>
           <p class="text-sm text-muted-foreground">{{ t.loginDesc }}</p>
@@ -110,7 +110,7 @@ async function login() {
           <!-- Interactive hover button -->
           <button
             type="submit"
-            class="relative w-full h-12 rounded-full bg-accent text-accent-foreground font-medium text-sm overflow-hidden transition-all duration-300 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            class="relative w-full h-11 rounded-full bg-accent text-accent-foreground font-medium tracking-wide text-sm overflow-hidden transition-all duration-300 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             :disabled="loading || !password"
             @mouseenter="btnHover = true"
             @mouseleave="btnHover = false"
