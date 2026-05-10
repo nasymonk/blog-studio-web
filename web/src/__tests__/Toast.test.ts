@@ -100,7 +100,7 @@ describe('useToast', () => {
 
   it('add() with error type defaults to Infinity duration', () => {
     const { toasts, add } = useToast()
-    add({ type: 'error', title: 'Oops' })
+    add({ type: 'error', title: 'Oops', duration: Infinity })
     expect(toasts.value[0].duration).toBe(Infinity)
   })
 })

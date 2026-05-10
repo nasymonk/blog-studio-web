@@ -28,7 +28,6 @@ export default defineConfig({
           'vendor-vue': ['vue', 'vue-router'],
           'vendor-icons': ['lucide-vue-next'],
           'vendor-marked': ['marked', 'dompurify'],
-          'vendor-toast': ['vue-sonner'],
         }
       }
     }

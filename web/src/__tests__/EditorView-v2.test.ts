@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { mount } from '@vue/test-utils'
 import SplitView from '@/components/SplitView.vue'
 import VersionHistory from '@/components/VersionHistory.vue'
@@ -164,12 +164,12 @@ describe('SplitView component integration', () => {
     // In source mode, preview is hidden via v-show (display:none)
     const panels = wrapper.findAll('.overflow-auto')
     expect(panels).toHaveLength(2)
-    expect(panels[0].element.style.display).not.toBe('none')
-    expect(panels[1].element.style.display).toBe('none')
+    expect((panels[0].element as HTMLElement).style.display).not.toBe('none')
+    expect((panels[1].element as HTMLElement).style.display).toBe('none')
 
     await wrapper.setProps({ mode: 'split' })
-    expect(panels[0].element.style.display).not.toBe('none')
-    expect(panels[1].element.style.display).not.toBe('none')
+    expect((panels[0].element as HTMLElement).style.display).not.toBe('none')
+    expect((panels[1].element as HTMLElement).style.display).not.toBe('none')
   })
 })
 

@@ -89,8 +89,8 @@ describe('SplitView', () => {
     const panels = wrapper.findAll('.overflow-auto')
     // v-show keeps both in DOM but hides source with display:none
     expect(panels).toHaveLength(2)
-    expect(panels[0].element.style.display).toBe('none')
-    expect(panels[1].element.style.display).not.toBe('none')
+    expect((panels[0].element as HTMLElement).style.display).toBe('none')
+    expect((panels[1].element as HTMLElement).style.display).not.toBe('none')
   })
 
   it('preview panel has display:none in source mode', () => {
@@ -101,7 +101,7 @@ describe('SplitView', () => {
     const panels = wrapper.findAll('.overflow-auto')
     // v-show keeps both in DOM but hides preview with display:none
     expect(panels).toHaveLength(2)
-    expect(panels[0].element.style.display).not.toBe('none')
-    expect(panels[1].element.style.display).toBe('none')
+    expect((panels[0].element as HTMLElement).style.display).not.toBe('none')
+    expect((panels[1].element as HTMLElement).style.display).toBe('none')
   })
 })
