@@ -103,10 +103,10 @@ onMounted(load)
         <span class="font-mono text-sm">{{ value }}</span>
       </template>
       <template #deletedAt="{ value }">
-        <span class="text-sm text-muted-foreground" :title="value">{{ relDate(value) }}</span>
+        <span class="text-sm text-muted-foreground" :title="String(value)">{{ relDate(String(value)) }}</span>
       </template>
       <template #size="{ value }">
-        <span class="text-sm text-muted-foreground">{{ fmtSize(value) }}</span>
+        <span class="text-sm text-muted-foreground">{{ fmtSize(Number(value)) }}</span>
       </template>
       <template #actions="{ row }">
         <div class="flex gap-1 justify-end" @click.stop>

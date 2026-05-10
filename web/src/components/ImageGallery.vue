@@ -62,8 +62,8 @@ async function handleUpload() {
     for (const file of Array.from(files)) {
       try {
         await api.uploadAsset(props.slug, file)
-      } catch (e: unknown) {
-        notify.error(e)
+      } catch (e) {
+        notify.error(e as any)
       }
     }
     emit('uploaded')

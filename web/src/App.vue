@@ -101,7 +101,7 @@ async function logout() {
 async function syncPosts() {
   store.postsLoading = true
   try { store.posts = await api.posts() }
-  catch (e: unknown) { notify.error(e) }
+  catch (e) { notify.error(e as any) }
   finally { store.postsLoading = false }
 }
 
@@ -126,7 +126,7 @@ onMounted(async () => {
       store.posts = posts
       try { store.health = await api.health() } catch { /* non-critical */ }
     }
-  } catch (e: unknown) { notify.error(e) }
+  } catch (e) { notify.error(e as any) }
 })
 </script>
 

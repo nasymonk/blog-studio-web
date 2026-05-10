@@ -118,7 +118,7 @@ onMounted(load)
       @row-click="handleRowClick"
     >
       <template #timestamp="{ value }">
-        <span class="font-mono text-[11px] text-muted-foreground">{{ fmtTime(value) }}</span>
+        <span class="font-mono text-[11px] text-muted-foreground">{{ fmtTime(String(value)) }}</span>
       </template>
       <template #slug="{ value }">
         <span class="max-w-[160px] truncate font-mono text-sm">{{ value }}</span>
@@ -130,8 +130,8 @@ onMounted(load)
         <Badge :variant="value === 'success' ? 'default' : 'destructive'" class="text-[10px]">{{ value }}</Badge>
       </template>
       <template #build="{ row }">
-        <Badge v-if="row.buildResult" :variant="row.buildResult.success ? 'default' : 'destructive'" class="text-[10px]">
-          {{ row.buildResult.exitCode }}
+        <Badge v-if="row.buildResult" :variant="(row.buildResult as any).success ? 'default' : 'destructive'" class="text-[10px]">
+          {{ (row.buildResult as any).exitCode }}
         </Badge>
       </template>
     </DataTable>
