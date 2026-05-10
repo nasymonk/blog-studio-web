@@ -30,6 +30,10 @@ marked.use({
       const escaped = text.replace(/</g, '&lt;').replace(/>/g, '&gt;')
       return `<pre>${langLabel}<code>${escaped}</code></pre>`
     },
+    image({ href, title, text }: { href: string; title?: string | null; text: string }) {
+      const titleAttr = title ? ` title="${title}"` : ''
+      return `<img src="${href}" alt="${text}" loading="lazy" decoding="async"${titleAttr} />`
+    },
   },
 })
 
@@ -95,10 +99,21 @@ function replaceMathPlaceholders(root: HTMLElement) {
   }
 }
 
+function attachImageLoadListeners(root: HTMLElement) {
+  for (const img of root.querySelectorAll<HTMLImageElement>('img')) {
+    if (img.complete) {
+      img.classList.add('loaded')
+    } else {
+      img.addEventListener('load', () => img.classList.add('loaded'), { once: true })
+    }
+  }
+}
+
 watch(html, () => {
   nextTick(() => {
     if (previewRef.value) {
       replaceMathPlaceholders(previewRef.value)
+      attachImageLoadListeners(previewRef.value)
     }
   })
 })
