@@ -326,3 +326,19 @@
 .markdown-body .task-list-item input[type="checkbox"] {
   margin-right: 0.5em;
 }
+.markdown-body .math-block {
+  overflow-x: auto;
+  text-align: center;
+  margin: 1em 0;
+}
+.markdown-body .math-inline {
+  display: inline;
+}
+.markdown-body .math-error {
+  color: var(--destructive);
+  border: 1px solid color-mix(in srgb, var(--destructive) 20%, transparent);
+  border-radius: 4px;
+  padding: 0.5em;
+  font-size: 0.85em;
+  font-family: var(--font-mono);
+}
