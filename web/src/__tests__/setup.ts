@@ -1,16 +1,5 @@
 import { vi, beforeEach } from 'vitest'
 
-// Silence vue-sonner "no Toaster mounted" warnings in tests
-vi.mock('vue-sonner', () => ({
-  toast: {
-    success: vi.fn(),
-    error: vi.fn(),
-    warning: vi.fn(),
-    dismiss: vi.fn(),
-  },
-  Toaster: { template: '<div />' },
-}))
-
 // Provide a full localStorage mock (happy-dom 17.x has a restricted localStorage)
 function makeLocalStorage() {
   let store: Record<string, string> = {}

@@ -1,72 +1,91 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { toast } from 'vue-sonner'
 import { useNotify } from '../composables/useNotify'
+import { useToast } from '../composables/useToast'
 
 describe('useNotify', () => {
   beforeEach(() => {
+    const { dismissAll } = useToast()
+    dismissAll()
     vi.clearAllMocks()
   })
 
-  it('success() calls toast.success with default 3s duration', () => {
+  it('success() adds a success toast with default 3s duration', () => {
     const { success } = useNotify()
     success('已保存')
-    expect(toast.success).toHaveBeenCalledWith('已保存', { duration: 3000 })
+    const { toasts } = useToast()
+    expect(toasts.value).toHaveLength(1)
+    expect(toasts.value[0].type).toBe('success')
+    expect(toasts.value[0].title).toBe('已保存')
+    expect(toasts.value[0].duration).toBe(3000)
   })
 
   it('success() accepts custom duration', () => {
     const { success } = useNotify()
     success('Done', 5000)
-    expect(toast.success).toHaveBeenCalledWith('Done', { duration: 5000 })
+    const { toasts } = useToast()
+    expect(toasts.value[0].duration).toBe(5000)
   })
 
-  it('warn() calls toast.warning with 6s duration', () => {
+  it('warn() adds a warning toast with 6s duration', () => {
     const { warn } = useNotify()
     warn('注意事项')
-    expect(toast.warning).toHaveBeenCalledWith('注意事项', { duration: 6000 })
+    const { toasts } = useToast()
+    expect(toasts.value).toHaveLength(1)
+    expect(toasts.value[0].type).toBe('warning')
+    expect(toasts.value[0].title).toBe('注意事项')
+    expect(toasts.value[0].duration).toBe(6000)
   })
 
-  it('error(string) calls toast.error sticky by default', () => {
+  it('error(string) adds an error toast sticky by default', () => {
     const { error } = useNotify()
     error('Something went wrong')
-    expect(toast.error).toHaveBeenCalledWith('Something went wrong', expect.objectContaining({ duration: Infinity }))
+    const { toasts } = useToast()
+    expect(toasts.value).toHaveLength(1)
+    expect(toasts.value[0].type).toBe('error')
+    expect(toasts.value[0].title).toBe('Something went wrong')
+    expect(toasts.value[0].duration).toBe(Infinity)
   })
 
-  it('error(string, false) calls toast.error with 8s duration', () => {
+  it('error(string, false) adds an error toast with 8s duration', () => {
     const { error } = useNotify()
     error('Transient error', false)
-    expect(toast.error).toHaveBeenCalledWith('Transient error', expect.objectContaining({ duration: 8000 }))
+    const { toasts } = useToast()
+    expect(toasts.value[0].duration).toBe(8000)
   })
 
   it('error(AppError) shows technicalDetail and suggestion in description', () => {
     const { error } = useNotify()
     error({ code: 'HUGO_FAIL', message: '构建失败', technicalDetail: 'exit code 1', suggestion: '检查 hugo 安装', retryable: true })
-    expect(toast.error).toHaveBeenCalledWith(
-      '构建失败',
-      expect.objectContaining({ description: 'exit code 1\n建议：检查 hugo 安装' })
-    )
+    const { toasts } = useToast()
+    expect(toasts.value[0].title).toBe('构建失败')
+    expect(toasts.value[0].description).toBe('exit code 1\n建议：检查 hugo 安装')
   })
 
   it('error(AppError) with suggestion only shows suggestion in description', () => {
     const { error } = useNotify()
     error({ code: 'ERR', message: 'Failed', technicalDetail: '', suggestion: '重启服务', retryable: false })
-    const call = vi.mocked(toast.error).mock.calls[0]
-    expect(call[1]?.description).toBe('建议：重启服务')
-    expect((call[1]?.action as any)?.label).toBeUndefined()
+    const { toasts } = useToast()
+    expect(toasts.value[0].description).toBe('建议：重启服务')
+    expect(toasts.value[0].action).toBeUndefined()
   })
 
   it('error(err, { onRetry }) adds retry action button', () => {
     const { error } = useNotify()
     const retryFn = vi.fn()
     error('API error', { onRetry: retryFn })
-    const call = vi.mocked(toast.error).mock.calls[0]
-    expect((call[1]?.action as any)?.label).toBe('重试')
-    ;(call[1]?.action as any)?.onClick()
+    const { toasts } = useToast()
+    expect(toasts.value[0].action?.label).toBe('重试')
+    toasts.value[0].action?.handler()
     expect(retryFn).toHaveBeenCalledOnce()
   })
 
-  it('dismiss() calls toast.dismiss', () => {
-    const { dismiss } = useNotify()
+  it('dismiss() clears all toasts', () => {
+    const { success, dismiss } = useNotify()
+    success('one')
+    success('two')
+    const { toasts } = useToast()
+    expect(toasts.value).toHaveLength(2)
     dismiss()
-    expect(toast.dismiss).toHaveBeenCalled()
+    expect(toasts.value).toHaveLength(0)
   })
 })

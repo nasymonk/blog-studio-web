@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { RouterView, RouterLink, useRoute } from 'vue-router'
-import { Toaster, toast } from 'vue-sonner'
+import { useToast } from '@/composables/useToast'
+import ToastContainer from '@/components/ToastContainer.vue'
 import {
   FileTextIcon, SettingsIcon, HomeIcon, ClockIcon, HeartPulseIcon,
   LogOutIcon, MoonIcon, SunIcon, Globe2Icon, RefreshCwIcon, Trash2Icon, TagsIcon,
@@ -30,11 +31,12 @@ const { t, lang, setLang } = useI18n()
 const { theme, toggle: toggleTheme } = useTheme()
 const isDark = computed(() => theme.value === 'dark')
 const notify = useNotify()
+const toast = useToast()
 
 watch(() => store.banner, (b) => {
   if (!b) return
   const fn = b.type === 'error' ? toast.error : b.type === 'ok' ? toast.success : toast.warning
-  fn(b.message, { duration: b.type === 'error' ? Infinity : 6000 })
+  fn(b.message)
   store.banner = null
 })
 
@@ -123,7 +125,7 @@ onMounted(async () => {
 
 <template>
   <TooltipProvider :delay-duration="300">
-    <Toaster position="top-right" rich-colors :expand="true" />
+    <ToastContainer />
     <CommandPalette v-model:open="paletteOpen" />
 
     <a href="#main-content" :aria-label="t.skipToContent" class="sr-only focus:not-sr-only focus:absolute focus:z-[9999] focus:top-2 focus:left-2 focus:px-3 focus:py-2 focus:bg-background focus:border focus:border-border focus:rounded">{{ t.skipToContent }}</a>

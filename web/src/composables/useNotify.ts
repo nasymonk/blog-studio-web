@@ -1,4 +1,4 @@
-import { toast } from 'vue-sonner'
+import { useToast } from '@/composables/useToast'
 import type { AppError } from '@/services/api'
 
 export interface NotifyErrorOptions {
@@ -7,8 +7,10 @@ export interface NotifyErrorOptions {
 }
 
 export function useNotify() {
+  const toast = useToast()
+
   function success(message: string, duration = 3000) {
-    toast.success(message, { duration })
+    toast.add({ type: 'success', title: message, duration })
   }
 
   function error(err: AppError | string, options: NotifyErrorOptions | boolean = true) {
@@ -17,15 +19,17 @@ export function useNotify() {
     const duration = sticky ? Infinity : 8000
 
     const action = onRetry
-      ? { label: '重试', onClick: onRetry }
+      ? { label: '重试', handler: onRetry }
       : undefined
 
     if (typeof err === 'string') {
-      toast.error(err, { duration, action })
+      toast.add({ type: 'error', title: err, duration, action })
       return
     }
     const description = [err.technicalDetail, err.suggestion && `建议：${err.suggestion}`].filter(Boolean).join('\n') || undefined
-    toast.error(err.message, {
+    toast.add({
+      type: 'error',
+      title: err.message,
       description,
       duration,
       action,
@@ -33,11 +37,11 @@ export function useNotify() {
   }
 
   function warn(message: string) {
-    toast.warning(message, { duration: 6000 })
+    toast.add({ type: 'warning', title: message, duration: 6000 })
   }
 
   function dismiss() {
-    toast.dismiss()
+    toast.dismissAll()
   }
 
   return { success, error, warn, dismiss }
