@@ -55,11 +55,12 @@ const metaExpanded = ref(false)
 const keybindingHelpOpen = ref(false)
 const postStats = ref<PostStats | null>(null)
 const galleryOpen = ref(false)
+const flashSave = ref(false)
 
 const { settings: editorSettings, applyPreset } = useEditorSettings()
 
 const editorContainer = ref<HTMLElement | null>(null)
-const { body, dirty, saving, savedAt, wordCount, mode, headings, activeLine, mount,
+const { body, dirty, saving, savedAt, saveStatus, lastSavedTime, wordCount, mode, headings, activeLine, mount,
         execBold, execItalic, execLink, execCode, execHeading, insertText, goToLine, toggleMode, applySettings } = useEditor(
   editorContainer,
   '',
@@ -80,6 +81,10 @@ const { body, dirty, saving, savedAt, wordCount, mode, headings, activeLine, mou
 watch(dirty, (val) => { store.editor.dirty = val })
 watch(saving, (val) => { store.editor.saving = val })
 watch(savedAt, (val) => { store.editor.savedAt = val })
+watch(savedAt, () => {
+  flashSave.value = true
+  setTimeout(() => { flashSave.value = false }, 600)
+})
 
 async function loadPost() {
   loading.value = true
@@ -176,18 +181,6 @@ function removeTag(tag: string) {
   if (!draft.value) return
   draft.value.frontMatter.tags = draft.value.frontMatter.tags.filter(tg => tg !== tag)
   store.editor.dirty = true
-}
-
-function savedLabel(): string {
-  if (saving.value) return t.value.saving
-  if (store.editor.savedAt) {
-    const secs = Math.round((Date.now() - store.editor.savedAt.getTime()) / 1000)
-    if (secs < 5) return t.value.saved
-    if (secs < 60) return `${t.value.autoSaved} ${t.value.agoSeconds(secs)}`
-    return `${t.value.autoSaved} ${t.value.agoMinutes(Math.round(secs/60))}`
-  }
-  if (dirty.value) return t.value.unsaved
-  return t.value.saved
 }
 
 const readingTime = computed(() => Math.max(1, Math.round(wordCount.value / 300)))
@@ -492,7 +485,20 @@ function onRootKeydown(e: KeyboardEvent) {
         <span v-if="postStats" class="text-border/40">·</span>
         <span v-if="postStats">{{ t.views }}: {{ postStats.views }}</span>
         <span class="text-border/40">·</span>
-        <span :class="{ 'text-destructive': dirty, 'text-ok': !dirty }">{{ savedLabel() }}</span>
+        <div class="flex items-center gap-2 text-xs" :class="{ 'save-flash': flashSave }">
+          <template v-if="saveStatus === 'saving'">
+            <Loader2Icon class="h-3 w-3 animate-spin text-muted-foreground" />
+            <span class="text-muted-foreground">{{ t.saving }}</span>
+          </template>
+          <template v-else-if="saveStatus === 'unsaved'">
+            <div class="h-2 w-2 rounded-full bg-warn animate-pulse" />
+            <span class="text-warn">{{ t.unsaved }}</span>
+          </template>
+          <template v-else-if="saveStatus === 'saved'">
+            <div class="h-2 w-2 rounded-full bg-ok" />
+            <span class="text-muted-foreground">{{ t.savedAt }} {{ lastSavedTime }}</span>
+          </template>
+        </div>
         <div class="flex-1" />
         <Button size="sm" variant="ghost" class="h-7 text-xs text-muted-foreground" :aria-label="t.saveDraft" :disabled="!dirty" @click="saveDraft">
           <SaveIcon class="h-3 w-3 mr-1" />{{ t.saveDraft }}
@@ -525,3 +531,13 @@ function onRootKeydown(e: KeyboardEvent) {
     />
   </div>
 </template>
+
+<style scoped>
+.save-flash {
+  animation: save-flash 0.6s ease-out;
+}
+@keyframes save-flash {
+  0% { background-color: oklch(from var(--ok) l c h / 0.2); }
+  100% { background-color: transparent; }
+}
+</style>

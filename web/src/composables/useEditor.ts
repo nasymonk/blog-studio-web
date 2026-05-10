@@ -48,6 +48,8 @@ export function useEditor(
   const dirty = ref(false)
   const saving = ref(false)
   const savedAt = ref<Date | null>(null)
+  const saveStatus = ref<'idle' | 'saving' | 'saved' | 'unsaved'>('idle')
+  const lastSavedTime = ref('')
   const wordCount = ref(0)
   const mode = ref<'wysiwyg' | 'source'>('wysiwyg')
   const headings = ref<Array<{ level: number; text: string; line: number }>>([])
@@ -59,6 +61,17 @@ export function useEditor(
   const lineNumbersCompartment = new Compartment()
   const editorStyleCompartment = new Compartment()
   let saveTimer: ReturnType<typeof setTimeout> | null = null
+
+  watch([dirty, saving, savedAt], () => {
+    if (saving.value) {
+      saveStatus.value = 'saving'
+    } else if (dirty.value) {
+      saveStatus.value = 'unsaved'
+    } else if (savedAt.value) {
+      saveStatus.value = 'saved'
+      lastSavedTime.value = savedAt.value.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    }
+  }, { immediate: true })
 
   function resolveCodeThemeExtensions(codeTheme: CodeTheme): Extension[] {
     switch (codeTheme) {
@@ -313,5 +326,5 @@ export function useEditor(
     view.focus()
   }
 
-  return { body, dirty, saving, savedAt, wordCount, mode, headings, activeLine, mount, destroy, save, toggleMode, execBold, execItalic, execLink, execImage, execCode, execHeading, insertText, goToLine, reconfigureCodeTheme, applySettings }
+  return { body, dirty, saving, savedAt, saveStatus, lastSavedTime, wordCount, mode, headings, activeLine, mount, destroy, save, toggleMode, execBold, execItalic, execLink, execImage, execCode, execHeading, insertText, goToLine, reconfigureCodeTheme, applySettings }
 }
