@@ -17,6 +17,7 @@ import { useNotify } from '@/composables/useNotify'
 import { useEditor } from '@/composables/useEditor'
 import { useEditorSettings } from '@/composables/useEditorSettings'
 import EditorOutline from '@/components/EditorOutline.vue'
+import FindReplace from '@/components/FindReplace.vue'
 import ImageGallery from '@/components/ImageGallery.vue'
 import KeybindingHelp from '@/components/KeybindingHelp.vue'
 import SplitView from '@/components/SplitView.vue'
@@ -61,7 +62,7 @@ const { settings: editorSettings, applyPreset } = useEditorSettings()
 
 const editorContainer = ref<HTMLElement | null>(null)
 const { body, dirty, saving, savedAt, saveStatus, lastSavedTime, wordCount, mode, headings, activeLine, mount,
-        execBold, execItalic, execLink, execCode, execHeading, insertText, goToLine, toggleMode, applySettings } = useEditor(
+        execBold, execItalic, execLink, execCode, execHeading, insertText, goToLine, toggleMode, applySettings, findReplace } = useEditor(
   editorContainer,
   '',
   theme,
@@ -453,6 +454,28 @@ function onRootKeydown(e: KeyboardEvent) {
           <RotateCcwIcon class="h-3 w-3 mr-1" />{{ t.rollback }}
         </Button>
       </div>
+
+      <!-- Find & Replace -->
+      <FindReplace
+        v-if="findReplace.open.value"
+        :search-text="findReplace.searchText.value"
+        :replace-text="findReplace.replaceText.value"
+        :case-sensitive="findReplace.caseSensitive.value"
+        :whole-word="findReplace.wholeWord.value"
+        :use-regex="findReplace.useRegex.value"
+        :match-count="findReplace.matchCount.value"
+        :current-match="findReplace.currentMatch.value"
+        @update:search-text="findReplace.searchText.value = $event"
+        @update:replace-text="findReplace.replaceText.value = $event"
+        @update:case-sensitive="findReplace.caseSensitive.value = $event"
+        @update:whole-word="findReplace.wholeWord.value = $event"
+        @update:use-regex="findReplace.useRegex.value = $event"
+        @close="findReplace.close()"
+        @find-next="findReplace.findNext()"
+        @find-prev="findReplace.findPrev()"
+        @replace="findReplace.replaceMatch()"
+        @replace-all="findReplace.replaceAllMatches()"
+      />
 
       <!-- Editor body -->
       <div class="flex flex-1 min-h-0 overflow-hidden rounded border border-border/60">

@@ -9,6 +9,7 @@ import { bracketMatching, indentOnInput } from '@codemirror/language'
 import { GFM } from '@lezer/markdown'
 import { oneDark } from '@codemirror/theme-one-dark'
 import type { EditorSettings, CodeTheme } from './useEditorSettings'
+import { useFindReplace } from './useFindReplace'
 
 // Lazy-loaded modules — resolved once on first use.
 let searchModule: typeof import('@codemirror/search') | null = null
@@ -61,6 +62,8 @@ export function useEditor(
   const lineNumbersCompartment = new Compartment()
   const editorStyleCompartment = new Compartment()
   let saveTimer: ReturnType<typeof setTimeout> | null = null
+
+  const findReplace = useFindReplace(() => view)
 
   watch([dirty, saving, savedAt], () => {
     if (saving.value) {
@@ -215,6 +218,7 @@ export function useEditor(
         EditorView.lineWrapping,
         EditorView.contentAttributes.of({ spellcheck: 'false', autocorrect: 'off', autocapitalize: 'off' }),
         keymap.of([
+          { key: 'Mod-f', run: () => { findReplace.openFind(); return true } },
           ...defaultKeymap,
           ...historyKeymap,
           ...searchMod.searchKeymap,
@@ -326,5 +330,5 @@ export function useEditor(
     view.focus()
   }
 
-  return { body, dirty, saving, savedAt, saveStatus, lastSavedTime, wordCount, mode, headings, activeLine, mount, destroy, save, toggleMode, execBold, execItalic, execLink, execImage, execCode, execHeading, insertText, goToLine, reconfigureCodeTheme, applySettings }
+  return { body, dirty, saving, savedAt, saveStatus, lastSavedTime, wordCount, mode, headings, activeLine, mount, destroy, save, toggleMode, execBold, execItalic, execLink, execImage, execCode, execHeading, insertText, goToLine, reconfigureCodeTheme, applySettings, findReplace }
 }
