@@ -321,13 +321,60 @@ export function useEditor(
   function execLink() { if (view) wrapSelection(view, '[', '](url)') }
   function execImage() { if (view) wrapSelection(view, '![', '](url)') }
   function execCode() { if (view) wrapSelection(view, '`', '`') }
-  function execHeading() {
+  function execHeading(level: 1 | 2 = 1) {
     if (!view) return
     const { from } = view.state.selection.main
     const line = view.state.doc.lineAt(from)
-    const prefix = line.text.startsWith('## ') ? '' : line.text.startsWith('# ') ? '## ' : '# '
+    const marker = '#'.repeat(level) + ' '
+    const prefix = line.text.startsWith(marker) ? '' : marker
     const cleanText = line.text.replace(/^#+\s*/, '')
     view.dispatch(view.state.update({ changes: { from: line.from, to: line.to, insert: prefix + cleanText } }))
+  }
+
+  function execStrikethrough() { if (view) wrapSelection(view, '~~', '~~') }
+
+  function execBlockquote() {
+    if (!view) return
+    const { from } = view.state.selection.main
+    const line = view.state.doc.lineAt(from)
+    const prefix = line.text.startsWith('> ') ? '' : '> '
+    view.dispatch(view.state.update({
+      changes: { from: line.from, to: line.to, insert: prefix + line.text.replace(/^>\s*/, '') }
+    }))
+  }
+
+  function insertLinePrefix(prefix: string) {
+    if (!view) return
+    const { from } = view.state.selection.main
+    const line = view.state.doc.lineAt(from)
+    view.dispatch(view.state.update({
+      changes: { from: line.from, to: line.to, insert: prefix + line.text }
+    }))
+  }
+
+  function execUnorderedList() { insertLinePrefix('- ') }
+  function execOrderedList() { insertLinePrefix('1. ') }
+  function execTaskList() { insertLinePrefix('- [ ] ') }
+
+  function execTable() {
+    if (!view) return
+    const table = '\n| 列1 | 列2 | 列3 |\n| --- | --- | --- |\n| | | |\n| | | |\n'
+    const pos = view.state.selection.main.head
+    view.dispatch(view.state.update({
+      changes: { from: pos, insert: table },
+      selection: { anchor: pos + table.length }
+    }))
+  }
+
+  function execHr() {
+    if (!view) return
+    const pos = view.state.selection.main.head
+    const line = view.state.doc.lineAt(pos)
+    const insert = '\n---\n'
+    view.dispatch(view.state.update({
+      changes: { from: line.to, insert },
+      selection: { anchor: line.to + insert.length }
+    }))
   }
 
   function insertText(text: string) {
@@ -351,5 +398,5 @@ export function useEditor(
     view.focus()
   }
 
-  return { body, dirty, saving, savedAt, saveStatus, lastSavedTime, wordCount, cursorLine, cursorCol, charCount, lineCount, readingTime, mode, headings, activeLine, mount, destroy, save, toggleMode, execBold, execItalic, execLink, execImage, execCode, execHeading, insertText, goToLine, reconfigureCodeTheme, applySettings, findReplace }
+  return { body, dirty, saving, savedAt, saveStatus, lastSavedTime, wordCount, cursorLine, cursorCol, charCount, lineCount, readingTime, mode, headings, activeLine, mount, destroy, save, toggleMode, execBold, execItalic, execLink, execImage, execCode, execHeading, execStrikethrough, execBlockquote, execUnorderedList, execOrderedList, execTaskList, execTable, execHr, insertText, goToLine, reconfigureCodeTheme, applySettings, findReplace }
 }

@@ -3,10 +3,7 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
   SaveIcon, SendIcon, EyeIcon, Loader2Icon, AlertCircleIcon,
-  BoldIcon, ItalicIcon, LinkIcon, ImageIcon, CodeIcon, Heading1Icon,
-  RotateCcwIcon, ListIcon, ChevronDownIcon, ChevronUpIcon, PenLineIcon,
-  GalleryHorizontalEndIcon, Columns2Icon, FileCodeIcon, MonitorIcon,
-  SettingsIcon
+  RotateCcwIcon, ChevronDownIcon, ChevronUpIcon, SettingsIcon,
 } from 'lucide-vue-next'
 import { api } from '@/services/api'
 import type { PostDraft, PostStats } from '@/services/api'
@@ -16,6 +13,7 @@ import { useTheme } from '@/composables/useTheme'
 import { useNotify } from '@/composables/useNotify'
 import { useEditor } from '@/composables/useEditor'
 import { useEditorSettings } from '@/composables/useEditorSettings'
+import EditorToolbar from '@/components/EditorToolbar.vue'
 import EditorOutline from '@/components/EditorOutline.vue'
 import FindReplace from '@/components/FindReplace.vue'
 import ImageGallery from '@/components/ImageGallery.vue'
@@ -34,7 +32,7 @@ import SkeletonLines from '@/components/SkeletonLines.vue'
 import Breadcrumb from '@/components/Breadcrumb.vue'
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuGroup,
-  DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator,
+  DropdownMenuLabel, DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import {
@@ -64,7 +62,7 @@ const { settings: editorSettings, applyPreset } = useEditorSettings()
 
 const editorContainer = ref<HTMLElement | null>(null)
 const { body, dirty, saving, savedAt, saveStatus, lastSavedTime, wordCount, cursorLine, cursorCol, charCount, lineCount, readingTime, mode, headings, activeLine, mount,
-        execBold, execItalic, execLink, execCode, execHeading, insertText, goToLine, toggleMode, applySettings, findReplace } = useEditor(
+        execBold, execItalic, execLink, execCode, execHeading, execStrikethrough, execBlockquote, execUnorderedList, execOrderedList, execTaskList, execTable, execHr, insertText, goToLine, toggleMode, applySettings, findReplace } = useEditor(
   editorContainer,
   '',
   theme,
@@ -327,39 +325,32 @@ function onRootKeydown(e: KeyboardEvent) {
       </div>
 
       <!-- Toolbar -->
-      <div class="flex items-center flex-wrap gap-1 py-2">
-        <Button variant="ghost" size="icon" class="h-8 w-8 md:h-7 md:w-7 text-muted-foreground hover:text-foreground" aria-label="Bold (⌘B)" title="加粗 (⌘B)" @click="execBold"><BoldIcon class="h-3.5 w-3.5" /></Button>
-        <Button variant="ghost" size="icon" class="h-8 w-8 md:h-7 md:w-7 text-muted-foreground hover:text-foreground" aria-label="Italic (⌘I)" title="斜体 (⌘I)" @click="execItalic"><ItalicIcon class="h-3.5 w-3.5" /></Button>
-        <Button variant="ghost" size="icon" class="h-8 w-8 md:h-7 md:w-7 text-muted-foreground hover:text-foreground" aria-label="Link (⌘K)" title="链接 (⌘K)" @click="execLink"><LinkIcon class="h-3.5 w-3.5" /></Button>
-        <Button variant="ghost" size="icon" class="h-8 w-8 md:h-7 md:w-7 text-muted-foreground hover:text-foreground" aria-label="Insert image" title="插入图片" @click="handleImageUpload"><ImageIcon class="h-3.5 w-3.5" /></Button>
-        <Button variant="ghost" size="icon" class="h-8 w-8 md:h-7 md:w-7 text-muted-foreground hover:text-foreground" aria-label="Image gallery" :title="t.gallery" @click="galleryOpen = true"><GalleryHorizontalEndIcon class="h-3.5 w-3.5" /></Button>
-        <Button variant="ghost" size="icon" class="h-8 w-8 md:h-7 md:w-7 text-muted-foreground hover:text-foreground" aria-label="Inline code" title="行内代码" @click="execCode"><CodeIcon class="h-3.5 w-3.5" /></Button>
-        <Button variant="ghost" size="icon" class="h-8 w-8 md:h-7 md:w-7 text-muted-foreground hover:text-foreground" aria-label="Heading" title="标题" @click="execHeading"><Heading1Icon class="h-3.5 w-3.5" /></Button>
-        <Separator orientation="vertical" class="mx-1 h-4 hidden md:block" />
-        <Button variant="ghost" size="icon" class="h-8 w-8 md:h-7 md:w-7" :class="mode === 'source' ? 'bg-accent/10 text-accent' : 'text-muted-foreground'" :aria-label="mode === 'wysiwyg' ? 'Switch to source mode' : 'Switch to WYSIWYG'" :title="mode === 'wysiwyg' ? '切换源码模式' : '切换所见即所得'" @click="toggleMode">
-          <CodeIcon v-if="mode === 'wysiwyg'" class="h-3.5 w-3.5" />
-          <PenLineIcon v-else class="h-3.5 w-3.5" />
-        </Button>
-        <Button variant="ghost" size="icon" class="h-8 w-8 md:h-7 md:w-7 hidden md:inline-flex" :class="showOutline ? 'bg-accent/10 text-accent' : 'text-muted-foreground'" aria-label="Toggle outline" title="大纲" @click="showOutline = !showOutline">
-          <ListIcon class="h-3.5 w-3.5" />
-        </Button>
-        <Separator orientation="vertical" class="mx-1 h-4" />
-        <Button variant="ghost" size="icon" class="h-8 w-8 md:h-7 md:w-7" :class="splitMode === 'source' ? 'bg-accent/10 text-accent' : 'text-muted-foreground'" :aria-label="t.sourceOnly" :title="t.sourceOnly" @click="setSplitMode('source')">
-          <FileCodeIcon class="h-3.5 w-3.5" />
-        </Button>
-        <Button variant="ghost" size="icon" class="h-8 w-8 md:h-7 md:w-7" :class="splitMode === 'split' ? 'bg-accent/10 text-accent' : 'text-muted-foreground'" :aria-label="t.splitMode" :title="t.splitMode" @click="setSplitMode('split')">
-          <Columns2Icon class="h-3.5 w-3.5" />
-        </Button>
-        <Button variant="ghost" size="icon" class="h-8 w-8 md:h-7 md:w-7" :class="splitMode === 'preview' ? 'bg-accent/10 text-accent' : 'text-muted-foreground'" :aria-label="t.previewOnly" :title="t.previewOnly" @click="setSplitMode('preview')">
-          <MonitorIcon class="h-3.5 w-3.5" />
-        </Button>
-        <div class="flex-1 hidden md:block" />
-        <Separator orientation="vertical" class="mx-1 h-4 hidden md:block" />
+      <div class="flex items-center gap-1 py-2">
+        <EditorToolbar
+          :split-mode="splitMode"
+          @bold="execBold"
+          @italic="execItalic"
+          @strikethrough="execStrikethrough"
+          @code="execCode"
+          @link="execLink"
+          @heading1="() => execHeading(1)"
+          @heading2="() => execHeading(2)"
+          @blockquote="execBlockquote"
+          @unordered-list="execUnorderedList"
+          @ordered-list="execOrderedList"
+          @task-list="execTaskList"
+          @image="handleImageUpload"
+          @table="execTable"
+          @hr="execHr"
+          @set-split-mode="setSplitMode"
+          @gallery="galleryOpen = true"
+          @keybindings="keybindingHelpOpen = true"
+        />
 
         <!-- Editor settings dropdown -->
         <DropdownMenu>
           <DropdownMenuTrigger as-child>
-            <Button variant="ghost" size="icon" class="h-8 w-8 md:h-7 md:w-7 text-muted-foreground hover:text-foreground" :aria-label="t.editorSettings" :title="t.editorSettings">
+            <Button variant="ghost" size="sm" class="h-7 w-7 p-0 text-muted-foreground hover:text-foreground" :title="t.editorSettings">
               <SettingsIcon class="h-3.5 w-3.5" />
             </Button>
           </DropdownMenuTrigger>
@@ -456,7 +447,9 @@ function onRootKeydown(e: KeyboardEvent) {
           </DropdownMenuContent>
         </DropdownMenu>
 
-        <Button variant="ghost" size="sm" class="text-xs h-8 md:h-7 text-destructive/60 hover:text-destructive" :aria-label="t.rollback" :title="t.rollback" @click="rollback">
+        <Separator orientation="vertical" class="h-5 mx-1" />
+
+        <Button variant="ghost" size="sm" class="text-xs h-7 text-destructive/60 hover:text-destructive" :aria-label="t.rollback" :title="t.rollback" @click="rollback">
           <RotateCcwIcon class="h-3 w-3 mr-1" />{{ t.rollback }}
         </Button>
       </div>
