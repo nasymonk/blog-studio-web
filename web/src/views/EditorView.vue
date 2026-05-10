@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import {
   SaveIcon, SendIcon, EyeIcon, Loader2Icon, AlertCircleIcon,
   RotateCcwIcon, ChevronDownIcon, ChevronUpIcon, SettingsIcon,
+  HistoryIcon,
 } from 'lucide-vue-next'
 import { api } from '@/services/api'
 import type { PostDraft, PostStats } from '@/services/api'
@@ -22,6 +23,8 @@ import SplitView from '@/components/SplitView.vue'
 import EditorStatusBar from '@/components/EditorStatusBar.vue'
 import MarkdownPreview from '@/components/MarkdownPreview.vue'
 import { useSplitView } from '@/composables/useSplitView'
+import { useVersionHistory } from '@/composables/useVersionHistory'
+import VersionHistory from '@/components/VersionHistory.vue'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -59,6 +62,7 @@ const galleryOpen = ref(false)
 const flashSave = ref(false)
 
 const { settings: editorSettings, applyPreset } = useEditorSettings()
+const { versions, isOpen: historyOpen, saveVersion, loadHistory: loadVersionHistory, toggle: toggleHistory } = useVersionHistory()
 
 const editorContainer = ref<HTMLElement | null>(null)
 const { body, dirty, saving, savedAt, saveStatus, lastSavedTime, wordCount, cursorLine, cursorCol, charCount, lineCount, readingTime, mode, headings, activeLine, mount,
@@ -85,6 +89,7 @@ watch(savedAt, (val) => { store.editor.savedAt = val })
 watch(savedAt, () => {
   flashSave.value = true
   setTimeout(() => { flashSave.value = false }, 600)
+  saveVersion(body.value, wordCount.value)
 })
 
 async function loadPost() {
@@ -118,6 +123,7 @@ async function loadPost() {
 
 onMounted(async () => {
   await loadPost()
+  loadVersionHistory(slug.value)
   if (editorContainer.value) mount(editorContainer.value, editorSettings.value)
 })
 
@@ -231,6 +237,12 @@ function onRootKeydown(e: KeyboardEvent) {
     e.preventDefault()
     keybindingHelpOpen.value = true
   }
+}
+
+function restoreVersion(restoreBody: string) {
+  body.value = restoreBody
+  dirty.value = true
+  historyOpen.value = false
 }
 </script>
 
@@ -449,6 +461,10 @@ function onRootKeydown(e: KeyboardEvent) {
 
         <Separator orientation="vertical" class="h-5 mx-1" />
 
+        <Button variant="ghost" size="sm" class="h-7 w-7 p-0 text-muted-foreground hover:text-foreground" :aria-label="'版本历史'" :title="'版本历史'" @click="toggleHistory">
+          <HistoryIcon class="h-3.5 w-3.5" />
+        </Button>
+
         <Button variant="ghost" size="sm" class="text-xs h-7 text-destructive/60 hover:text-destructive" :aria-label="t.rollback" :title="t.rollback" @click="rollback">
           <RotateCcwIcon class="h-3 w-3 mr-1" />{{ t.rollback }}
         </Button>
@@ -551,6 +567,12 @@ function onRootKeydown(e: KeyboardEvent) {
       <Button class="rounded-full px-5" @click="loadPost">{{ t.retry }}</Button>
     </div>
 
+    <VersionHistory
+      :versions="versions"
+      :open="historyOpen"
+      @close="historyOpen = false"
+      @restore="restoreVersion"
+    />
     <KeybindingHelp v-model:open="keybindingHelpOpen" />
     <ImageGallery
       v-if="draft"
