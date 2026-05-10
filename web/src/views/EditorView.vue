@@ -30,7 +30,7 @@ import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
-import { Skeleton } from '@/components/ui/skeleton'
+import SkeletonLines from '@/components/SkeletonLines.vue'
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuGroup,
   DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator,
@@ -238,8 +238,8 @@ function onRootKeydown(e: KeyboardEvent) {
 <template>
   <div class="flex flex-col h-full max-w-5xl" @keydown="onRootKeydown">
     <!-- Loading -->
-    <div v-if="loading" class="flex items-center justify-center py-20">
-      <Loader2Icon class="h-6 w-6 animate-spin text-muted-foreground" />
+    <div v-if="loading" class="h-full">
+      <SkeletonLines :lines="12" />
     </div>
 
     <template v-else-if="draft">

@@ -14,7 +14,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Skeleton } from '@/components/ui/skeleton'
+import SkeletonCard from '@/components/SkeletonCard.vue'
 import { Separator } from '@/components/ui/separator'
 import EmptyState from '@/components/EmptyState.vue'
 
@@ -298,7 +298,7 @@ onMounted(loadPosts)
 
     <!-- Loading -->
     <div v-if="store.postsLoading" class="stagger space-y-3">
-      <Skeleton v-for="i in 5" :key="i" class="h-[72px] animate-fade-up" />
+      <SkeletonCard v-for="i in 5" :key="i" class="animate-fade-up" />
     </div>
 
     <!-- Empty -->
