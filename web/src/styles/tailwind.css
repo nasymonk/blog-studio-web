@@ -442,6 +442,31 @@
   .list-hover:hover {
     background-color: var(--color-muted);
   }
+
+  /* Underline input — used in search, title, login */
+  .input-underline {
+    @apply border-0 border-b border-border rounded-none bg-transparent px-0 focus-visible:ring-0 focus-visible:border-accent transition-colors;
+  }
+
+  /* Section label — used in editor meta, settings, tag groups */
+  .section-label {
+    @apply text-[10px] uppercase tracking-wider text-muted-foreground/70 font-medium;
+  }
+
+  /* Compact ghost icon button */
+  .btn-icon-ghost {
+    @apply h-7 w-7 p-0;
+  }
+
+  /* Tag pill */
+  .tag-pill {
+    @apply text-[10px] px-1.5 py-0.5 rounded-full bg-muted;
+  }
+
+  /* Borderless card with hover */
+  .card-flat {
+    @apply rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors;
+  }
 }
 
 /* ============================================
