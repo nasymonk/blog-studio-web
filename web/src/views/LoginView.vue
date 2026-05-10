@@ -19,6 +19,7 @@ const { theme, toggle } = useTheme()
 const password = ref('')
 const loading = ref(false)
 const error = ref('')
+const shakeKey = ref(0)
 const btnHover = ref(false)
 const isTyping = ref(false)
 let typingTimeout: ReturnType<typeof setTimeout> | null = null
@@ -40,6 +41,7 @@ async function login() {
     router.push('/posts')
   } catch (e: any) {
     error.value = e?.message || t.value.errorLogin
+    shakeKey.value++
   } finally {
     loading.value = false
   }
@@ -99,9 +101,11 @@ async function login() {
               autocomplete="current-password"
               autofocus
               class="h-12 border-0 border-b border-border rounded-none bg-transparent px-0 focus-visible:ring-0 focus-visible:border-accent transition-colors"
+              :class="{ 'input-error input-error-shake': error }"
+              :key="shakeKey"
               @input="onPasswordInput"
             />
-            <p v-if="error" class="text-xs text-destructive mt-1" role="alert">{{ error }}</p>
+            <p v-if="error" class="field-error" role="alert">{{ error }}</p>
           </div>
 
           <!-- Interactive hover button -->

@@ -58,6 +58,7 @@
   --color-link: var(--link);
   --color-link-bg: var(--link-bg);
   --color-hover: var(--hover);
+  --color-success: var(--success);
 }
 
 :root {
@@ -470,4 +471,50 @@
 .dialog-destructive [data-slot="dialog-header"],
 .dialog-destructive .dialog-header {
   color: var(--color-destructive);
+}
+
+/* ============================================
+   Form Validation Styles
+   ============================================ */
+
+/* Error state */
+.input-error,
+.input-error:focus {
+  border-color: var(--color-destructive) !important;
+}
+.input-error:focus {
+  box-shadow: 0 0 0 3px oklch(from var(--color-destructive) l c h / 0.15) !important;
+}
+.input-error-shake {
+  animation: shake 0.3s var(--ease-spring);
+}
+
+/* Success state */
+.input-success,
+.input-success:focus {
+  border-color: var(--color-success) !important;
+}
+
+/* Inline error message */
+.field-error {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin-top: var(--space-1);
+  font-size: var(--text-xs);
+  color: var(--color-destructive);
+  animation: fade-up var(--duration-fast) var(--ease-smooth);
+}
+
+/* Auto-resize textarea */
+textarea.auto-resize {
+  field-sizing: content;
+  min-height: 3lh;
+  max-height: 12lh;
+  overflow-y: auto;
+}
+
+/* Form field spacing */
+.form-field + .form-field {
+  margin-top: var(--space-4);
 }
