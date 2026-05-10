@@ -1,4 +1,4 @@
-import { ref, watch, onBeforeUnmount, type Ref } from 'vue'
+import { ref, computed, watch, onBeforeUnmount, type Ref } from 'vue'
 import { countWords } from '@/utils/words'
 import { EditorView, keymap, lineNumbers, highlightActiveLine } from '@codemirror/view'
 import { EditorState, Compartment, type Extension } from '@codemirror/state'
@@ -52,6 +52,10 @@ export function useEditor(
   const saveStatus = ref<'idle' | 'saving' | 'saved' | 'unsaved'>('idle')
   const lastSavedTime = ref('')
   const wordCount = ref(0)
+  const cursorLine = ref(1)
+  const cursorCol = ref(1)
+  const charCount = ref(0)
+  const lineCount = ref(0)
   const mode = ref<'wysiwyg' | 'source'>('wysiwyg')
   const headings = ref<Array<{ level: number; text: string; line: number }>>([])
   const activeLine = ref(0)
@@ -134,6 +138,21 @@ export function useEditor(
     activeLine.value = view.state.doc.lineAt(pos).number
   }
 
+  function updateCursorInfo() {
+    if (!view) return
+    const pos = view.state.selection.main.head
+    const line = view.state.doc.lineAt(pos)
+    cursorLine.value = line.number
+    cursorCol.value = pos - line.from + 1
+    charCount.value = view.state.doc.length
+    lineCount.value = view.state.doc.lines
+  }
+
+  const readingTime = computed(() => {
+    const minutes = Math.ceil(wordCount.value / 200)
+    return minutes < 1 ? '< 1 分钟' : `${minutes} 分钟`
+  })
+
   async function save() {
     if (saveTimer) { clearTimeout(saveTimer); saveTimer = null }
     saving.value = true
@@ -161,6 +180,7 @@ export function useEditor(
         extractHeadings(body.value)
       }
       updateActiveLine()
+      updateCursorInfo()
     })
 
     const pasteHandler = EditorView.domEventHandlers({
@@ -242,6 +262,7 @@ export function useEditor(
     view = new EditorView({ state, parent: el })
     wordCount.value = countWords(initialBody)
     extractHeadings(initialBody)
+    updateCursorInfo()
   }
 
   watch(theme, (val) => {
@@ -330,5 +351,5 @@ export function useEditor(
     view.focus()
   }
 
-  return { body, dirty, saving, savedAt, saveStatus, lastSavedTime, wordCount, mode, headings, activeLine, mount, destroy, save, toggleMode, execBold, execItalic, execLink, execImage, execCode, execHeading, insertText, goToLine, reconfigureCodeTheme, applySettings, findReplace }
+  return { body, dirty, saving, savedAt, saveStatus, lastSavedTime, wordCount, cursorLine, cursorCol, charCount, lineCount, readingTime, mode, headings, activeLine, mount, destroy, save, toggleMode, execBold, execItalic, execLink, execImage, execCode, execHeading, insertText, goToLine, reconfigureCodeTheme, applySettings, findReplace }
 }

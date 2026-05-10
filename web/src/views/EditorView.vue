@@ -21,6 +21,7 @@ import FindReplace from '@/components/FindReplace.vue'
 import ImageGallery from '@/components/ImageGallery.vue'
 import KeybindingHelp from '@/components/KeybindingHelp.vue'
 import SplitView from '@/components/SplitView.vue'
+import EditorStatusBar from '@/components/EditorStatusBar.vue'
 import MarkdownPreview from '@/components/MarkdownPreview.vue'
 import { useSplitView } from '@/composables/useSplitView'
 import { Button } from '@/components/ui/button'
@@ -61,7 +62,7 @@ const flashSave = ref(false)
 const { settings: editorSettings, applyPreset } = useEditorSettings()
 
 const editorContainer = ref<HTMLElement | null>(null)
-const { body, dirty, saving, savedAt, saveStatus, lastSavedTime, wordCount, mode, headings, activeLine, mount,
+const { body, dirty, saving, savedAt, saveStatus, lastSavedTime, wordCount, cursorLine, cursorCol, charCount, lineCount, readingTime, mode, headings, activeLine, mount,
         execBold, execItalic, execLink, execCode, execHeading, insertText, goToLine, toggleMode, applySettings, findReplace } = useEditor(
   editorContainer,
   '',
@@ -183,8 +184,6 @@ function removeTag(tag: string) {
   draft.value.frontMatter.tags = draft.value.frontMatter.tags.filter(tg => tg !== tag)
   store.editor.dirty = true
 }
-
-const readingTime = computed(() => Math.max(1, Math.round(wordCount.value / 300)))
 
 const metaSummary = computed(() => {
   if (!draft.value) return ''
@@ -500,11 +499,20 @@ function onRootKeydown(e: KeyboardEvent) {
         <EditorOutline v-if="showOutline" :headings="headings" :active-line="activeLine" @jump="goToLine" />
       </div>
 
+      <EditorStatusBar
+        :word-count="wordCount"
+        :char-count="charCount"
+        :line-count="lineCount"
+        :cursor-line="cursorLine"
+        :cursor-col="cursorCol"
+        :reading-time="readingTime"
+      />
+
       <!-- Status bar -->
       <div class="flex items-center gap-2 py-2 text-[11px] text-muted-foreground/70">
         <span>{{ wordCount }} {{ t.wordCount }}</span>
         <span class="text-border/40">·</span>
-        <span>{{ readingTime }} {{ t.readingTime }}</span>
+        <span>{{ readingTime }}</span>
         <span v-if="postStats" class="text-border/40">·</span>
         <span v-if="postStats">{{ t.views }}: {{ postStats.views }}</span>
         <span class="text-border/40">·</span>
