@@ -23,11 +23,16 @@ export default defineConfig({
             '@codemirror/commands',
             '@codemirror/language',
             '@codemirror/lang-markdown',
-            '@codemirror/theme-one-dark'
+            '@codemirror/theme-one-dark',
+            'vue-codemirror6',
           ],
-          'vendor-vue': ['vue', 'vue-router'],
+          'vendor-codemirror-languages': [
+            '@codemirror/language-data',
+          ],
+          'vendor-vue': ['vue', 'vue-router', '@vueuse/core'],
           'vendor-icons': ['lucide-vue-next'],
           'vendor-marked': ['marked', 'dompurify'],
+          'vendor-ui': ['reka-ui'],
         }
       }
     }
