@@ -1,13 +1,14 @@
 import { ref, watch, onBeforeUnmount, type Ref } from 'vue'
 import { countWords } from '@/utils/words'
 import { EditorView, keymap, lineNumbers, highlightActiveLine } from '@codemirror/view'
-import { EditorState, Compartment } from '@codemirror/state'
+import { EditorState, Compartment, type Extension } from '@codemirror/state'
 import { defaultKeymap, historyKeymap, history, indentWithTab } from '@codemirror/commands'
 import { markdown } from '@codemirror/lang-markdown'
 import { languages } from '@codemirror/language-data'
 import { bracketMatching, indentOnInput } from '@codemirror/language'
 import { GFM } from '@lezer/markdown'
 import { oneDark } from '@codemirror/theme-one-dark'
+import type { EditorSettings, CodeTheme } from './useEditorSettings'
 
 // Lazy-loaded modules — resolved once on first use.
 let searchModule: typeof import('@codemirror/search') | null = null
@@ -54,7 +55,35 @@ export function useEditor(
   let view: EditorView | null = null
   const themeCompartment = new Compartment()
   const wysiwygCompartment = new Compartment()
+  const codeThemeCompartment = new Compartment()
+  const lineNumbersCompartment = new Compartment()
+  const editorStyleCompartment = new Compartment()
   let saveTimer: ReturnType<typeof setTimeout> | null = null
+
+  function resolveCodeThemeExtensions(codeTheme: CodeTheme): Extension[] {
+    switch (codeTheme) {
+      case 'oneDark': return [oneDark]
+      // Other themes can be added here as real theme imports become available.
+      case 'githubLight': return []
+      case 'catppuccin': return []
+      case 'solarized': return []
+      default: return []
+    }
+  }
+
+  function buildEditorStyleExtension(s: EditorSettings): Extension {
+    const fontMap: Record<string, string> = {
+      system: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+      mono: '"JetBrains Mono", "Fira Code", "Cascadia Code", Menlo, monospace',
+      serif: '"Noto Serif", "Source Serif", Georgia, "Times New Roman", serif',
+    }
+    const fontFamily = fontMap[s.fontFamily] || fontMap.system
+    return EditorView.theme({
+      '&': { fontSize: `${s.fontSize}px`, fontFamily },
+      '.cm-content': { fontFamily, lineHeight: String(s.lineHeight) },
+      '.cm-line': { lineHeight: String(s.lineHeight) },
+    })
+  }
 
   function scheduleAutoSave() {
     if (saveTimer) clearTimeout(saveTimer)
@@ -102,9 +131,10 @@ export function useEditor(
     return true
   }
 
-  async function mount(el: HTMLElement) {
+  async function mount(el: HTMLElement, editorSettings?: EditorSettings) {
     // Lazy-load search and wysiwyg extensions on first mount.
     const [searchMod, wysiwygMod] = await Promise.all([loadSearch(), loadWysiwygModule()])
+    const currentSettings = editorSettings ?? { fontFamily: 'system', fontSize: 14, lineHeight: 1.6, lineNumbers: true, codeTheme: 'oneDark' as CodeTheme }
 
     const updateListener = EditorView.updateListener.of((update) => {
       if (update.docChanged) {
@@ -166,7 +196,6 @@ export function useEditor(
       extensions: [
         markdown({ extensions: [GFM, wysiwygMod.mathExtension()], codeLanguages: languages }),
         history(),
-        lineNumbers(),
         bracketMatching(),
         highlightActiveLine(),
         indentOnInput(),
@@ -183,6 +212,9 @@ export function useEditor(
           { key: 'Mod-k', run: (v) => wrapSelection(v, '[', '](url)') },
         ]),
         themeCompartment.of(theme.value === 'dark' ? oneDark : []),
+        codeThemeCompartment.of(resolveCodeThemeExtensions(currentSettings.codeTheme)),
+        lineNumbersCompartment.of(currentSettings.lineNumbers ? lineNumbers() : []),
+        editorStyleCompartment.of(buildEditorStyleExtension(currentSettings)),
         wysiwygCompartment.of(wysiwygMod.wysiwyg()),
         updateListener,
         pasteHandler,
@@ -210,6 +242,23 @@ export function useEditor(
       effects: wysiwygCompartment.reconfigure(newMode === 'wysiwyg' && wysiwygModule ? wysiwygModule.wysiwyg() : []),
     })
     view.focus()
+  }
+
+  function reconfigureCodeTheme(codeTheme: CodeTheme) {
+    if (view) {
+      view.dispatch({ effects: codeThemeCompartment.reconfigure(resolveCodeThemeExtensions(codeTheme)) })
+    }
+  }
+
+  function applySettings(s: EditorSettings) {
+    if (!view) return
+    view.dispatch({
+      effects: [
+        codeThemeCompartment.reconfigure(resolveCodeThemeExtensions(s.codeTheme)),
+        lineNumbersCompartment.reconfigure(s.lineNumbers ? lineNumbers() : []),
+        editorStyleCompartment.reconfigure(buildEditorStyleExtension(s)),
+      ]
+    })
   }
 
   function destroy() {
@@ -264,5 +313,5 @@ export function useEditor(
     view.focus()
   }
 
-  return { body, dirty, saving, savedAt, wordCount, mode, headings, activeLine, mount, destroy, save, toggleMode, execBold, execItalic, execLink, execImage, execCode, execHeading, insertText, goToLine }
+  return { body, dirty, saving, savedAt, wordCount, mode, headings, activeLine, mount, destroy, save, toggleMode, execBold, execItalic, execLink, execImage, execCode, execHeading, insertText, goToLine, reconfigureCodeTheme, applySettings }
 }

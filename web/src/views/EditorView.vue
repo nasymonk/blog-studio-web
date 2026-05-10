@@ -5,7 +5,8 @@ import {
   SaveIcon, SendIcon, EyeIcon, Loader2Icon, AlertCircleIcon,
   BoldIcon, ItalicIcon, LinkIcon, ImageIcon, CodeIcon, Heading1Icon,
   RotateCcwIcon, ListIcon, ChevronDownIcon, ChevronUpIcon, PenLineIcon,
-  GalleryHorizontalEndIcon, Columns2Icon, FileCodeIcon, MonitorIcon
+  GalleryHorizontalEndIcon, Columns2Icon, FileCodeIcon, MonitorIcon,
+  SettingsIcon
 } from 'lucide-vue-next'
 import { api } from '@/services/api'
 import type { PostDraft, PostStats } from '@/services/api'
@@ -14,6 +15,7 @@ import { useI18n } from '@/i18n'
 import { useTheme } from '@/composables/useTheme'
 import { useNotify } from '@/composables/useNotify'
 import { useEditor } from '@/composables/useEditor'
+import { useEditorSettings } from '@/composables/useEditorSettings'
 import EditorOutline from '@/components/EditorOutline.vue'
 import ImageGallery from '@/components/ImageGallery.vue'
 import KeybindingHelp from '@/components/KeybindingHelp.vue'
@@ -27,6 +29,14 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { Skeleton } from '@/components/ui/skeleton'
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuGroup,
+  DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select'
 
 const route = useRoute()
 const router = useRouter()
@@ -46,9 +56,11 @@ const keybindingHelpOpen = ref(false)
 const postStats = ref<PostStats | null>(null)
 const galleryOpen = ref(false)
 
+const { settings: editorSettings, applyPreset } = useEditorSettings()
+
 const editorContainer = ref<HTMLElement | null>(null)
 const { body, dirty, saving, savedAt, wordCount, mode, headings, activeLine, mount,
-        execBold, execItalic, execLink, execCode, execHeading, insertText, goToLine, toggleMode } = useEditor(
+        execBold, execItalic, execLink, execCode, execHeading, insertText, goToLine, toggleMode, applySettings } = useEditor(
   editorContainer,
   '',
   theme,
@@ -100,12 +112,16 @@ async function loadPost() {
 
 onMounted(async () => {
   await loadPost()
-  if (editorContainer.value) mount(editorContainer.value)
+  if (editorContainer.value) mount(editorContainer.value, editorSettings.value)
 })
 
 watch(editorContainer, (el) => {
-  if (el && !loading.value) mount(el)
+  if (el && !loading.value) mount(el, editorSettings.value)
 })
+
+watch(editorSettings, (val) => {
+  applySettings(val)
+}, { deep: true })
 
 async function saveDraft() {
   if (!draft.value) return
@@ -339,6 +355,107 @@ function onRootKeydown(e: KeyboardEvent) {
         </Button>
         <div class="flex-1" />
         <Separator orientation="vertical" class="mx-1 h-4" />
+
+        <!-- Editor settings dropdown -->
+        <DropdownMenu>
+          <DropdownMenuTrigger as-child>
+            <Button variant="ghost" size="icon" class="h-7 w-7 text-muted-foreground hover:text-foreground" :aria-label="t.editorSettings" :title="t.editorSettings">
+              <SettingsIcon class="h-3.5 w-3.5" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" class="w-64">
+            <DropdownMenuLabel>{{ t.editorSettings }}</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuGroup>
+              <!-- Preset buttons -->
+              <div class="px-2 py-1.5">
+                <Label class="text-[10px] uppercase tracking-wider text-muted-foreground/70 mb-1.5 block">{{ t.preset }}</Label>
+                <div class="flex gap-1">
+                  <Button variant="outline" size="sm" class="h-7 text-xs flex-1" @click="applyPreset('default')">{{ t.presetDefault }}</Button>
+                  <Button variant="outline" size="sm" class="h-7 text-xs flex-1" @click="applyPreset('typewriter')">{{ t.presetTypewriter }}</Button>
+                  <Button variant="outline" size="sm" class="h-7 text-xs flex-1" @click="applyPreset('compact')">{{ t.presetCompact }}</Button>
+                </div>
+              </div>
+
+              <!-- Font family -->
+              <div class="px-2 py-1.5">
+                <Label class="text-[10px] uppercase tracking-wider text-muted-foreground/70 mb-1 block">{{ t.fontFamily }}</Label>
+                <Select :model-value="editorSettings.fontFamily" @update:model-value="(v: any) => { if (v) editorSettings.fontFamily = v }">
+                  <SelectTrigger class="h-8 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="system">{{ t.fontFamilySystem }}</SelectItem>
+                    <SelectItem value="mono">{{ t.fontFamilyMono }}</SelectItem>
+                    <SelectItem value="serif">{{ t.fontFamilySerif }}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <!-- Font size -->
+              <div class="px-2 py-1.5">
+                <div class="flex items-center justify-between mb-1">
+                  <Label class="text-[10px] uppercase tracking-wider text-muted-foreground/70">{{ t.fontSize }}</Label>
+                  <span class="text-[10px] text-muted-foreground tabular-nums">{{ editorSettings.fontSize }}px</span>
+                </div>
+                <input
+                  type="range"
+                  :value="editorSettings.fontSize"
+                  min="12" max="24" step="1"
+                  class="w-full h-1.5 accent-primary cursor-pointer"
+                  @input="editorSettings.fontSize = Number(($event.target as HTMLInputElement).value)"
+                />
+              </div>
+
+              <!-- Line height -->
+              <div class="px-2 py-1.5">
+                <div class="flex items-center justify-between mb-1">
+                  <Label class="text-[10px] uppercase tracking-wider text-muted-foreground/70">{{ t.lineHeight }}</Label>
+                  <span class="text-[10px] text-muted-foreground tabular-nums">{{ editorSettings.lineHeight.toFixed(1) }}</span>
+                </div>
+                <input
+                  type="range"
+                  :value="editorSettings.lineHeight"
+                  min="1.2" max="2.0" step="0.1"
+                  class="w-full h-1.5 accent-primary cursor-pointer"
+                  @input="editorSettings.lineHeight = Number(Number(($event.target as HTMLInputElement).value).toFixed(1))"
+                />
+              </div>
+
+              <!-- Line numbers toggle -->
+              <div class="px-2 py-1.5 flex items-center justify-between">
+                <Label class="text-[10px] uppercase tracking-wider text-muted-foreground/70">{{ t.lineNumbers }}</Label>
+                <button
+                  class="relative inline-flex h-5 w-9 items-center rounded-full transition-colors cursor-pointer"
+                  :class="editorSettings.lineNumbers ? 'bg-primary' : 'bg-input'"
+                  @click="editorSettings.lineNumbers = !editorSettings.lineNumbers"
+                >
+                  <span
+                    class="inline-block h-3.5 w-3.5 rounded-full bg-white shadow transition-transform"
+                    :class="editorSettings.lineNumbers ? 'translate-x-[18px]' : 'translate-x-[3px]'"
+                  />
+                </button>
+              </div>
+
+              <!-- Code theme -->
+              <div class="px-2 py-1.5">
+                <Label class="text-[10px] uppercase tracking-wider text-muted-foreground/70 mb-1 block">{{ t.codeTheme }}</Label>
+                <Select :model-value="editorSettings.codeTheme" @update:model-value="(v: any) => { if (v) editorSettings.codeTheme = v }">
+                  <SelectTrigger class="h-8 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="oneDark">{{ t.codeThemeOneDark }}</SelectItem>
+                    <SelectItem value="githubLight">{{ t.codeThemeGithubLight }}</SelectItem>
+                    <SelectItem value="catppuccin">{{ t.codeThemeCatppuccin }}</SelectItem>
+                    <SelectItem value="solarized">{{ t.codeThemeSolarized }}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </DropdownMenuGroup>
+          </DropdownMenuContent>
+        </DropdownMenu>
+
         <Button variant="ghost" size="sm" class="text-xs h-7 text-destructive/60 hover:text-destructive" :aria-label="t.rollback" :title="t.rollback" @click="rollback">
           <RotateCcwIcon class="h-3 w-3 mr-1" />{{ t.rollback }}
         </Button>
