@@ -116,6 +116,10 @@ let onUnauthorized: (() => void) | null = null
 export function setUnauthorizedHandler(handler: () => void) { onUnauthorized = handler }
 const base = `${window.location.pathname.split('/').filter(Boolean)[0] ? '/' + window.location.pathname.split('/').filter(Boolean)[0] : ''}/api`
 
+// Post list SWR cache
+let postListCache: { data: PostState[]; timestamp: number } | null = null
+const POST_LIST_TTL = 30_000 // 30 seconds
+
 async function request<T>(path: string, options: RequestInit = {}, signal?: AbortSignal): Promise<T> {
   const headers = new Headers(options.headers)
   if (!(options.body instanceof FormData)) headers.set('Content-Type', 'application/json')
@@ -134,18 +138,46 @@ async function request<T>(path: string, options: RequestInit = {}, signal?: Abor
   return payload.data as T
 }
 
+// Cache invalidation helper
+function invalidatePostCache() {
+  postListCache = null
+}
+
 export const api = {
   setCSRF: (value: string) => { csrfToken = value },
   session: () => request<{ authenticated: boolean; csrfToken?: string }>('/session'),
   login: (password: string) => request<{ authenticated: boolean; csrfToken: string }>('/auth/login', { method: 'POST', body: JSON.stringify({ password }) }),
   logout: () => request<{ authenticated: boolean }>('/auth/logout', { method: 'POST' }),
   changePassword: (currentPassword: string, newPassword: string) => request<{ changed: boolean }>('/auth/password', { method: 'POST', body: JSON.stringify({ currentPassword, newPassword }) }),
-  posts: () => request<PostState[]>('/posts'),
+  posts: async (): Promise<PostState[]> => {
+    if (postListCache && Date.now() - postListCache.timestamp < POST_LIST_TTL) {
+      // Background revalidation
+      request<PostState[]>('/posts').then(data => {
+        postListCache = { data, timestamp: Date.now() }
+      }).catch(() => {})
+      return postListCache.data
+    }
+    const data = await request<PostState[]>('/posts')
+    postListCache = { data, timestamp: Date.now() }
+    return data
+  },
   post: (slug: string) => request<PostDraft>(`/posts/${encodeURIComponent(slug)}`),
-  saveDraft: (draft: PostDraft) => request<{ saved: boolean }>(`/posts/${encodeURIComponent(draft.slug)}/draft`, { method: 'PUT', body: JSON.stringify(draft) }),
-  publishBlog: (draft: PostDraft, confirmOverwrite = false, signal?: AbortSignal) => request<PublishResult>(`/posts/${encodeURIComponent(draft.slug)}/publish/blog`, { method: 'POST', body: JSON.stringify({ slug: draft.slug, draft, confirmOverwrite }) }, signal),
+  saveDraft: async (draft: PostDraft) => {
+    const result = await request<{ saved: boolean }>(`/posts/${encodeURIComponent(draft.slug)}/draft`, { method: 'PUT', body: JSON.stringify(draft) })
+    invalidatePostCache()
+    return result
+  },
+  publishBlog: async (draft: PostDraft, confirmOverwrite = false, signal?: AbortSignal) => {
+    const result = await request<PublishResult>(`/posts/${encodeURIComponent(draft.slug)}/publish/blog`, { method: 'POST', body: JSON.stringify({ slug: draft.slug, draft, confirmOverwrite }) }, signal)
+    invalidatePostCache()
+    return result
+  },
   preview: (draft: PostDraft, signal?: AbortSignal) => request<PreviewResult>(`/posts/${encodeURIComponent(draft.slug)}/preview`, { method: 'POST', body: JSON.stringify(draft) }, signal),
-  rollback: (slug: string) => request<PublishResult>(`/posts/${encodeURIComponent(slug)}/rollback`, { method: 'POST' }),
+  rollback: async (slug: string) => {
+    const result = await request<PublishResult>(`/posts/${encodeURIComponent(slug)}/rollback`, { method: 'POST' })
+    invalidatePostCache()
+    return result
+  },
   uploadAsset: (slug: string, file: File) => {
     const form = new FormData()
     form.append('file', file)
@@ -169,13 +201,29 @@ export const api = {
   },
   config: () => request<Config>('/config'),
   saveConfig: (config: Config) => request<Config>('/config', { method: 'PUT', body: JSON.stringify(config) }),
-  deletePost: (slug: string) => request<{ trashId: string }>(`/posts/${encodeURIComponent(slug)}`, { method: 'DELETE' }),
+  deletePost: async (slug: string) => {
+    const result = await request<{ trashId: string }>(`/posts/${encodeURIComponent(slug)}`, { method: 'DELETE' })
+    invalidatePostCache()
+    return result
+  },
   postStats: (slug: string) => request<PostStats>(`/posts/${encodeURIComponent(slug)}/stats`),
   trash: () => request<TrashItem[]>('/trash'),
-  restoreTrash: (id: string) => request<{ restored: boolean }>(`/trash/${encodeURIComponent(id)}/restore`, { method: 'POST' }),
+  restoreTrash: async (id: string) => {
+    const result = await request<{ restored: boolean }>(`/trash/${encodeURIComponent(id)}/restore`, { method: 'POST' })
+    invalidatePostCache()
+    return result
+  },
   purgeTrash: (id: string) => request<{ purged: boolean }>(`/trash/${encodeURIComponent(id)}`, { method: 'DELETE' }),
-  bulkTrash: (slugs: string[]) => request<Array<{ slug: string; success: boolean; error?: string }>>('/posts/bulk/trash', { method: 'POST', body: JSON.stringify({ slugs }) }),
-  bulkPublish: (slugs: string[]) => request<Array<{ slug: string; status: string; error?: string }>>('/posts/bulk/publish', { method: 'POST', body: JSON.stringify({ slugs }) }),
+  bulkTrash: async (slugs: string[]) => {
+    const result = await request<Array<{ slug: string; success: boolean; error?: string }>>('/posts/bulk/trash', { method: 'POST', body: JSON.stringify({ slugs }) })
+    invalidatePostCache()
+    return result
+  },
+  bulkPublish: async (slugs: string[]) => {
+    const result = await request<Array<{ slug: string; status: string; error?: string }>>('/posts/bulk/publish', { method: 'POST', body: JSON.stringify({ slugs }) })
+    invalidatePostCache()
+    return result
+  },
   renameTag: (oldName: string, newName: string) => request<{ updated: number }>('/tags/rename', { method: 'POST', body: JSON.stringify({ oldName, newName }) }),
   deleteTag: (name: string) => request<{ updated: number }>('/tags/delete', { method: 'POST', body: JSON.stringify({ name }) }),
   exportAll: async () => {
@@ -193,10 +241,12 @@ export const api = {
     document.body.removeChild(a)
     URL.revokeObjectURL(url)
   },
-  importZip: (file: File) => {
+  importZip: async (file: File) => {
     const form = new FormData()
     form.append('file', file)
-    return request<{ imported: number }>('/posts/import', { method: 'POST', body: form })
+    const result = await request<{ imported: number }>('/posts/import', { method: 'POST', body: form })
+    invalidatePostCache()
+    return result
   },
   metrics: async (): Promise<string> => {
     const headers = new Headers()
