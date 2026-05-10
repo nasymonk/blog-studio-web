@@ -330,7 +330,7 @@ onMounted(loadPosts)
           }"
         >
           <div
-            class="post-card group relative flex items-stretch rounded cursor-pointer transition-all duration-200 hover:-translate-y-px hover:shadow-sm bg-card border border-border/60 focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-1 h-full"
+            class="post-card card-hover group relative flex items-stretch rounded cursor-pointer bg-card border border-border/60 focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-1 h-full"
             tabindex="0"
             role="button"
             :aria-label="filtered[virtualRow.index]?.title"

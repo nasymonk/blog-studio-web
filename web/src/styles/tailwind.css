@@ -342,3 +342,76 @@
   font-size: 0.85em;
   font-family: var(--font-mono);
 }
+
+/* ============================================
+   Micro-interactions
+   ============================================ */
+@layer utilities {
+
+  /* Button press — scale down on active */
+  .btn-press {
+    transition: transform var(--duration-fast) var(--ease-spring), box-shadow var(--duration-normal);
+  }
+  .btn-press:active {
+    transform: scale(0.97);
+  }
+
+  /* Card hover — lift and shadow */
+  .card-hover {
+    transition: transform var(--duration-normal), box-shadow var(--duration-normal);
+  }
+  .card-hover:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+  }
+
+  /* Focus ring — smooth accent ring on focus-visible */
+  .focus-ring {
+    transition: box-shadow var(--duration-fast);
+  }
+  .focus-ring:focus-visible {
+    outline: 2px solid var(--color-ring);
+    outline-offset: 2px;
+  }
+
+  /* Link underline slide in from left */
+  .link-slide {
+    position: relative;
+    text-decoration: none;
+  }
+  .link-slide::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    width: 0;
+    height: 1px;
+    background: currentColor;
+    transition: width var(--duration-normal) var(--ease-smooth);
+  }
+  .link-slide:hover::after {
+    width: 100%;
+  }
+
+  /* Toggle spring animation */
+  .toggle-spring {
+    transition: background-color var(--duration-slow) var(--ease-spring);
+  }
+
+  /* Input focus — border color + ring */
+  .input-focus {
+    transition: border-color var(--duration-normal), box-shadow var(--duration-normal);
+  }
+  .input-focus:focus {
+    border-color: var(--color-ring);
+    box-shadow: 0 0 0 3px oklch(from var(--ring) l c h / 0.15);
+  }
+
+  /* List item hover */
+  .list-hover {
+    transition: background-color var(--duration-fast);
+  }
+  .list-hover:hover {
+    background-color: var(--color-muted);
+  }
+}
