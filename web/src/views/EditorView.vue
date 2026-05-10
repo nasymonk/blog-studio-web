@@ -4,7 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import {
   SaveIcon, SendIcon, EyeIcon, Loader2Icon, AlertCircleIcon,
   RotateCcwIcon, ChevronDownIcon, ChevronUpIcon, SettingsIcon,
-  HistoryIcon,
+  HistoryIcon, MaximizeIcon,
 } from 'lucide-vue-next'
 import { api } from '@/services/api'
 import type { PostDraft, PostStats } from '@/services/api'
@@ -60,6 +60,23 @@ const keybindingHelpOpen = ref(false)
 const postStats = ref<PostStats | null>(null)
 const galleryOpen = ref(false)
 const flashSave = ref(false)
+const focusMode = ref(false)
+function toggleFocusMode() { focusMode.value = !focusMode.value }
+
+// Global Escape handler for focus mode (CodeMirror may intercept keydown)
+function onGlobalEscape(e: KeyboardEvent) {
+  if (e.key === 'Escape' && focusMode.value) {
+    e.preventDefault()
+    focusMode.value = false
+  }
+}
+watch(focusMode, (active) => {
+  if (active) {
+    document.addEventListener('keydown', onGlobalEscape)
+  } else {
+    document.removeEventListener('keydown', onGlobalEscape)
+  }
+})
 
 const { settings: editorSettings, applyPreset } = useEditorSettings()
 const { versions, isOpen: historyOpen, saveVersion, loadHistory: loadVersionHistory, toggle: toggleHistory } = useVersionHistory()
@@ -233,6 +250,11 @@ function onScheduledAtInput(e: Event) {
 }
 
 function onRootKeydown(e: KeyboardEvent) {
+  if (e.key === 'Escape' && focusMode.value) {
+    e.preventDefault()
+    focusMode.value = false
+    return
+  }
   if (e.key === '?' && !e.ctrlKey && !e.metaKey && !(e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement)) {
     e.preventDefault()
     keybindingHelpOpen.value = true
@@ -247,7 +269,7 @@ function restoreVersion(restoreBody: string) {
 </script>
 
 <template>
-  <div class="flex flex-col h-full max-w-5xl" @keydown="onRootKeydown">
+  <div class="flex flex-col h-full max-w-5xl" :class="{ 'is-focus-mode': focusMode }" @keydown="onRootKeydown">
     <!-- Loading -->
     <div v-if="loading" class="h-full">
       <SkeletonLines :lines="12" />
@@ -461,6 +483,10 @@ function restoreVersion(restoreBody: string) {
 
         <Separator orientation="vertical" class="h-5 mx-1" />
 
+        <Button variant="ghost" size="sm" class="h-7 w-7 p-0 text-muted-foreground hover:text-foreground" title="专注模式" @click="toggleFocusMode">
+          <MaximizeIcon class="h-3.5 w-3.5" />
+        </Button>
+
         <Button variant="ghost" size="sm" class="h-7 w-7 p-0 text-muted-foreground hover:text-foreground" :aria-label="'版本历史'" :title="'版本历史'" @click="toggleHistory">
           <HistoryIcon class="h-3.5 w-3.5" />
         </Button>
@@ -491,6 +517,14 @@ function restoreVersion(restoreBody: string) {
         @replace="findReplace.replaceMatch()"
         @replace-all="findReplace.replaceAllMatches()"
       />
+
+      <!-- Focus mode hint bar -->
+      <div v-if="focusMode" class="focus-hint-bar flex items-center justify-between px-4 py-2 shrink-0">
+        <span class="text-xs text-muted-foreground">专注模式</span>
+        <button class="text-xs text-muted-foreground hover:text-foreground transition-colors" @click="toggleFocusMode">
+          按 Esc 退出
+        </button>
+      </div>
 
       <!-- Editor body -->
       <div class="flex flex-1 min-h-0 overflow-hidden rounded border border-border/60">
@@ -582,6 +616,7 @@ function restoreVersion(restoreBody: string) {
       :on-insert="insertText"
       @uploaded="loadPost"
     />
+
   </div>
 </template>
 
@@ -592,5 +627,33 @@ function restoreVersion(restoreBody: string) {
 @keyframes save-flash {
   0% { background-color: oklch(from var(--ok) l c h / 0.2); }
   100% { background-color: transparent; }
+}
+
+/* Focus mode */
+.is-focus-mode {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 50 !important;
+  max-width: none !important;
+  background: var(--color-background);
+  padding: 0 !important;
+}
+
+.is-focus-mode > *:not(.flex-1):not(.focus-hint-bar) {
+  display: none !important;
+}
+
+.is-focus-mode > .flex-1 {
+  border: none !important;
+  border-radius: 0 !important;
+}
+
+.is-focus-mode .cm-editor {
+  max-width: 700px;
+  margin: 0 auto;
+}
+
+.is-focus-mode .cm-editor .cm-scroller {
+  padding: 2rem 1rem;
 }
 </style>
