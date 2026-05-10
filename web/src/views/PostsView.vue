@@ -16,6 +16,7 @@ import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Separator } from '@/components/ui/separator'
+import EmptyState from '@/components/EmptyState.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -301,14 +302,13 @@ onMounted(loadPosts)
     </div>
 
     <!-- Empty -->
-    <div v-else-if="filtered.length === 0" class="text-center py-20 text-muted-foreground space-y-3">
-      <FileTextIcon class="h-10 w-10 mx-auto opacity-30" />
-      <p class="font-serif font-medium">{{ searchQuery || statusFilter !== 'all' || selectedTags.length ? t.noResults : t.noPosts }}</p>
-      <p v-if="!searchQuery && statusFilter === 'all' && !selectedTags.length" class="text-sm">{{ t.createFirstPost }}</p>
-      <Button v-if="!searchQuery && statusFilter === 'all' && !selectedTags.length" class="rounded-full px-5" @click="newPost">
-        <PlusIcon class="h-3.5 w-3.5 mr-1" />{{ t.newPost }}
-      </Button>
-    </div>
+    <EmptyState
+      v-else-if="filtered.length === 0"
+      :title="searchQuery || statusFilter !== 'all' || selectedTags.length ? t.noSearchResults : t.noPosts"
+      :description="searchQuery || statusFilter !== 'all' || selectedTags.length ? t.noSearchResultsDesc : t.noPostsDesc"
+      :action-label="searchQuery || statusFilter !== 'all' || selectedTags.length ? undefined : t.newPost"
+      @action="newPost"
+    />
 
     <!-- Post list (virtual scrolling) -->
     <div

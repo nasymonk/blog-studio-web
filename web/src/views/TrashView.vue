@@ -8,6 +8,7 @@ import { useNotify } from '@/composables/useNotify'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import EmptyState from '@/components/EmptyState.vue'
 
 const { t } = useI18n()
 const notify = useNotify()
@@ -70,10 +71,11 @@ onMounted(load)
       <Skeleton v-for="i in 5" :key="i" class="h-[44px] animate-fade-up" />
     </div>
 
-    <div v-else-if="items.length === 0" class="text-center py-20 text-muted-foreground animate-fade-up">
-      <Trash2Icon class="h-8 w-8 mx-auto opacity-20 mb-3" />
-      <p class="font-serif">{{ t.trashEmpty }}</p>
-    </div>
+    <EmptyState
+      v-else-if="items.length === 0"
+      :title="t.trashEmpty"
+      :description="t.trashEmptyDesc"
+    />
 
     <div v-else class="rounded border border-border/60 overflow-hidden">
       <Table>

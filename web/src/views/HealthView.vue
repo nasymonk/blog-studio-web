@@ -7,6 +7,7 @@ import { useNotify } from '@/composables/useNotify'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
+import EmptyState from '@/components/EmptyState.vue'
 
 const { t } = useI18n()
 const notify = useNotify()
@@ -155,13 +156,13 @@ onMounted(loadAll)
       </div>
     </div>
 
-    <div v-else-if="!health" class="text-center py-16 text-muted-foreground animate-fade-up">
-      <RefreshCwIcon class="h-8 w-8 mx-auto opacity-20 mb-3" />
-      <p class="font-serif">{{ t.noHealthData }}</p>
-      <Button variant="outline" class="rounded-full px-5 mt-3" @click="load">
-        <RefreshCwIcon class="h-3.5 w-3.5 mr-1.5" />{{ t.refresh }}
-      </Button>
-    </div>
+    <EmptyState
+      v-else-if="!health"
+      :title="t.noHealthData"
+      :description="t.healthLoadFailed"
+      :action-label="t.refresh"
+      @action="load"
+    />
 
     <div v-else class="space-y-2 stagger">
       <div
