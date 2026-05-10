@@ -286,7 +286,7 @@ function restoreVersion(restoreBody: string) {
       <!-- Title -->
       <input
         v-model="draft.frontMatter.title"
-        class="w-full bg-transparent border-0 outline-none font-serif text-2xl font-semibold placeholder:text-muted-foreground/40 py-3 px-0 focus:ring-0"
+        class="w-full bg-transparent border-0 outline-none text-2xl font-semibold placeholder:text-muted-foreground/40 py-3 px-0 focus:ring-0"
         :placeholder="t.title"
         @input="store.editor.dirty = true"
       />
@@ -360,7 +360,7 @@ function restoreVersion(restoreBody: string) {
       </div>
 
       <!-- Toolbar -->
-      <div class="flex items-center gap-1 py-2">
+      <div class="flex items-center gap-1 py-2 border-b border-border/40">
         <EditorToolbar
           :split-mode="splitMode"
           @bold="execBold"
@@ -528,7 +528,7 @@ function restoreVersion(restoreBody: string) {
       </div>
 
       <!-- Editor body -->
-      <div class="flex flex-1 min-h-0 overflow-hidden rounded border border-border/60">
+      <div class="flex flex-1 min-h-0 overflow-hidden rounded-lg">
         <SplitView
           :mode="splitMode"
           :split-ratio="splitRatio"
@@ -560,7 +560,7 @@ function restoreVersion(restoreBody: string) {
       />
 
       <!-- Status bar -->
-      <div class="flex items-center gap-2 py-2 text-[11px] text-muted-foreground/70 flex-wrap">
+      <div class="flex items-center gap-2 py-1.5 text-[11px] text-muted-foreground/70 flex-wrap border-t border-border/30">
         <span class="hidden sm:inline">{{ wordCount }} {{ t.wordCount }}</span>
         <span class="hidden sm:inline text-border/40">·</span>
         <span class="hidden sm:inline">{{ readingTime }}</span>
