@@ -323,6 +323,10 @@ func (s *Server) postRouter(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
+	if len(parts) == 4 && parts[1] == "assets" && parts[3] == "thumbnail" && r.Method == http.MethodGet {
+		s.serveThumbnail(w, r, slug, parts[2])
+		return
+	}
 	if len(parts) == 3 && parts[1] == "publish" {
 		switch parts[2] {
 		case "blog":
@@ -802,7 +806,34 @@ func (s *Server) uploadAsset(w http.ResponseWriter, r *http.Request, slug string
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
+	go generateThumbnail(target) // async, don't block the response
 	writeOK(w, content.Asset{Name: name, Size: int64(len(data))})
+}
+
+func (s *Server) serveThumbnail(w http.ResponseWriter, r *http.Request, slug, name string) {
+	postDir, appErr := storage.PostDir(s.cfg.Site.PostRoot, slug)
+	if appErr != nil {
+		writeError(w, http.StatusBadRequest, appErr)
+		return
+	}
+	ext := strings.ToLower(filepath.Ext(name))
+	thumbName := strings.TrimSuffix(name, ext) + "_thumb" + ext
+	thumbPath, safeErr := storage.SafeJoin(postDir, thumbName)
+	if safeErr != nil {
+		writeError(w, http.StatusBadRequest, safeErr)
+		return
+	}
+	// Serve thumbnail if it exists, otherwise fall back to the original.
+	servePath := thumbPath
+	if _, err := os.Stat(thumbPath); os.IsNotExist(err) {
+		origPath, safeErr2 := storage.SafeJoin(postDir, name)
+		if safeErr2 != nil {
+			writeError(w, http.StatusBadRequest, safeErr2)
+			return
+		}
+		servePath = origPath
+	}
+	http.ServeFile(w, r, servePath)
 }
 
 func (s *Server) publishBlog(w http.ResponseWriter, r *http.Request, slug string) {
