@@ -7,7 +7,8 @@ import { useI18n } from '@/i18n'
 import { useNotify } from '@/composables/useNotify'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import DataTable from '@/components/DataTable.vue'
+import type { Column } from '@/components/DataTable.vue'
 import EmptyState from '@/components/EmptyState.vue'
 
 const { t } = useI18n()
@@ -15,11 +16,26 @@ const notify = useNotify()
 const items = ref<TrashItem[]>([])
 const loading = ref(true)
 
+const trashColumns: Column[] = [
+  { key: 'slug', label: t.value.post, sortable: true },
+  { key: 'deletedAt', label: t.value.deletedAt, sortable: true },
+  { key: 'size', label: t.value.size, sortable: true },
+  { key: 'actions', label: '', width: '120px' },
+]
+
 async function load() {
   loading.value = true
   try { items.value = await api.trash() }
   catch (e: any) { notify.error(e) }
   finally { loading.value = false }
+}
+
+async function restoreItem(item: Record<string, any>) {
+  return restore(item as TrashItem)
+}
+
+async function purgeItem(item: Record<string, any>) {
+  return purge(item as TrashItem)
 }
 
 async function restore(item: TrashItem) {
@@ -77,34 +93,31 @@ onMounted(load)
       :description="t.trashEmptyDesc"
     />
 
-    <div v-else class="rounded border border-border/60 overflow-hidden">
-      <Table>
-        <TableHeader>
-          <TableRow class="hover:bg-transparent">
-            <TableHead class="text-[10px] uppercase tracking-wider text-muted-foreground/60">{{ t.post }}</TableHead>
-            <TableHead class="text-[10px] uppercase tracking-wider text-muted-foreground/60">{{ t.deletedAt }}</TableHead>
-            <TableHead class="text-[10px] uppercase tracking-wider text-muted-foreground/60">{{ t.size }}</TableHead>
-            <TableHead class="text-right"></TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          <TableRow v-for="(item, idx) in items" :key="item.id" class="group hover:bg-muted/30" :class="idx % 2 === 1 ? 'bg-muted/15' : ''">
-            <TableCell><span class="font-mono text-sm">{{ item.slug }}</span></TableCell>
-            <TableCell :title="item.deletedAt" class="text-sm text-muted-foreground">{{ relDate(item.deletedAt) }}</TableCell>
-            <TableCell class="text-sm text-muted-foreground">{{ fmtSize(item.size) }}</TableCell>
-            <TableCell class="text-right">
-              <div class="flex gap-1 justify-end opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity">
-                <Button variant="ghost" size="sm" class="text-xs h-7 text-muted-foreground" @click="restore(item)">
-                  <UndoIcon class="h-3 w-3 mr-1" /> {{ t.restore }}
-                </Button>
-                <Button variant="ghost" size="sm" class="text-xs h-7 text-destructive hover:bg-destructive/10" @click="purge(item)">
-                  <Trash2Icon class="h-3 w-3 mr-1" /> {{ t.purge }}
-                </Button>
-              </div>
-            </TableCell>
-          </TableRow>
-        </TableBody>
-      </Table>
-    </div>
+    <DataTable
+      v-else
+      :columns="trashColumns"
+      :data="items"
+      :empty-message="t.trashEmpty"
+    >
+      <template #slug="{ value }">
+        <span class="font-mono text-sm">{{ value }}</span>
+      </template>
+      <template #deletedAt="{ row, value }">
+        <span class="text-sm text-muted-foreground" :title="value">{{ relDate(value) }}</span>
+      </template>
+      <template #size="{ value }">
+        <span class="text-sm text-muted-foreground">{{ fmtSize(value) }}</span>
+      </template>
+      <template #actions="{ row }">
+        <div class="flex gap-1 justify-end" @click.stop>
+          <Button variant="ghost" size="sm" class="text-xs h-7 text-muted-foreground" @click="restoreItem(row)">
+            <UndoIcon class="h-3 w-3 mr-1" /> {{ t.restore }}
+          </Button>
+          <Button variant="ghost" size="sm" class="text-xs h-7 text-destructive hover:bg-destructive/10" @click="purgeItem(row)">
+            <Trash2Icon class="h-3 w-3 mr-1" /> {{ t.purge }}
+          </Button>
+        </div>
+      </template>
+    </DataTable>
   </div>
 </template>

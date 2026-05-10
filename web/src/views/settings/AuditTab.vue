@@ -8,7 +8,8 @@ import { useNotify } from '@/composables/useNotify'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import DataTable from '@/components/DataTable.vue'
+import type { Column } from '@/components/DataTable.vue'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { Skeleton } from '@/components/ui/skeleton'
 
@@ -21,6 +22,18 @@ const selected = ref<AuditEntry | null>(null)
 const searchQuery = ref('')
 const operationFilter = ref('')
 const operations = ['', 'publish', 'save', 'delete', 'rollback']
+
+const auditColumns: Column[] = [
+  { key: 'timestamp', label: t.value.time, sortable: true },
+  { key: 'slug', label: 'Slug', sortable: true },
+  { key: 'operation', label: t.value.op, sortable: true },
+  { key: 'result', label: t.value.result },
+  { key: 'build', label: 'Build' },
+]
+
+function handleRowClick(row: Record<string, any>) {
+  selected.value = row as AuditEntry
+}
 
 function opLabel(op: string) {
   if (!op) return t.value.opAll
@@ -97,39 +110,31 @@ onMounted(load)
     <Skeleton v-if="loading" class="h-[300px]" />
     <div v-else-if="entries.length === 0" class="text-center py-16 text-muted-foreground text-sm">{{ t.noAuditRecords }}</div>
 
-    <div v-else class="rounded border border-border/60 overflow-hidden">
-      <Table>
-        <TableHeader>
-          <TableRow class="hover:bg-transparent">
-            <TableHead class="text-[10px] uppercase tracking-wider text-muted-foreground/60">{{ t.time }}</TableHead>
-            <TableHead class="text-[10px] uppercase tracking-wider text-muted-foreground/60">Slug</TableHead>
-            <TableHead class="text-[10px] uppercase tracking-wider text-muted-foreground/60">{{ t.op }}</TableHead>
-            <TableHead class="text-[10px] uppercase tracking-wider text-muted-foreground/60">{{ t.result }}</TableHead>
-            <TableHead class="text-[10px] uppercase tracking-wider text-muted-foreground/60">Build</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          <TableRow
-            v-for="e in entries"
-            :key="e.auditId"
-            class="cursor-pointer hover:bg-muted/30"
-            @click="selected = e"
-          >
-            <TableCell class="font-mono text-[11px] text-muted-foreground">{{ fmtTime(e.timestamp) }}</TableCell>
-            <TableCell class="max-w-[160px] truncate font-mono text-sm">{{ e.slug }}</TableCell>
-            <TableCell class="text-sm">{{ e.operation }}</TableCell>
-            <TableCell>
-              <Badge :variant="e.result === 'success' ? 'default' : 'destructive'" class="text-[10px]">{{ e.result }}</Badge>
-            </TableCell>
-            <TableCell>
-              <Badge v-if="e.buildResult" :variant="e.buildResult.success ? 'default' : 'destructive'" class="text-[10px]">
-                {{ e.buildResult.exitCode }}
-              </Badge>
-            </TableCell>
-          </TableRow>
-        </TableBody>
-      </Table>
-    </div>
+    <DataTable
+      v-else
+      :columns="auditColumns"
+      :data="entries"
+      :empty-message="t.noAuditRecords"
+      @row-click="handleRowClick"
+    >
+      <template #timestamp="{ value }">
+        <span class="font-mono text-[11px] text-muted-foreground">{{ fmtTime(value) }}</span>
+      </template>
+      <template #slug="{ value }">
+        <span class="max-w-[160px] truncate font-mono text-sm">{{ value }}</span>
+      </template>
+      <template #operation="{ value }">
+        <span class="text-sm">{{ value }}</span>
+      </template>
+      <template #result="{ value }">
+        <Badge :variant="value === 'success' ? 'default' : 'destructive'" class="text-[10px]">{{ value }}</Badge>
+      </template>
+      <template #build="{ row }">
+        <Badge v-if="row.buildResult" :variant="row.buildResult.success ? 'default' : 'destructive'" class="text-[10px]">
+          {{ row.buildResult.exitCode }}
+        </Badge>
+      </template>
+    </DataTable>
 
     <Sheet :open="!!selected" @update:open="(v: boolean) => { if (!v) selected = null }">
       <SheetContent>
