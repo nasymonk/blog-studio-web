@@ -1,0 +1,76 @@
+/* ============================================
+   Typography Scale & Base Styles
+   ============================================ */
+
+@layer base {
+
+  /* ---- Heading Hierarchy ---- */
+
+  h1 {
+    font-size: 2rem;       /* 32px */
+    font-weight: 700;
+    line-height: var(--leading-tight);
+    letter-spacing: var(--tracking-tight);
+    font-family: var(--font-serif);
+  }
+
+  h2 {
+    font-size: 1.5rem;     /* 24px */
+    font-weight: 600;
+    line-height: var(--leading-tight);
+    letter-spacing: var(--tracking-tight);
+    font-family: var(--font-serif);
+  }
+
+  h3 {
+    font-size: 1.25rem;    /* 20px */
+    font-weight: 600;
+    line-height: var(--leading-tight);
+    letter-spacing: var(--tracking-normal);
+    font-family: var(--font-serif);
+  }
+
+  h4 {
+    font-size: 1rem;       /* 16px */
+    font-weight: 600;
+    line-height: var(--leading-normal);
+    letter-spacing: var(--tracking-normal);
+    font-family: var(--font-serif);
+  }
+
+  /* ---- Body ---- */
+
+  body {
+    font-family: var(--font-sans);
+    font-size: var(--text-base);
+    line-height: var(--leading-relaxed);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* ---- Code ---- */
+
+  code {
+    font-family: var(--font-mono);
+    font-size: 0.9em;
+  }
+
+  pre code {
+    font-size: inherit;
+  }
+
+  /* ---- CJK Text ---- */
+
+  .cjk-text {
+    word-break: break-word;
+    overflow-wrap: break-word;
+  }
+
+  /* ---- Caption ---- */
+
+  .text-caption {
+    font-size: var(--text-xs);
+    color: var(--muted-foreground);
+    font-weight: 500;
+  }
+}
