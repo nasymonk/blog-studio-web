@@ -2,7 +2,17 @@
 import { ref, computed, watch, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { useEventListener } from '@vueuse/core'
-import { SearchIcon } from 'lucide-vue-next'
+import {
+  SearchIcon,
+  FilePlusIcon,
+  PaletteIcon,
+  SettingsIcon,
+  HeartPulseIcon,
+  LanguagesIcon,
+  ShieldIcon,
+  LogOutIcon,
+  FileTextIcon,
+} from 'lucide-vue-next'
 import { useStore } from '@/store'
 import { useI18n } from '@/i18n'
 import { useTheme } from '@/composables/useTheme'
@@ -21,38 +31,103 @@ const query = ref('')
 const cursor = ref(0)
 const inputRef = ref<HTMLInputElement | null>(null)
 
-interface Cmd { label: string; description?: string; shortcut?: string; action: () => void }
+interface Cmd {
+  label: string
+  description?: string
+  shortcut?: string
+  icon: typeof SearchIcon
+  action: () => void
+}
 
-const fixedCmds: Cmd[] = [
-  { label: '新建文章', shortcut: '', action: () => { close(); const s = prompt('Slug:'); if (s) router.push(`/posts/${encodeURIComponent(s)}`) } },
-  { label: '切换主题', shortcut: '', action: () => { close(); toggleTheme() } },
-  { label: '切换语言', shortcut: '', action: () => { close(); setLang(lang.value === 'zh' ? 'en' : 'zh') } },
-  { label: '跳到设置', shortcut: '', action: () => go('/settings') },
-  { label: '跳到审计', shortcut: '', action: () => go('/settings/audit') },
-  { label: '跳到健康检查', shortcut: '', action: () => go('/health') },
-  { label: '退出登录', shortcut: '', action: () => { close(); store.session.authenticated = false; router.push('/login') } },
-]
+/** Simple subsequence fuzzy match — returns true if query chars appear in order within text */
+function fuzzyMatch(query: string, text: string): boolean {
+  if (!query) return true
+  const q = query.toLowerCase()
+  const t = text.toLowerCase()
+  let qi = 0
+  for (let ti = 0; ti < t.length && qi < q.length; ti++) {
+    if (t[ti] === q[qi]) qi++
+  }
+  return qi === q.length
+}
 
-const postCmds = computed<Cmd[]>(() =>
-  store.posts
-    .filter(p => {
-      const q = query.value.trim().toLowerCase()
-      if (!q) return true
-      return p.title.toLowerCase().includes(q) || p.slug.includes(q)
-    })
-    .slice(0, 8)
-    .map(p => ({ label: p.title, description: p.slug, action: () => go(`/posts/${p.slug}`) }))
-)
+const quickActions = computed<Cmd[]>(() => [
+  {
+    label: t.value.newPost,
+    icon: FilePlusIcon,
+    action: () => {
+      close()
+      const s = prompt(t.value.newPostSlug)
+      if (s) router.push(`/posts/${encodeURIComponent(s)}`)
+    },
+  },
+  {
+    label: t.value.theme,
+    icon: PaletteIcon,
+    action: () => {
+      close()
+      toggleTheme()
+    },
+  },
+  {
+    label: t.value.switchLanguage,
+    icon: LanguagesIcon,
+    action: () => {
+      close()
+      setLang(lang.value === 'zh' ? 'en' : 'zh')
+    },
+  },
+  {
+    label: t.value.settings,
+    icon: SettingsIcon,
+    action: () => go('/settings'),
+  },
+  {
+    label: t.value.auditLog,
+    icon: ShieldIcon,
+    action: () => go('/settings/audit'),
+  },
+  {
+    label: t.value.health,
+    icon: HeartPulseIcon,
+    action: () => go('/health'),
+  },
+  {
+    label: t.value.logout,
+    icon: LogOutIcon,
+    action: () => {
+      close()
+      store.session.authenticated = false
+      router.push('/login')
+    },
+  },
+])
 
-const filteredCmds = computed(() => {
-  const q = query.value.trim().toLowerCase()
-  return q ? fixedCmds.filter(c => c.label.toLowerCase().includes(q)) : fixedCmds
+const filteredActions = computed(() => {
+  const q = query.value.trim()
+  if (!q) return quickActions.value
+  return quickActions.value.filter(c => fuzzyMatch(q, c.label))
 })
 
-const items = computed<Cmd[]>(() => [...filteredCmds.value, ...postCmds.value])
+const recentPosts = computed<Cmd[]>(() => {
+  const q = query.value.trim()
+  const sorted = [...store.posts].sort((a, b) => b.date.localeCompare(a.date))
+  const filtered = q
+    ? sorted.filter(p => fuzzyMatch(q, p.title) || fuzzyMatch(q, p.slug))
+    : sorted
+  return filtered.slice(0, 8).map(p => ({
+    label: p.title,
+    description: p.slug,
+    icon: FileTextIcon,
+    action: () => go(`/posts/${p.slug}`),
+  }))
+})
 
-const hasCommands = computed(() => filteredCmds.value.length > 0)
-const hasPosts = computed(() => postCmds.value.length > 0)
+const items = computed<Cmd[]>(() => [...filteredActions.value, ...recentPosts.value])
+
+const hasActions = computed(() => filteredActions.value.length > 0)
+const hasPosts = computed(() => recentPosts.value.length > 0)
+const actionCount = computed(() => filteredActions.value.length)
 
 watch(() => props.open, (v) => {
   if (v) {
@@ -95,7 +170,7 @@ function onKeydown(e: KeyboardEvent) {
           ref="inputRef"
           v-model="query"
           class="flex-1 bg-transparent outline-none text-sm font-serif placeholder:text-muted-foreground/40"
-          placeholder="搜索命令或文章…"
+          :placeholder="t.commandPalettePlaceholder"
           autocomplete="off"
         />
         <kbd class="hidden sm:inline-flex h-5 items-center gap-0.5 rounded border border-border bg-muted px-1.5 text-[10px] text-muted-foreground/60 font-mono">ESC</kbd>
@@ -103,12 +178,12 @@ function onKeydown(e: KeyboardEvent) {
 
       <ScrollArea class="max-h-[360px]">
         <div class="py-2">
-          <!-- Commands group -->
-          <template v-if="hasCommands">
-            <div class="px-4 py-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground/50">命令</div>
+          <!-- Quick Actions group -->
+          <template v-if="hasActions">
+            <div class="px-4 py-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground/50">{{ t.quickActions }}</div>
             <button
-              v-for="(item, i) in filteredCmds"
-              :key="'cmd-' + i"
+              v-for="(item, i) in filteredActions"
+              :key="'action-' + i"
               class="relative flex w-full items-center gap-3 px-4 py-2 text-sm cursor-pointer transition-colors"
               :class="cursor === i ? 'bg-accent/8' : 'hover:bg-muted/50'"
               role="option"
@@ -118,25 +193,27 @@ function onKeydown(e: KeyboardEvent) {
             >
               <!-- Active indicator -->
               <div v-if="cursor === i" class="absolute left-0 top-1.5 bottom-1.5 w-0.5 bg-accent rounded-full" />
+              <component :is="item.icon" class="h-4 w-4 text-muted-foreground/60 shrink-0" />
               <span class="flex-1 text-left font-sans">{{ item.label }}</span>
               <kbd v-if="item.shortcut" class="text-[10px] font-mono text-muted-foreground/40 bg-muted px-1.5 py-0.5 rounded border border-border/50">{{ item.shortcut }}</kbd>
             </button>
           </template>
 
-          <!-- Posts group -->
+          <!-- Recent Posts group -->
           <template v-if="hasPosts">
-            <div class="px-4 py-1.5 mt-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground/50">文章</div>
+            <div class="px-4 py-1.5 mt-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground/50">{{ t.recentPosts }}</div>
             <button
-              v-for="(item, j) in postCmds"
+              v-for="(item, j) in recentPosts"
               :key="'post-' + j"
               class="relative flex w-full items-center gap-3 px-4 py-2 text-sm cursor-pointer transition-colors"
-              :class="cursor === filteredCmds.length + j ? 'bg-accent/8' : 'hover:bg-muted/50'"
+              :class="cursor === actionCount + j ? 'bg-accent/8' : 'hover:bg-muted/50'"
               role="option"
-              :aria-selected="cursor === filteredCmds.length + j"
+              :aria-selected="cursor === actionCount + j"
               @click="select(item)"
-              @mouseenter="cursor = filteredCmds.length + j"
+              @mouseenter="cursor = actionCount + j"
             >
-              <div v-if="cursor === filteredCmds.length + j" class="absolute left-0 top-1.5 bottom-1.5 w-0.5 bg-accent rounded-full" />
+              <div v-if="cursor === actionCount + j" class="absolute left-0 top-1.5 bottom-1.5 w-0.5 bg-accent rounded-full" />
+              <component :is="item.icon" class="h-4 w-4 text-muted-foreground/60 shrink-0" />
               <span class="flex-1 text-left font-serif truncate">{{ item.label }}</span>
               <span v-if="item.description" class="text-[11px] text-muted-foreground/40 font-mono truncate max-w-[120px]">{{ item.description }}</span>
             </button>
@@ -145,7 +222,7 @@ function onKeydown(e: KeyboardEvent) {
           <!-- Empty -->
           <div v-if="items.length === 0" class="py-10 text-center space-y-2 animate-fade-in">
             <SearchIcon class="h-6 w-6 mx-auto text-muted-foreground/25" />
-            <p class="text-sm text-muted-foreground/50">无匹配结果</p>
+            <p class="text-sm text-muted-foreground/50">{{ t.noMatchResults }}</p>
           </div>
         </div>
       </ScrollArea>

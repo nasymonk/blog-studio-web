@@ -233,6 +233,16 @@ const dict = {
     codeThemeGithubLight: 'GitHub Light',
     codeThemeCatppuccin: 'Catppuccin',
     codeThemeSolarized: 'Solarized',
+
+    quickActions: '快速操作',
+    recentPosts: '最近文章',
+    commandPalettePlaceholder: '搜索命令或文章…',
+    noMatchResults: '无匹配结果',
+    switchLanguage: '切换语言',
+    goToAudit: '前往审计',
+    exitLogin: '退出登录',
+    commandLabel: '命令',
+    postsLabel: '文章',
   },
   en: {
     posts: 'Posts',
@@ -466,6 +476,16 @@ const dict = {
     codeThemeGithubLight: 'GitHub Light',
     codeThemeCatppuccin: 'Catppuccin',
     codeThemeSolarized: 'Solarized',
+
+    quickActions: 'Quick Actions',
+    recentPosts: 'Recent Posts',
+    commandPalettePlaceholder: 'Search commands or posts…',
+    noMatchResults: 'No matching results',
+    switchLanguage: 'Switch Language',
+    goToAudit: 'Go to Audit',
+    exitLogin: 'Logout',
+    commandLabel: 'Commands',
+    postsLabel: 'Posts',
   }
 } as const
 
