@@ -276,8 +276,8 @@ onMounted(loadPosts)
     <div v-if="allTags.length" class="flex gap-1.5 flex-wrap">
       <button
         v-for="tag in allTags" :key="tag"
-        class="font-deco text-[11px] px-2.5 py-0.5 rounded-full border transition-colors cursor-pointer"
-        :class="selectedTags.includes(tag) ? 'bg-accent text-accent-foreground border-accent' : 'border-border text-muted-foreground hover:border-accent/40'"
+        class="text-[10px] px-1.5 py-0.5 rounded-full bg-muted cursor-pointer transition-colors"
+        :class="selectedTags.includes(tag) ? 'bg-accent text-accent-foreground' : 'text-muted-foreground hover:bg-muted/60'"
         @click="toggleTag(tag)">
         # {{ tag }}
       </button>
@@ -333,7 +333,7 @@ onMounted(loadPosts)
           }"
         >
           <div
-            class="post-card card-hover group relative flex items-stretch rounded cursor-pointer bg-card border border-border/60 focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-1 h-full"
+            class="post-card card-hover group relative flex items-stretch rounded cursor-pointer bg-card border border-transparent hover:bg-muted/40 focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-1 h-full"
             tabindex="0"
             role="button"
             :aria-label="filtered[virtualRow.index]?.title"
@@ -354,16 +354,16 @@ onMounted(loadPosts)
             <!-- Status color bar -->
             <div class="w-[3px] shrink-0 rounded-l" :class="statusColor(filtered[virtualRow.index]!)" />
 
-            <div class="flex-1 flex items-center justify-between gap-3 px-4 py-3 min-w-0">
+            <div class="flex-1 flex items-center justify-between gap-3 py-3 px-4 min-w-0">
               <div class="min-w-0 space-y-1">
                 <div class="flex items-center gap-2">
-                  <span class="font-serif font-medium text-sm truncate">{{ filtered[virtualRow.index]!.title || filtered[virtualRow.index]!.slug }}</span>
+                  <span class="text-sm font-medium truncate">{{ filtered[virtualRow.index]!.title || filtered[virtualRow.index]!.slug }}</span>
                   <AlertTriangleIcon v-if="filtered[virtualRow.index]!.large" class="h-3 w-3 text-warn shrink-0" :title="t.large" />
                 </div>
                 <div class="flex items-center gap-2">
                   <span class="text-[11px] text-muted-foreground" :title="filtered[virtualRow.index]!.date">{{ relDate(filtered[virtualRow.index]!.date) }}</span>
                   <Badge :variant="statusBadge(filtered[virtualRow.index]!).variant" class="text-[10px] h-4 px-1.5">{{ statusBadge(filtered[virtualRow.index]!).label }}</Badge>
-                  <span v-for="tag in (filtered[virtualRow.index]!.tags || []).slice(0, 3)" :key="tag" class="font-deco text-[11px] text-muted-foreground/70"># {{ tag }}</span>
+                  <span v-for="tag in (filtered[virtualRow.index]!.tags || []).slice(0, 3)" :key="tag" class="text-[10px] px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground/70"># {{ tag }}</span>
                 </div>
               </div>
 
