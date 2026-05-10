@@ -45,10 +45,17 @@ const isLoginPage = computed(() => route.name === 'login')
 
 const paletteOpen = ref(false)
 const sidebarOpen = ref(false)
+const sidebarCollapsed = ref(localStorage.getItem('sidebar:collapsed') === 'true')
+watch(sidebarCollapsed, (val) => localStorage.setItem('sidebar:collapsed', String(val)))
+
 useEventListener('keydown', (e: KeyboardEvent) => {
   if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
     e.preventDefault()
     if (isAuthed.value) paletteOpen.value = true
+  }
+  if ((e.metaKey || e.ctrlKey) && e.key === '\\') {
+    e.preventDefault()
+    sidebarCollapsed.value = !sidebarCollapsed.value
   }
 })
 
@@ -212,11 +219,15 @@ onMounted(async () => {
       </div>
 
       <!-- Desktop sidebar -->
-      <aside class="hidden md:flex w-[240px] shrink-0 border-r border-border bg-sidebar flex-col" aria-label="主导航">
+      <aside
+        class="hidden md:flex shrink-0 border-r border-border bg-sidebar flex-col transition-all duration-200"
+        :class="sidebarCollapsed ? 'w-[56px]' : 'w-[240px]'"
+        aria-label="主导航"
+      >
         <!-- Brand -->
         <div class="flex items-center gap-3 px-5 py-5">
           <div class="font-display text-3xl text-accent leading-none select-none">博</div>
-          <div class="min-w-0">
+          <div v-if="!sidebarCollapsed" class="min-w-0">
             <div class="font-serif font-semibold text-sm truncate leading-tight">{{ store.config?.site.name || 'Blog Studio' }}</div>
             <div class="text-[10px] text-muted-foreground tracking-wider">{{ t.adminSubtitle }}</div>
           </div>
@@ -228,21 +239,24 @@ onMounted(async () => {
           <nav class="px-3 py-3 space-y-4" role="navigation" aria-label="主菜单">
             <!-- Content group -->
             <div>
-              <div class="px-2.5 mb-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground/60">{{ t.contentGroup }}</div>
+              <div v-if="!sidebarCollapsed" class="px-2.5 mb-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground/60">{{ t.contentGroup }}</div>
               <div class="space-y-0.5">
                 <Tooltip v-for="item in contentNav" :key="item.to">
                   <TooltipTrigger as-child>
                     <RouterLink
                       :to="item.to"
                       class="group relative flex items-center gap-2.5 rounded px-2.5 py-1.5 text-sm text-sidebar-foreground transition-all duration-200 hover:translate-x-0.5"
-                      :class="route.path === item.to || route.path.startsWith(item.to + '/') ? 'bg-sidebar-accent text-sidebar-accent-foreground font-medium' : 'hover:bg-sidebar-accent/50'"
+                      :class="[
+                        route.path === item.to || route.path.startsWith(item.to + '/') ? 'bg-sidebar-accent text-sidebar-accent-foreground font-medium' : 'hover:bg-sidebar-accent/50',
+                        sidebarCollapsed && 'justify-center px-0',
+                      ]"
                     >
                       <!-- Active indicator bar -->
                       <div v-if="route.path === item.to || route.path.startsWith(item.to + '/')"
                         class="absolute left-0 top-1 bottom-1 w-0.5 bg-accent rounded-full origin-top animate-fade-in" />
                       <component :is="item.icon" class="h-4 w-4 shrink-0 opacity-70" aria-hidden="true" />
-                      <span class="flex-1">{{ item.label() }}</span>
-                      <Badge v-if="item.count?.()" variant="secondary" class="h-5 min-w-[20px] justify-center px-1.5 text-[10px]">
+                      <span v-if="!sidebarCollapsed" class="flex-1">{{ item.label() }}</span>
+                      <Badge v-if="!sidebarCollapsed && item.count?.()" variant="secondary" class="h-5 min-w-[20px] justify-center px-1.5 text-[10px]">
                         {{ item.count() }}
                       </Badge>
                     </RouterLink>
@@ -254,19 +268,22 @@ onMounted(async () => {
 
             <!-- System group -->
             <div>
-              <div class="px-2.5 mb-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground/60">{{ t.systemGroup }}</div>
+              <div v-if="!sidebarCollapsed" class="px-2.5 mb-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground/60">{{ t.systemGroup }}</div>
               <div class="space-y-0.5">
                 <Tooltip v-for="item in systemNav" :key="item.to">
                   <TooltipTrigger as-child>
                     <RouterLink
                       :to="item.to"
                       class="group relative flex items-center gap-2.5 rounded px-2.5 py-1.5 text-sm text-sidebar-foreground transition-all duration-200 hover:translate-x-0.5"
-                      :class="route.path === item.to || route.path.startsWith(item.to + '/') ? 'bg-sidebar-accent text-sidebar-accent-foreground font-medium' : 'hover:bg-sidebar-accent/50'"
+                      :class="[
+                        route.path === item.to || route.path.startsWith(item.to + '/') ? 'bg-sidebar-accent text-sidebar-accent-foreground font-medium' : 'hover:bg-sidebar-accent/50',
+                        sidebarCollapsed && 'justify-center px-0',
+                      ]"
                     >
                       <div v-if="route.path === item.to || route.path.startsWith(item.to + '/')"
                         class="absolute left-0 top-1 bottom-1 w-0.5 bg-accent rounded-full origin-top animate-fade-in" />
                       <component :is="item.icon" class="h-4 w-4 shrink-0 opacity-70" aria-hidden="true" />
-                      <span class="flex-1">{{ item.label() }}</span>
+                      <span v-if="!sidebarCollapsed" class="flex-1">{{ item.label() }}</span>
                       <span v-if="item.dot?.()" class="h-2 w-2 rounded-full bg-destructive animate-pulse" role="status" aria-label="服务异常" />
                     </RouterLink>
                   </TooltipTrigger>
@@ -280,14 +297,24 @@ onMounted(async () => {
         <Separator class="mx-4 w-auto" />
 
         <div class="px-3 py-3 space-y-0.5">
-          <Button variant="ghost" class="w-full justify-start gap-2.5 h-8 text-sm px-2.5 text-muted-foreground" :aria-label="t.sync" :disabled="store.postsLoading" @click="syncPosts">
-            <RefreshCwIcon class="h-4 w-4" :class="{ 'animate-spin': store.postsLoading }" />
-            <span>{{ t.sync }}</span>
-          </Button>
-          <Button variant="ghost" class="w-full justify-start gap-2.5 h-8 text-sm px-2.5 text-muted-foreground" :aria-label="t.logout" @click="logout">
-            <LogOutIcon class="h-4 w-4" />
-            <span>{{ t.logout }}</span>
-          </Button>
+          <Tooltip>
+            <TooltipTrigger as-child>
+              <Button variant="ghost" class="w-full justify-start gap-2.5 h-8 text-sm px-2.5 text-muted-foreground" :class="sidebarCollapsed && 'justify-center px-0'" :aria-label="t.sync" :disabled="store.postsLoading" @click="syncPosts">
+                <RefreshCwIcon class="h-4 w-4" :class="{ 'animate-spin': store.postsLoading }" />
+                <span v-if="!sidebarCollapsed">{{ t.sync }}</span>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent v-if="sidebarCollapsed" side="right" :side-offset="8">{{ t.sync }}</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger as-child>
+              <Button variant="ghost" class="w-full justify-start gap-2.5 h-8 text-sm px-2.5 text-muted-foreground" :class="sidebarCollapsed && 'justify-center px-0'" :aria-label="t.logout" @click="logout">
+                <LogOutIcon class="h-4 w-4" />
+                <span v-if="!sidebarCollapsed">{{ t.logout }}</span>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent v-if="sidebarCollapsed" side="right" :side-offset="8">{{ t.logout }}</TooltipContent>
+          </Tooltip>
         </div>
       </aside>
 
