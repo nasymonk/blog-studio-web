@@ -49,10 +49,10 @@ func TestLoginLimiter_EvictOldest(t *testing.T) {
 
 func TestRealIP_XForwardedFor(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
-	req.Header.Set("X-Forwarded-For", "1.2.3.4, 10.0.0.1")
+	req.Header.Set("X-Forwarded-For", "10.0.0.1, 1.2.3.4")
 	got := RealIP(req)
 	if got != "10.0.0.1" {
-		t.Errorf("RealIP = %q want 10.0.0.1", got)
+		t.Errorf("RealIP = %q want 10.0.0.1 (first IP in X-Forwarded-For)", got)
 	}
 }
 
