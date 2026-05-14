@@ -207,6 +207,10 @@ func (s *Store) snapshot() {
 	if err := os.WriteFile(tmp, data, 0600); err != nil {
 		return
 	}
+	if f, err := os.Open(tmp); err == nil {
+		_ = f.Sync()
+		f.Close()
+	}
 	_ = os.Rename(tmp, s.persistPath)
 }
 

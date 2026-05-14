@@ -1023,7 +1023,11 @@ func (s *Server) health(w http.ResponseWriter, r *http.Request) {
 	buildResult := s.runner.Run(context.Background(), cfg.Site.BlogRoot, "--renderToMemory")
 	buildDuration := time.Since(buildStart)
 	if !buildResult.Success {
-		add("hugo-build", "error", "Hugo 构建测试失败。", buildResult.Stderr, "检查 hugo.toml 和主题是否正常。")
+		stderr := buildResult.Stderr
+		if len(stderr) > 500 {
+			stderr = stderr[:500] + "..."
+		}
+		add("hugo-build", "error", "Hugo 构建测试失败。", stderr, "检查 hugo.toml 和主题是否正常。")
 	} else {
 		add("hugo-build", "ok", fmt.Sprintf("Hugo 构建测试通过（%dms）。", buildDuration.Milliseconds()), buildResult.Stdout, "")
 	}
@@ -1215,12 +1219,10 @@ func secureHeaders(next http.Handler) http.Handler {
 		w.Header().Set("X-Content-Type-Options", "nosniff")
 		w.Header().Set("X-Frame-Options", "SAMEORIGIN")
 		w.Header().Set("Referrer-Policy", "same-origin")
-		w.Header().Set("Content-Security-Policy", "default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; frame-src 'self'; connect-src 'self'; base-uri 'none'; form-action 'self'")
+		w.Header().Set("Content-Security-Policy", "default-src 'self'; img-src 'self' data: blob:; style-src 'self'; script-src 'self'; frame-src 'self'; connect-src 'self'; base-uri 'none'; form-action 'self'")
 		w.Header().Set("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
 		w.Header().Set("Cross-Origin-Opener-Policy", "same-origin")
-		if r.Header.Get("X-Forwarded-Proto") == "https" {
-			w.Header().Set("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
-		}
+		w.Header().Set("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
 		next.ServeHTTP(w, r)
 	})
 }
