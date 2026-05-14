@@ -1,17 +1,20 @@
 <script setup lang="ts">
-import { computed, nextTick, watch, useTemplateRef } from 'vue'
+import { computed, nextTick, watch, useTemplateRef, onMounted } from 'vue'
 import { marked } from 'marked'
 import DOMPurify from 'dompurify'
-import katex from 'katex'
-import 'katex/dist/katex.min.css'
 
 const props = defineProps<{ source: string }>()
 const previewRef = useTemplateRef<HTMLElement>('preview')
 
 const MATH_BLOCK = 'MATHBLOCK'
 const MATH_INLINE = 'MATHINLINE'
-const mathMap = new Map<string, string>()
+const mathRaw = new Map<string, string>()
 let mathCounter = 0
+
+// Katex renderToString — loaded lazily (~60KB) only when math is detected in content
+type KatexRenderFn = (math: string, displayMode: boolean) => string
+let renderKatex: KatexRenderFn | null = null
+let katexLoading = false
 
 // Configure DOMPurify to allow KaTeX elements and inline styles
 const purifyConfig = {
@@ -38,26 +41,18 @@ marked.use({
 })
 
 function extractMath(text: string): string {
-  mathMap.clear()
+  mathRaw.clear()
   mathCounter = 0
   // Block math: $$...$$
   text = text.replace(/\$\$([\s\S]*?)\$\$/g, (_, math: string) => {
     const key = `${MATH_BLOCK}${mathCounter++}MATH`
-    try {
-      mathMap.set(key, katex.renderToString(math.trim(), { throwOnError: false, displayMode: true }))
-    } catch {
-      mathMap.set(key, `<span class="math-error">${math}</span>`)
-    }
+    mathRaw.set(key, math.trim())
     return key
   })
   // Inline math: $...$ (not $$)
   text = text.replace(/(?<!\$)\$(?!\$)(.*?)\$/g, (_, math: string) => {
     const key = `${MATH_INLINE}${mathCounter++}MATH`
-    try {
-      mathMap.set(key, katex.renderToString(math.trim(), { throwOnError: false, displayMode: false }))
-    } catch {
-      mathMap.set(key, `<code>${math}</code>`)
-    }
+    mathRaw.set(key, math.trim())
     return key
   })
   return text
@@ -70,12 +65,13 @@ const html = computed(() => {
 })
 
 function replaceMathPlaceholders(root: HTMLElement) {
+  if (!renderKatex) return
   const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT)
   const toReplace: { node: Text; key: string }[] = []
   while (walker.nextNode()) {
     const textNode = walker.currentNode as Text
     const text = textNode.textContent || ''
-    for (const [key] of mathMap) {
+    for (const [key] of mathRaw) {
       if (text.includes(key)) {
         toReplace.push({ node: textNode, key })
         break
@@ -83,18 +79,27 @@ function replaceMathPlaceholders(root: HTMLElement) {
     }
   }
   for (const { node, key } of toReplace) {
-    const mathHtml = mathMap.get(key)
-    if (!mathHtml) continue
-    const span = document.createElement('span')
-    span.className = key.startsWith(MATH_BLOCK) ? 'math-block' : 'math-inline'
-    span.innerHTML = mathHtml
-    const parent = node.parentNode
-    if (parent) {
-      const remaining = (node.textContent || '').replace(key, '')
-      parent.replaceChild(span, node)
-      if (remaining) {
-        parent.insertBefore(document.createTextNode(remaining), span.nextSibling)
+    const rawMath = mathRaw.get(key)
+    if (!rawMath) continue
+    try {
+      const isBlock = key.startsWith(MATH_BLOCK)
+      const rendered = renderKatex(rawMath, isBlock)
+      const span = document.createElement('span')
+      span.className = isBlock ? 'math-block' : 'math-inline'
+      span.innerHTML = rendered
+      const parent = node.parentNode
+      if (parent) {
+        const remaining = (node.textContent || '').replace(key, '')
+        parent.replaceChild(span, node)
+        if (remaining) {
+          parent.insertBefore(document.createTextNode(remaining), span.nextSibling)
+        }
       }
+    } catch {
+      // If KaTeX rendering fails, show raw math as inline code
+      const code = document.createElement('code')
+      code.textContent = rawMath
+      node.parentNode?.replaceChild(code, node)
     }
   }
 }
@@ -116,6 +121,35 @@ watch(html, () => {
       attachImageLoadListeners(previewRef.value)
     }
   })
+})
+
+// Lazy-load KaTeX (~60KB) only when math delimiters are detected in content
+async function loadKatex() {
+  if (katexLoading) return
+  katexLoading = true
+  try {
+    const mod = await import('katex')
+    await import('katex/dist/katex.min.css')
+    renderKatex = (math: string, displayMode: boolean) =>
+      mod.default.renderToString(math, { throwOnError: false, displayMode })
+    if (previewRef.value) {
+      replaceMathPlaceholders(previewRef.value)
+    }
+  } catch {
+    // KaTeX failed to load; math placeholders remain visible as raw text
+  }
+}
+
+function hasMath(text: string): boolean {
+  return /\$\$/.test(text) || /(?<!\$)\$(?!\$)/.test(text)
+}
+
+onMounted(() => {
+  if (hasMath(props.source)) loadKatex()
+})
+
+watch(() => props.source, (val) => {
+  if (!renderKatex && hasMath(val)) loadKatex()
 })
 </script>
 

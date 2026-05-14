@@ -12,8 +12,11 @@ export default defineConfig({
     }
   },
   build: {
-    sourcemap: true,
-    chunkSizeWarningLimit: 600,
+    target: 'es2020',
+    cssMinify: true,
+    sourcemap: false,
+    reportCompressedSize: true,
+    chunkSizeWarningLimit: 400,
     rollupOptions: {
       output: {
         manualChunks: {
@@ -29,9 +32,15 @@ export default defineConfig({
           'vendor-codemirror-languages': [
             '@codemirror/language-data',
           ],
-          'vendor-vue': ['vue', 'vue-router', '@vueuse/core'],
+          'vendor-vue': ['vue', 'vue-router'],
+          'vendor-vueuse': ['@vueuse/core'],
           'vendor-icons': ['lucide-vue-next'],
           'vendor-marked': ['marked', 'dompurify'],
+          'vendor-katex': ['katex'],
+          'vendor-tanstack': [
+            '@tanstack/vue-table',
+            '@tanstack/vue-virtual',
+          ],
           'vendor-ui': ['reka-ui'],
         }
       }
