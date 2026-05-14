@@ -76,9 +76,17 @@ func (l *LoginLimiter) cleanup() {
 }
 
 func RealIP(r *http.Request) string {
+	// X-Real-IP takes precedence (set by nginx)
+	if realIP := r.Header.Get("X-Real-IP"); realIP != "" {
+		return strings.TrimSpace(realIP)
+	}
 	if fwd := r.Header.Get("X-Forwarded-For"); fwd != "" {
 		parts := strings.Split(fwd, ",")
-		return strings.TrimSpace(parts[len(parts)-1])
+		// First IP is the original client in standard proxy setups
+		ip := strings.TrimSpace(parts[0])
+		if ip != "" {
+			return ip
+		}
 	}
 	if rip, _, err := net.SplitHostPort(r.RemoteAddr); err == nil {
 		return rip

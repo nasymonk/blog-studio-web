@@ -1135,9 +1135,27 @@ func (s *Server) spaHandler(base string) http.Handler {
 		if rel == "" {
 			rel = "index.html"
 		}
-		target := filepath.Join(s.paths.Static, filepath.Clean(rel))
-		if info, err := os.Stat(target); err == nil && !info.IsDir() {
-			http.ServeFile(w, r, target)
+		cleaned := filepath.Clean(rel)
+		// Reject any path that tries to escape the static directory
+		if cleaned == ".." || strings.HasPrefix(cleaned, "../") {
+			http.ServeFile(w, r, filepath.Join(s.paths.Static, "index.html"))
+			return
+		}
+		target := filepath.Join(s.paths.Static, cleaned)
+		resolved, err := filepath.EvalSymlinks(target)
+		if err != nil {
+			// File doesn't exist or can't be accessed — serve index.html
+			http.ServeFile(w, r, filepath.Join(s.paths.Static, "index.html"))
+			return
+		}
+		staticRoot, _ := filepath.EvalSymlinks(s.paths.Static)
+		if !strings.HasPrefix(resolved, staticRoot+string(filepath.Separator)) && resolved != staticRoot {
+			// Path escaped static directory
+			http.ServeFile(w, r, filepath.Join(s.paths.Static, "index.html"))
+			return
+		}
+		if info, err := os.Stat(resolved); err == nil && !info.IsDir() {
+			http.ServeFile(w, r, resolved)
 			return
 		}
 		http.ServeFile(w, r, filepath.Join(s.paths.Static, "index.html"))

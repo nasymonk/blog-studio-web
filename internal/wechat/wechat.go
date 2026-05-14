@@ -78,7 +78,7 @@ func (s *Service) accessToken(ctx context.Context, appID, appSecret string) (str
 	req, _ := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
 	resp, err := s.client.Do(req)
 	if err != nil {
-		return "", apperror.Wrap("WECHAT_TOKEN_FAILED", "无法获取微信 access token。", err, "检查 AppID/AppSecret、IP 白名单和网络。", true)
+		return "", apperror.New("WECHAT_TOKEN_FAILED", "无法获取微信 access token。", fmt.Sprintf("访问微信 API (%s) 失败, AppSecret 已从错误详情中移除", req.URL.Host), "检查 AppID/AppSecret、IP 白名单和网络。", true)
 	}
 	defer resp.Body.Close()
 	var payload struct {
@@ -97,8 +97,17 @@ func (s *Service) coverMediaID(ctx context.Context, token string, draft content.
 	if draft.FrontMatter.Image == "" {
 		return "", apperror.New("WECHAT_COVER_MISSING", "公众号草稿需要封面图。", "front matter image is empty", "在文章 front matter 添加 image，并将图片放入 Page Bundle。", false)
 	}
+	// Validate image path — reject traversal
+	image := filepath.Clean(draft.FrontMatter.Image)
+	if filepath.IsAbs(image) || strings.HasPrefix(image, "..") {
+		return "", apperror.New("INVALID_IMAGE_PATH", "封面图片路径无效", "image path contains path traversal", "请使用文章目录内的图片作为封面。", false)
+	}
 	postDir := filepath.Join(s.cfg.Site.PostRoot, draft.Slug)
-	coverPath := filepath.Join(postDir, draft.FrontMatter.Image)
+	coverPath := filepath.Join(postDir, image)
+	// Verify coverPath stays within postDir
+	if !strings.HasPrefix(coverPath, filepath.Clean(postDir)+string(filepath.Separator)) && coverPath != filepath.Clean(postDir) {
+		return "", apperror.New("PATH_TRAVERSAL", "封面图片路径越界", "resolved path escapes post directory", "请使用文章目录内的图片作为封面。", false)
+	}
 	return s.uploadPermanentImage(ctx, token, coverPath)
 }
 
