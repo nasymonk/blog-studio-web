@@ -385,6 +385,8 @@ function restoreVersion(restoreBody: string) {
                 <div class="px-2 py-1.5 flex items-center justify-between">
                   <Label class="text-[10px] uppercase tracking-wider text-muted-foreground/70">{{ t.lineNumbers }}</Label>
                   <button
+                    role="switch"
+                    :aria-checked="editorSettings.lineNumbers"
                     class="relative inline-flex h-5 w-9 items-center rounded-full transition-colors cursor-pointer"
                     :class="editorSettings.lineNumbers ? 'bg-primary' : 'bg-input'"
                     @click="editorSettings.lineNumbers = !editorSettings.lineNumbers"

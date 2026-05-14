@@ -178,7 +178,7 @@ function onKeydown(e: KeyboardEvent) {
       </div>
 
       <ScrollArea class="max-h-[360px]">
-        <div class="py-2">
+        <div class="py-2" role="listbox">
           <!-- Quick Actions group -->
           <template v-if="hasActions">
             <div class="px-4 py-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground/50">{{ t.quickActions }}</div>

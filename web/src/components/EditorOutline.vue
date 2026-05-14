@@ -36,6 +36,7 @@ function indentClass(level: number) {
       <li
         v-for="(h, i) in headings"
         :key="h.line"
+        :aria-current="i === activeIndex ? 'true' : undefined"
         class="flex items-baseline gap-1.5 py-1 pr-2 cursor-pointer rounded leading-snug break-words transition-colors"
         :class="[
           indentClass(h.level),

@@ -32,6 +32,7 @@ const breadcrumbItems = computed(() => {
         :key="tab.to"
         :to="tab.to"
         role="tab"
+        :aria-selected="route.path === tab.to"
         class="relative px-3 py-2 text-sm text-muted-foreground transition-colors -mb-px"
         :class="route.path === tab.to ? 'text-foreground font-medium' : 'hover:text-foreground'"
       >
@@ -42,7 +43,7 @@ const breadcrumbItems = computed(() => {
         />
       </RouterLink>
     </nav>
-    <div class="pt-4">
+    <div role="tabpanel" class="pt-4">
       <RouterView />
     </div>
   </div>

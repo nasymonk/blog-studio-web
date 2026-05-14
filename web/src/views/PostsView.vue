@@ -316,6 +316,7 @@ onMounted(loadPosts)
     <div
       v-else
       ref="parentRef"
+      role="list"
       class="stagger overflow-auto"
       :style="{ height: 'calc(100vh - 280px)', minHeight: '400px' }"
     >
@@ -326,6 +327,7 @@ onMounted(loadPosts)
         <div
           v-for="virtualRow in virtualRows"
           :key="String(virtualRow.key)"
+          role="listitem"
           class="absolute left-0 right-0"
           :style="{
             top: `${virtualRow.start}px`,

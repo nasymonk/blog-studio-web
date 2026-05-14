@@ -26,6 +26,10 @@ const emit = defineEmits<{
     <!-- Divider -->
     <div
       v-if="mode === 'split'"
+      role="separator"
+      tabindex="0"
+      aria-label="Resize panels"
+      :aria-valuenow="Math.round(splitRatio * 100)"
       class="w-1 shrink-0 cursor-col-resize bg-border/60 hover:bg-accent/40 transition-colors relative group"
       @mousedown="emit('dragStart', $event)"
     >
