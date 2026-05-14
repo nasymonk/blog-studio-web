@@ -22,25 +22,60 @@ const colorMap = {
 
 const progress = ref(100)
 let animationFrame: number | null = null
+let remainingMs = 0
+let pauseTime = 0
+let timerId: ReturnType<typeof setTimeout> | null = null
 
-onMounted(() => {
-  if (props.toast.duration === Infinity || props.toast.duration <= 0) return
-
-  const startTime = Date.now()
+function startTimer() {
   const duration = props.toast.duration
+  if (duration === Infinity || duration <= 0) return
+
+  remainingMs = duration
+  const startTime = Date.now()
 
   function tick() {
-    const elapsed = Date.now() - startTime
-    progress.value = Math.max(0, 100 - (elapsed / duration) * 100)
+    if (!pauseTime) {
+      const elapsed = Date.now() - startTime
+      progress.value = Math.max(0, 100 - (elapsed / duration) * 100)
+    }
     if (progress.value > 0) {
       animationFrame = requestAnimationFrame(tick)
     }
   }
   animationFrame = requestAnimationFrame(tick)
+
+  timerId = setTimeout(() => {
+    emit('dismiss', props.toast.id)
+  }, duration)
+}
+
+function onMouseEnter() {
+  if (timerId) {
+    pauseTime = Date.now()
+    clearTimeout(timerId)
+    timerId = null
+    // Calculate remaining time
+    const elapsed = (100 - progress.value) / 100 * props.toast.duration
+    remainingMs = Math.max(0, props.toast.duration - elapsed)
+  }
+}
+
+function onMouseLeave() {
+  if (pauseTime && remainingMs > 0) {
+    pauseTime = 0
+    timerId = setTimeout(() => {
+      emit('dismiss', props.toast.id)
+    }, remainingMs)
+  }
+}
+
+onMounted(() => {
+  startTimer()
 })
 
 function onDismiss() {
   if (animationFrame) cancelAnimationFrame(animationFrame)
+  if (timerId) clearTimeout(timerId)
   emit('dismiss', props.toast.id)
 }
 </script>
@@ -51,6 +86,8 @@ function onDismiss() {
     :class="[colorMap[toast.type].bg, colorMap[toast.type].border]"
     role="alert"
     :aria-live="toast.type === 'error' ? 'assertive' : 'polite'"
+    @mouseenter="onMouseEnter"
+    @mouseleave="onMouseLeave"
   >
     <div class="flex items-start gap-3 p-4">
       <component
