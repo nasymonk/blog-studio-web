@@ -67,7 +67,9 @@ func (r *Runner) run(ctx context.Context, workDir string, args []string) Command
 	if r.logger != nil {
 		r.logger.Info("hugo build starting", "workDir", workDir, "args", args)
 	}
-	cmd := exec.CommandContext(ctx, "hugo", args...)
+	buildCtx, cancel := context.WithTimeout(ctx, 60*time.Second)
+	defer cancel()
+	cmd := exec.CommandContext(buildCtx, "hugo", args...)
 	cmd.Dir = workDir
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout

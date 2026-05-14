@@ -174,8 +174,8 @@ func normalize(cfg *Config, paths Paths) {
 	if cfg.Preview.TTLMinutes <= 0 {
 		cfg.Preview.TTLMinutes = 120
 	}
-	if cfg.MaxUploadBytes <= 0 {
-		cfg.MaxUploadBytes = 10 * 1024 * 1024
+	if cfg.MaxUploadBytes <= 0 || cfg.MaxUploadBytes > 100<<20 {
+		cfg.MaxUploadBytes = 10 << 20
 	}
 }
 
