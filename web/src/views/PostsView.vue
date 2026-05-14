@@ -83,7 +83,7 @@ const filtered = computed(() =>
 const rowVirtualizer = useVirtualizer(computed(() => ({
   count: filtered.value.length,
   getScrollElement: () => parentRef.value,
-  estimateSize: () => 72,
+  estimateSize: () => 92,
   overscan: 5,
 })))
 
@@ -229,11 +229,13 @@ onMounted(loadPosts)
     <div class="flex flex-col md:flex-row md:items-end gap-3">
       <div class="flex items-end gap-3 flex-1 min-w-0">
         <div class="relative flex-1 max-w-[360px]">
+          <label for="posts-search" class="sr-only">{{ t.search }}</label>
           <SearchIcon class="absolute left-0 bottom-3 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
           <Input
+            id="posts-search"
             ref="searchInputRef"
             v-model="searchQuery"
-            class="border-0 border-b border-border rounded-none bg-transparent pl-6 pb-2 h-auto focus-visible:ring-0 focus-visible:border-accent transition-colors"
+            class="border-0 border-b border-border rounded-none bg-transparent pl-6 pb-2 h-auto focus-visible:ring-2 focus-visible:ring-accent transition-colors"
             :placeholder="t.search"
           />
         </div>
@@ -259,8 +261,8 @@ onMounted(loadPosts)
         <Button size="sm" class="rounded-full px-4 h-8" @click="newPost">
           <PlusIcon class="h-3.5 w-3.5 mr-1" />{{ t.newPost }}
         </Button>
-        <Button variant="ghost" size="icon" class="h-8 w-8 text-muted-foreground" :disabled="store.postsLoading" @click="loadPosts">
-          <RefreshCwIcon class="h-4 w-4" :class="{ 'animate-spin': store.postsLoading }" />
+        <Button variant="ghost" size="icon" class="h-8 w-8 text-muted-foreground" aria-label="Refresh posts" :disabled="store.postsLoading" @click="loadPosts">
+          <RefreshCwIcon class="h-4 w-4" :class="{ 'animate-spin': store.postsLoading }" aria-hidden="true" />
         </Button>
         <Separator orientation="vertical" class="h-5 hidden md:block" />
         <Button variant="ghost" size="sm" class="text-xs h-8 text-muted-foreground hidden md:inline-flex" :title="t.exportAll" @click="exportAll">
@@ -333,7 +335,7 @@ onMounted(loadPosts)
           }"
         >
           <div
-            class="post-card card-hover group relative flex items-stretch rounded cursor-pointer bg-card border border-transparent hover:bg-muted/40 focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-1 h-full"
+            class="post-card card-hover group relative flex items-stretch rounded-lg cursor-pointer bg-card border border-border/40 shadow-sm hover:border-border/80 hover:bg-muted/20 focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-1 h-full"
             tabindex="0"
             role="button"
             :aria-label="filtered[virtualRow.index]?.title"
@@ -344,7 +346,7 @@ onMounted(loadPosts)
             <!-- Selection checkbox -->
             <button
               class="flex items-center justify-center w-10 md:w-8 shrink-0 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-              :aria-label="selectedSlugs.has(filtered[virtualRow.index]!.slug) ? t.deselectAll : t.selectAll"
+              :aria-label="selectedSlugs.has(filtered[virtualRow.index]!.slug) ? 'Deselect post' : 'Select post'"
               @click.stop="toggleSelect(filtered[virtualRow.index]!.slug)"
             >
               <CheckSquareIcon v-if="selectedSlugs.has(filtered[virtualRow.index]!.slug)" class="h-4 w-4 text-accent" />
@@ -352,33 +354,38 @@ onMounted(loadPosts)
             </button>
 
             <!-- Status color bar -->
-            <div class="w-[3px] shrink-0 rounded-l" :class="statusColor(filtered[virtualRow.index]!)" />
+            <div class="w-1.5 shrink-0 rounded-l-lg" :class="[statusColor(filtered[virtualRow.index]!), filtered[virtualRow.index]!.draft ? 'opacity-40' : 'opacity-100']" />
 
-            <div class="flex-1 flex items-center justify-between gap-3 py-3 px-4 min-w-0">
-              <div class="min-w-0 space-y-1">
-                <div class="flex items-center gap-2">
-                  <span class="text-sm font-medium truncate">{{ filtered[virtualRow.index]!.title || filtered[virtualRow.index]!.slug }}</span>
-                  <AlertTriangleIcon v-if="filtered[virtualRow.index]!.large" class="h-3 w-3 text-warn shrink-0" :title="t.large" />
+            <div class="flex-1 flex flex-col justify-center gap-1.5 py-3 px-4 min-w-0">
+              <div class="flex items-start justify-between gap-3">
+                <div class="min-w-0 space-y-1">
+                  <div class="flex items-center gap-2">
+                    <span class="text-sm font-semibold truncate">{{ filtered[virtualRow.index]!.title || filtered[virtualRow.index]!.slug }}</span>
+                    <AlertTriangleIcon v-if="filtered[virtualRow.index]!.large" class="h-3 w-3 text-warn shrink-0" :title="t.large" />
+                  </div>
+                  <div v-if="filtered[virtualRow.index]!.description" class="text-xs text-muted-foreground line-clamp-1">
+                    {{ filtered[virtualRow.index]!.description }}
+                  </div>
                 </div>
-                <div class="flex items-center gap-2">
-                  <span class="text-[11px] text-muted-foreground" :title="filtered[virtualRow.index]!.date">{{ relDate(filtered[virtualRow.index]!.date) }}</span>
-                  <Badge :variant="statusBadge(filtered[virtualRow.index]!).variant" class="text-[10px] h-4 px-1.5">{{ statusBadge(filtered[virtualRow.index]!).label }}</Badge>
-                  <span v-for="tag in (filtered[virtualRow.index]!.tags || []).slice(0, 3)" :key="tag" class="text-[10px] px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground/70"># {{ tag }}</span>
+
+                <!-- Actions (always visible, subtle) -->
+                <div class="flex gap-1 shrink-0 text-muted-foreground/40">
+                  <Button variant="ghost" size="icon" class="h-8 w-8 md:h-7 md:w-7 hover:text-foreground hover:bg-muted/50" :aria-label="t.edit" :title="t.edit" @click.stop="router.push(`/posts/${encodeURIComponent(filtered[virtualRow.index]!.slug)}`)">
+                    <EditIcon class="h-3.5 w-3.5" aria-hidden="true" />
+                  </Button>
+                  <Button variant="ghost" size="icon" class="h-8 w-8 md:h-7 md:w-7 hover:text-foreground hover:bg-muted/50" :aria-label="t.preview" :title="t.preview" @click.stop="router.push(`/posts/${encodeURIComponent(filtered[virtualRow.index]!.slug)}/preview`)">
+                    <EyeIcon class="h-3.5 w-3.5" aria-hidden="true" />
+                  </Button>
+                  <Button variant="ghost" size="icon" class="h-8 w-8 md:h-7 md:w-7 hover:text-destructive hover:bg-destructive/10" :aria-label="t.moveToTrash" :title="t.moveToTrash" @click.stop="deletePost(filtered[virtualRow.index]!)">
+                    <Trash2Icon class="h-3.5 w-3.5" aria-hidden="true" />
+                  </Button>
                 </div>
               </div>
 
-              <!-- Actions (visible on focus/hover) -->
-              <div class="flex gap-0.5 shrink-0 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100"
-                :class="{ 'opacity-100': focusedIndex === virtualRow.index }">
-                <Button variant="ghost" size="icon" class="h-8 w-8 md:h-7 md:w-7 text-muted-foreground" :title="t.edit" @click.stop="router.push(`/posts/${encodeURIComponent(filtered[virtualRow.index]!.slug)}`)">
-                  <EditIcon class="h-3.5 w-3.5" />
-                </Button>
-                <Button variant="ghost" size="icon" class="h-8 w-8 md:h-7 md:w-7 text-muted-foreground" :title="t.preview" @click.stop="router.push(`/posts/${encodeURIComponent(filtered[virtualRow.index]!.slug)}/preview`)">
-                  <EyeIcon class="h-3.5 w-3.5" />
-                </Button>
-                <Button variant="ghost" size="icon" class="h-8 w-8 md:h-7 md:w-7 text-destructive/60 hover:text-destructive" :title="t.moveToTrash" @click.stop="deletePost(filtered[virtualRow.index]!)">
-                  <Trash2Icon class="h-3.5 w-3.5" />
-                </Button>
+              <div class="flex items-center gap-2 mt-0.5">
+                <span class="text-[11px] text-muted-foreground" :title="filtered[virtualRow.index]!.date">{{ relDate(filtered[virtualRow.index]!.date) }}</span>
+                <Badge :variant="statusBadge(filtered[virtualRow.index]!).variant" class="text-[10px] h-4 px-1.5 font-normal">{{ statusBadge(filtered[virtualRow.index]!).label }}</Badge>
+                <span v-for="tag in (filtered[virtualRow.index]!.tags || []).slice(0, 3)" :key="tag" class="text-[10px] px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground/70"># {{ tag }}</span>
               </div>
             </div>
           </div>

@@ -79,15 +79,17 @@ onMounted(load)
     <div class="flex flex-col md:flex-row md:items-end gap-3">
       <div class="flex items-end gap-3 flex-1 min-w-0">
         <div class="relative flex-1 max-w-[360px]">
+          <label for="audit-search" class="sr-only">{{ t.searchAudit }}</label>
           <SearchIcon class="absolute left-0 bottom-3 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
           <Input
+            id="audit-search"
             v-model="searchQuery"
             :placeholder="t.searchAudit"
-            class="border-0 border-b border-border rounded-none bg-transparent pl-6 pb-2 h-auto focus-visible:ring-0 focus-visible:border-accent transition-colors"
+            class="border-0 border-b border-border rounded-none bg-transparent pl-6 pb-2 h-auto focus-visible:ring-2 focus-visible:ring-accent transition-colors"
           />
         </div>
-        <Button variant="ghost" size="icon" class="h-8 w-8 text-muted-foreground mb-0.5" :disabled="loading" @click="load">
-          <RefreshCwIcon class="h-4 w-4" :class="{ 'animate-spin': loading }" />
+        <Button variant="ghost" size="icon" class="h-8 w-8 text-muted-foreground mb-0.5" aria-label="Refresh" :disabled="loading" @click="load">
+          <RefreshCwIcon class="h-4 w-4" :class="{ 'animate-spin': loading }" aria-hidden="true" />
         </Button>
       </div>
       <div class="flex items-center gap-1 flex-wrap">

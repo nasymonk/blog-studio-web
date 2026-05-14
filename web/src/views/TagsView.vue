@@ -97,10 +97,12 @@ onMounted(loadPosts)
 
     <!-- Search -->
     <div class="relative max-w-[300px]">
+      <label for="tags-search" class="sr-only">{{ t.search }}</label>
       <SearchIcon class="absolute left-0 bottom-3 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
       <Input
+        id="tags-search"
         v-model="searchQuery"
-        class="border-0 border-b border-border rounded-none bg-transparent pl-6 pb-2 h-auto focus-visible:ring-0 focus-visible:border-accent transition-colors"
+        class="border-0 border-b border-border rounded-none bg-transparent pl-6 pb-2 h-auto focus-visible:ring-2 focus-visible:ring-accent transition-colors"
         :placeholder="t.search"
       />
     </div>

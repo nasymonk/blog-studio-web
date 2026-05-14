@@ -9,6 +9,7 @@ export type AppError = {
 export type PostState = {
   slug: string
   title: string
+  description?: string
   date: string
   draft: boolean
   tags: string[]

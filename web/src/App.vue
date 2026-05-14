@@ -338,9 +338,9 @@ onMounted(async () => {
             <Button variant="ghost" size="sm" class="h-8 px-2 text-xs gap-1 text-muted-foreground" :aria-label="lang === 'zh' ? 'Switch to English' : '切换到中文'" @click="setLang(lang === 'zh' ? 'en' : 'zh')">
               <Globe2Icon class="h-3.5 w-3.5" />{{ lang === 'zh' ? 'EN' : '中文' }}
             </Button>
-            <Button variant="ghost" size="icon" class="h-8 w-8 text-muted-foreground" :title="t.theme" @click="toggleTheme">
-              <MoonIcon v-if="!isDark" class="h-3.5 w-3.5" />
-              <SunIcon v-else class="h-3.5 w-3.5" />
+            <Button variant="ghost" size="icon" class="h-8 w-8 text-muted-foreground" :aria-label="t.theme" :title="t.theme" @click="toggleTheme">
+              <MoonIcon v-if="!isDark" class="h-3.5 w-3.5" aria-hidden="true" />
+              <SunIcon v-else class="h-3.5 w-3.5" aria-hidden="true" />
             </Button>
           </div>
         </header>

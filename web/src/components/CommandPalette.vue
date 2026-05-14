@@ -164,8 +164,10 @@ function onKeydown(e: KeyboardEvent) {
     <DialogContent class="overflow-hidden p-0 gap-0 max-w-[520px] top-[18vh] translate-y-0 rounded-lg" @keydown="onKeydown">
       <!-- Search -->
       <div class="flex items-center gap-3 px-4 py-3.5 border-b border-border">
+        <label for="cmd-palette-search" class="sr-only">{{ t.commandPalettePlaceholder }}</label>
         <SearchIcon class="h-4 w-4 text-muted-foreground/50 shrink-0" />
         <input
+          id="cmd-palette-search"
           ref="inputRef"
           v-model="query"
           class="flex-1 bg-transparent outline-none text-sm font-serif placeholder:text-muted-foreground/40"
