@@ -146,8 +146,8 @@ func (s *Service) uploadPermanentImage(ctx context.Context, token, pathName stri
 }
 
 func (s *Service) addDraft(ctx context.Context, token string, draft content.PostDraft, html string, thumbID string) (string, *apperror.AppError) {
-	payload := map[string]interface{}{
-		"articles": []map[string]interface{}{{
+	payload := map[string]any{
+		"articles": []map[string]any{{
 			"title":                 draft.FrontMatter.Title,
 			"author":                "",
 			"digest":                draft.FrontMatter.Description,

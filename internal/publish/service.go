@@ -75,7 +75,7 @@ type Result struct {
 	DiffPath      string             `json:"diffPath,omitempty"`
 	AuditID       string             `json:"auditId"`
 	BuildResult   CommandResult      `json:"buildResult"`
-	ChannelResult interface{}        `json:"channelResult,omitempty"`
+	ChannelResult any                `json:"channelResult,omitempty"`
 	Error         *apperror.AppError `json:"error,omitempty"`
 }
 

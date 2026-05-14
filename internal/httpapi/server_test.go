@@ -15,6 +15,7 @@ import (
 
 	"blog-studio-web/internal/auth"
 	"blog-studio-web/internal/config"
+	"blog-studio-web/internal/testutil"
 )
 
 // newTestServer creates a Server with temp directories and returns the handler and a
@@ -89,22 +90,10 @@ func login(t *testing.T, handler http.Handler, password string) *httptest.Respon
 	return rec
 }
 
-// doRequest is a convenience for making an HTTP request against the handler.
-func doRequest(t *testing.T, handler http.Handler, method, path string, cookie *http.Cookie) *httptest.ResponseRecorder {
-	t.Helper()
-	req := httptest.NewRequest(method, path, nil)
-	if cookie != nil {
-		req.AddCookie(cookie)
-	}
-	rec := httptest.NewRecorder()
-	handler.ServeHTTP(rec, req)
-	return rec
-}
-
 func TestHealthEndpoint(t *testing.T) {
 	handler, _ := newTestServer(t)
 
-	rec := doRequest(t, handler, http.MethodGet, "/studio/api/health", nil)
+	rec := testutil.DoRequest(t, handler, http.MethodGet, "/studio/api/health", nil)
 
 	if rec.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
@@ -118,7 +107,7 @@ func TestHealthEndpoint(t *testing.T) {
 		t.Fatalf("expected ok=true, got false: %s", rec.Body.String())
 	}
 
-	data, ok := resp.Data.(map[string]interface{})
+	data, ok := resp.Data.(map[string]any)
 	if !ok {
 		t.Fatalf("expected data to be a map, got %T", resp.Data)
 	}
@@ -154,7 +143,7 @@ func TestLoginWrongPassword(t *testing.T) {
 func TestPostsRequiresAuth(t *testing.T) {
 	handler, _ := newTestServer(t)
 
-	rec := doRequest(t, handler, http.MethodGet, "/studio/api/posts", nil)
+	rec := testutil.DoRequest(t, handler, http.MethodGet, "/studio/api/posts", nil)
 
 	if rec.Code != http.StatusUnauthorized {
 		t.Fatalf("expected 401, got %d: %s", rec.Code, rec.Body.String())
@@ -178,7 +167,7 @@ func TestPostsRequiresAuth(t *testing.T) {
 func TestSecurityHeaders(t *testing.T) {
 	handler, _ := newTestServer(t)
 
-	rec := doRequest(t, handler, http.MethodGet, "/studio/api/health", nil)
+	rec := testutil.DoRequest(t, handler, http.MethodGet, "/studio/api/health", nil)
 
 	tests := []struct {
 		header   string
@@ -229,7 +218,7 @@ func TestLoginSuccessAndAuthenticatedRequest(t *testing.T) {
 	}
 
 	// Use session cookie to access a protected endpoint.
-	rec2 := doRequest(t, handler, http.MethodGet, "/studio/api/posts", cookie)
+	rec2 := testutil.DoRequest(t, handler, http.MethodGet, "/studio/api/posts", cookie)
 	if rec2.Code != http.StatusOK {
 		t.Fatalf("posts with auth: expected 200, got %d: %s", rec2.Code, rec2.Body.String())
 	}
@@ -246,7 +235,7 @@ func TestLoginSuccessAndAuthenticatedRequest(t *testing.T) {
 func TestRequestIDHeader(t *testing.T) {
 	handler, _ := newTestServer(t)
 
-	rec := doRequest(t, handler, http.MethodGet, "/studio/api/health", nil)
+	rec := testutil.DoRequest(t, handler, http.MethodGet, "/studio/api/health", nil)
 
 	reqID := rec.Header().Get("X-Request-ID")
 	if reqID == "" {
@@ -277,7 +266,7 @@ func authCookieAndCSRF(t *testing.T, handler http.Handler) (*http.Cookie, string
 	if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
 		t.Fatalf("unmarshal login resp: %v", err)
 	}
-	data, ok := resp.Data.(map[string]interface{})
+	data, ok := resp.Data.(map[string]any)
 	if !ok {
 		t.Fatalf("expected data map, got %T", resp.Data)
 	}
@@ -286,26 +275,6 @@ func authCookieAndCSRF(t *testing.T, handler http.Handler) (*http.Cookie, string
 		t.Fatal("expected csrfToken in login response")
 	}
 	return cookie, csrf
-}
-
-// doWriteRequest makes an authenticated write request with CSRF token.
-func doWriteRequest(t *testing.T, handler http.Handler, method, path string, cookie *http.Cookie, csrf string, body []byte) *httptest.ResponseRecorder {
-	t.Helper()
-	var reqBody *bytes.Reader
-	if body != nil {
-		reqBody = bytes.NewReader(body)
-	} else {
-		reqBody = bytes.NewReader([]byte("{}"))
-	}
-	req := httptest.NewRequest(method, path, reqBody)
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("X-CSRF-Token", csrf)
-	if cookie != nil {
-		req.AddCookie(cookie)
-	}
-	rec := httptest.NewRecorder()
-	handler.ServeHTTP(rec, req)
-	return rec
 }
 
 // createTestPost creates a post directory with an index.md file for testing.
@@ -333,7 +302,7 @@ func TestSession_Authenticated(t *testing.T) {
 	handler, _ := newTestServer(t)
 	cookie, _ := authCookieAndCSRF(t, handler)
 
-	rec := doRequest(t, handler, http.MethodGet, "/studio/api/session", cookie)
+	rec := testutil.DoRequest(t, handler, http.MethodGet, "/studio/api/session", cookie)
 	if rec.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
 	}
@@ -345,7 +314,7 @@ func TestSession_Authenticated(t *testing.T) {
 	if !resp.OK {
 		t.Fatalf("expected ok=true")
 	}
-	data, ok := resp.Data.(map[string]interface{})
+	data, ok := resp.Data.(map[string]any)
 	if !ok {
 		t.Fatalf("expected data map, got %T", resp.Data)
 	}
@@ -357,7 +326,7 @@ func TestSession_Authenticated(t *testing.T) {
 func TestSession_Unauthenticated(t *testing.T) {
 	handler, _ := newTestServer(t)
 
-	rec := doRequest(t, handler, http.MethodGet, "/studio/api/session", nil)
+	rec := testutil.DoRequest(t, handler, http.MethodGet, "/studio/api/session", nil)
 	if rec.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
 	}
@@ -369,7 +338,7 @@ func TestSession_Unauthenticated(t *testing.T) {
 	if !resp.OK {
 		t.Fatalf("expected ok=true")
 	}
-	data, ok := resp.Data.(map[string]interface{})
+	data, ok := resp.Data.(map[string]any)
 	if !ok {
 		t.Fatalf("expected data map, got %T", resp.Data)
 	}
@@ -447,18 +416,18 @@ func TestLogout_Success(t *testing.T) {
 	cookie, csrf := authCookieAndCSRF(t, handler)
 
 	// Logout
-	rec := doWriteRequest(t, handler, http.MethodPost, "/studio/api/auth/logout", cookie, csrf, nil)
+	rec := testutil.DoWriteRequest(t, handler, http.MethodPost, "/studio/api/auth/logout", cookie, csrf, nil)
 	if rec.Code != http.StatusOK {
 		t.Fatalf("logout: expected 200, got %d: %s", rec.Code, rec.Body.String())
 	}
 
 	// Verify session is destroyed.
-	rec2 := doRequest(t, handler, http.MethodGet, "/studio/api/session", cookie)
+	rec2 := testutil.DoRequest(t, handler, http.MethodGet, "/studio/api/session", cookie)
 	var resp APIResponse
 	if err := json.Unmarshal(rec2.Body.Bytes(), &resp); err != nil {
 		t.Fatalf("unmarshal: %v", err)
 	}
-	data, ok := resp.Data.(map[string]interface{})
+	data, ok := resp.Data.(map[string]any)
 	if !ok {
 		t.Fatalf("expected data map")
 	}
@@ -475,7 +444,7 @@ func TestChangePassword_Success(t *testing.T) {
 		"currentPassword": "testpass123",
 		"newPassword":     "newpass456",
 	})
-	rec := doWriteRequest(t, handler, http.MethodPost, "/studio/api/auth/password", cookie, csrf, body)
+	rec := testutil.DoWriteRequest(t, handler, http.MethodPost, "/studio/api/auth/password", cookie, csrf, body)
 	if rec.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
 	}
@@ -489,7 +458,7 @@ func TestChangePassword_WrongCurrent(t *testing.T) {
 		"currentPassword": "wrongold",
 		"newPassword":     "newpass456",
 	})
-	rec := doWriteRequest(t, handler, http.MethodPost, "/studio/api/auth/password", cookie, csrf, body)
+	rec := testutil.DoWriteRequest(t, handler, http.MethodPost, "/studio/api/auth/password", cookie, csrf, body)
 	if rec.Code != http.StatusUnauthorized {
 		t.Fatalf("expected 401, got %d: %s", rec.Code, rec.Body.String())
 	}
@@ -501,7 +470,7 @@ func TestListPosts_Success(t *testing.T) {
 	handler, _ := newTestServer(t)
 	cookie, _ := authCookieAndCSRF(t, handler)
 
-	rec := doRequest(t, handler, http.MethodGet, "/studio/api/posts", cookie)
+	rec := testutil.DoRequest(t, handler, http.MethodGet, "/studio/api/posts", cookie)
 	if rec.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
 	}
@@ -520,9 +489,9 @@ func TestSaveDraft_ValidDraft(t *testing.T) {
 	cookie, csrf := authCookieAndCSRF(t, handler)
 	_ = sessions
 
-	draft := map[string]interface{}{
+	draft := map[string]any{
 		"slug": "test-post",
-		"frontMatter": map[string]interface{}{
+		"frontMatter": map[string]any{
 			"title": "Test Post",
 			"date":  "2025-01-01T00:00:00Z",
 			"draft": true,
@@ -531,7 +500,7 @@ func TestSaveDraft_ValidDraft(t *testing.T) {
 		"body": "Hello world",
 	}
 	body, _ := json.Marshal(draft)
-	rec := doWriteRequest(t, handler, http.MethodPost, "/studio/api/posts/test-post/draft", cookie, csrf, body)
+	rec := testutil.DoWriteRequest(t, handler, http.MethodPost, "/studio/api/posts/test-post/draft", cookie, csrf, body)
 	if rec.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
 	}
@@ -549,7 +518,7 @@ func TestSaveDraft_InvalidJSON(t *testing.T) {
 	handler, _ := newTestServer(t)
 	cookie, csrf := authCookieAndCSRF(t, handler)
 
-	rec := doWriteRequest(t, handler, http.MethodPost, "/studio/api/posts/bad-post/draft", cookie, csrf, []byte("{invalid"))
+	rec := testutil.DoWriteRequest(t, handler, http.MethodPost, "/studio/api/posts/bad-post/draft", cookie, csrf, []byte("{invalid"))
 	if rec.Code != http.StatusBadRequest {
 		t.Fatalf("expected 400, got %d: %s", rec.Code, rec.Body.String())
 	}
@@ -559,7 +528,7 @@ func TestLoadPost_NotFound(t *testing.T) {
 	handler, _ := newTestServer(t)
 	cookie, _ := authCookieAndCSRF(t, handler)
 
-	rec := doRequest(t, handler, http.MethodGet, "/studio/api/posts/nonexistent", cookie)
+	rec := testutil.DoRequest(t, handler, http.MethodGet, "/studio/api/posts/nonexistent", cookie)
 	if rec.Code != http.StatusNotFound {
 		t.Fatalf("expected 404, got %d: %s", rec.Code, rec.Body.String())
 	}
@@ -578,21 +547,21 @@ func TestPublishBlog_Success(t *testing.T) {
 	cookie, csrf := authCookieAndCSRF(t, handler)
 	_ = sessions
 
-	draft := map[string]interface{}{
+	draft := map[string]any{
 		"slug": "pub-test",
-		"frontMatter": map[string]interface{}{
+		"frontMatter": map[string]any{
 			"title": "Publish Test",
 			"date":  "2025-01-01T00:00:00Z",
 			"draft": false,
 		},
 		"body": "Published content",
 	}
-	reqBody, _ := json.Marshal(map[string]interface{}{
+	reqBody, _ := json.Marshal(map[string]any{
 		"slug":             "pub-test",
 		"draft":            draft,
 		"confirmOverwrite": true,
 	})
-	rec := doWriteRequest(t, handler, http.MethodPost, "/studio/api/posts/pub-test/publish/blog", cookie, csrf, reqBody)
+	rec := testutil.DoWriteRequest(t, handler, http.MethodPost, "/studio/api/posts/pub-test/publish/blog", cookie, csrf, reqBody)
 	if rec.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
 	}
@@ -610,7 +579,7 @@ func TestPublishBlog_InvalidJSON(t *testing.T) {
 	handler, _ := newTestServer(t)
 	cookie, csrf := authCookieAndCSRF(t, handler)
 
-	rec := doWriteRequest(t, handler, http.MethodPost, "/studio/api/posts/x/publish/blog", cookie, csrf, []byte("{bad"))
+	rec := testutil.DoWriteRequest(t, handler, http.MethodPost, "/studio/api/posts/x/publish/blog", cookie, csrf, []byte("{bad"))
 	if rec.Code != http.StatusBadRequest {
 		t.Fatalf("expected 400, got %d: %s", rec.Code, rec.Body.String())
 	}
@@ -620,7 +589,7 @@ func TestRollback_NoBackup(t *testing.T) {
 	handler, _ := newTestServer(t)
 	cookie, csrf := authCookieAndCSRF(t, handler)
 
-	rec := doWriteRequest(t, handler, http.MethodPost, "/studio/api/posts/no-such-post/rollback", cookie, csrf, nil)
+	rec := testutil.DoWriteRequest(t, handler, http.MethodPost, "/studio/api/posts/no-such-post/rollback", cookie, csrf, nil)
 	if rec.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
 	}
@@ -639,7 +608,7 @@ func TestDeletePost_NotFound(t *testing.T) {
 	handler, _ := newTestServer(t)
 	cookie, csrf := authCookieAndCSRF(t, handler)
 
-	rec := doWriteRequest(t, handler, http.MethodDelete, "/studio/api/posts/nonexistent-slug", cookie, csrf, nil)
+	rec := testutil.DoWriteRequest(t, handler, http.MethodDelete, "/studio/api/posts/nonexistent-slug", cookie, csrf, nil)
 	if rec.Code != http.StatusNotFound {
 		t.Fatalf("expected 404, got %d: %s", rec.Code, rec.Body.String())
 	}
@@ -650,9 +619,9 @@ func TestDeletePost_Success(t *testing.T) {
 	cookie, csrf := authCookieAndCSRF(t, handler)
 
 	// First create a draft (which creates the post in cache).
-	draft := map[string]interface{}{
+	draft := map[string]any{
 		"slug": "delete-me",
-		"frontMatter": map[string]interface{}{
+		"frontMatter": map[string]any{
 			"title": "Delete Me",
 			"date":  "2025-01-01T00:00:00Z",
 			"draft": true,
@@ -660,24 +629,24 @@ func TestDeletePost_Success(t *testing.T) {
 		"body": "To be deleted",
 	}
 	body, _ := json.Marshal(draft)
-	draftRec := doWriteRequest(t, handler, http.MethodPost, "/studio/api/posts/delete-me/draft", cookie, csrf, body)
+	draftRec := testutil.DoWriteRequest(t, handler, http.MethodPost, "/studio/api/posts/delete-me/draft", cookie, csrf, body)
 	if draftRec.Code != http.StatusOK {
 		t.Fatalf("save draft: expected 200, got %d", draftRec.Code)
 	}
 
 	// Publish the draft so it exists in the post directory.
-	pubBody, _ := json.Marshal(map[string]interface{}{
+	pubBody, _ := json.Marshal(map[string]any{
 		"slug":             "delete-me",
 		"draft":            draft,
 		"confirmOverwrite": true,
 	})
-	pubRec := doWriteRequest(t, handler, http.MethodPost, "/studio/api/posts/delete-me/publish/blog", cookie, csrf, pubBody)
+	pubRec := testutil.DoWriteRequest(t, handler, http.MethodPost, "/studio/api/posts/delete-me/publish/blog", cookie, csrf, pubBody)
 	if pubRec.Code != http.StatusOK {
 		t.Fatalf("publish: expected 200, got %d: %s", pubRec.Code, pubRec.Body.String())
 	}
 
 	// Now delete.
-	rec := doWriteRequest(t, handler, http.MethodDelete, "/studio/api/posts/delete-me", cookie, csrf, nil)
+	rec := testutil.DoWriteRequest(t, handler, http.MethodDelete, "/studio/api/posts/delete-me", cookie, csrf, nil)
 	if rec.Code != http.StatusOK {
 		t.Fatalf("delete: expected 200, got %d: %s", rec.Code, rec.Body.String())
 	}
@@ -689,7 +658,7 @@ func TestDeletePost_Success(t *testing.T) {
 	if !resp.OK {
 		t.Fatalf("expected ok=true: %s", rec.Body.String())
 	}
-	data, ok := resp.Data.(map[string]interface{})
+	data, ok := resp.Data.(map[string]any)
 	if !ok {
 		t.Fatalf("expected data map, got %T", resp.Data)
 	}
@@ -704,7 +673,7 @@ func TestTrash_ListEmpty(t *testing.T) {
 	handler, _ := newTestServer(t)
 	cookie, _ := authCookieAndCSRF(t, handler)
 
-	rec := doRequest(t, handler, http.MethodGet, "/studio/api/trash", cookie)
+	rec := testutil.DoRequest(t, handler, http.MethodGet, "/studio/api/trash", cookie)
 	if rec.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
 	}
@@ -724,7 +693,7 @@ func TestGetConfig_Success(t *testing.T) {
 	handler, _ := newTestServer(t)
 	cookie, _ := authCookieAndCSRF(t, handler)
 
-	rec := doRequest(t, handler, http.MethodGet, "/studio/api/config", cookie)
+	rec := testutil.DoRequest(t, handler, http.MethodGet, "/studio/api/config", cookie)
 	if rec.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
 	}
@@ -743,14 +712,14 @@ func TestPutConfig_Success(t *testing.T) {
 	cookie, csrf := authCookieAndCSRF(t, handler)
 
 	// Read current config first.
-	getRec := doRequest(t, handler, http.MethodGet, "/studio/api/config", cookie)
+	getRec := testutil.DoRequest(t, handler, http.MethodGet, "/studio/api/config", cookie)
 	var getResp APIResponse
 	if err := json.Unmarshal(getRec.Body.Bytes(), &getResp); err != nil {
 		t.Fatalf("unmarshal get config: %v", err)
 	}
 	cfgJSON, _ := json.Marshal(getResp.Data)
 
-	rec := doWriteRequest(t, handler, http.MethodPut, "/studio/api/config", cookie, csrf, cfgJSON)
+	rec := testutil.DoWriteRequest(t, handler, http.MethodPut, "/studio/api/config", cookie, csrf, cfgJSON)
 	if rec.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
 	}
@@ -768,7 +737,7 @@ func TestPutConfig_InvalidJSON(t *testing.T) {
 	handler, _ := newTestServer(t)
 	cookie, csrf := authCookieAndCSRF(t, handler)
 
-	rec := doWriteRequest(t, handler, http.MethodPut, "/studio/api/config", cookie, csrf, []byte("{invalid"))
+	rec := testutil.DoWriteRequest(t, handler, http.MethodPut, "/studio/api/config", cookie, csrf, []byte("{invalid"))
 	if rec.Code != http.StatusBadRequest {
 		t.Fatalf("expected 400, got %d: %s", rec.Code, rec.Body.String())
 	}
@@ -780,7 +749,7 @@ func TestGetSite_Success(t *testing.T) {
 	handler, _ := newTestServer(t)
 	cookie, _ := authCookieAndCSRF(t, handler)
 
-	rec := doRequest(t, handler, http.MethodGet, "/studio/api/site", cookie)
+	rec := testutil.DoRequest(t, handler, http.MethodGet, "/studio/api/site", cookie)
 	if rec.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
 	}
@@ -802,7 +771,7 @@ func TestPutSite_Success(t *testing.T) {
 		"description":  "Updated description",
 		"profileImage": "/avatar.png",
 	})
-	rec := doWriteRequest(t, handler, http.MethodPut, "/studio/api/site", cookie, csrf, body)
+	rec := testutil.DoWriteRequest(t, handler, http.MethodPut, "/studio/api/site", cookie, csrf, body)
 	if rec.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
 	}
@@ -820,7 +789,7 @@ func TestPutSite_InvalidJSON(t *testing.T) {
 	handler, _ := newTestServer(t)
 	cookie, csrf := authCookieAndCSRF(t, handler)
 
-	rec := doWriteRequest(t, handler, http.MethodPut, "/studio/api/site", cookie, csrf, []byte("bad"))
+	rec := testutil.DoWriteRequest(t, handler, http.MethodPut, "/studio/api/site", cookie, csrf, []byte("bad"))
 	if rec.Code != http.StatusBadRequest {
 		t.Fatalf("expected 400, got %d: %s", rec.Code, rec.Body.String())
 	}
@@ -832,7 +801,7 @@ func TestGetNowPage_Success(t *testing.T) {
 	handler, _ := newTestServer(t)
 	cookie, _ := authCookieAndCSRF(t, handler)
 
-	rec := doRequest(t, handler, http.MethodGet, "/studio/api/pages/now", cookie)
+	rec := testutil.DoRequest(t, handler, http.MethodGet, "/studio/api/pages/now", cookie)
 	if rec.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
 	}
@@ -844,7 +813,7 @@ func TestGetNowPage_Success(t *testing.T) {
 	if !resp.OK {
 		t.Fatalf("expected ok=true")
 	}
-	data, ok := resp.Data.(map[string]interface{})
+	data, ok := resp.Data.(map[string]any)
 	if !ok {
 		t.Fatalf("expected data map")
 	}
@@ -860,7 +829,7 @@ func TestPutNowPage_Success(t *testing.T) {
 	body, _ := json.Marshal(map[string]string{
 		"raw": "---\ntitle: Now\n---\n\nUpdated now page",
 	})
-	rec := doWriteRequest(t, handler, http.MethodPut, "/studio/api/pages/now", cookie, csrf, body)
+	rec := testutil.DoWriteRequest(t, handler, http.MethodPut, "/studio/api/pages/now", cookie, csrf, body)
 	if rec.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
 	}
@@ -880,7 +849,7 @@ func TestAuditRecent_Success(t *testing.T) {
 	handler, _ := newTestServer(t)
 	cookie, _ := authCookieAndCSRF(t, handler)
 
-	rec := doRequest(t, handler, http.MethodGet, "/studio/api/audit", cookie)
+	rec := testutil.DoRequest(t, handler, http.MethodGet, "/studio/api/audit", cookie)
 	if rec.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
 	}
@@ -904,7 +873,7 @@ func TestRenameTag_Success(t *testing.T) {
 		"oldName": "old-tag",
 		"newName": "new-tag",
 	})
-	rec := doWriteRequest(t, handler, http.MethodPost, "/studio/api/tags/rename", cookie, csrf, body)
+	rec := testutil.DoWriteRequest(t, handler, http.MethodPost, "/studio/api/tags/rename", cookie, csrf, body)
 	if rec.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
 	}
@@ -926,7 +895,7 @@ func TestRenameTag_EmptyName(t *testing.T) {
 		"oldName": "",
 		"newName": "new-tag",
 	})
-	rec := doWriteRequest(t, handler, http.MethodPost, "/studio/api/tags/rename", cookie, csrf, body)
+	rec := testutil.DoWriteRequest(t, handler, http.MethodPost, "/studio/api/tags/rename", cookie, csrf, body)
 	if rec.Code != http.StatusBadRequest {
 		t.Fatalf("expected 400, got %d: %s", rec.Code, rec.Body.String())
 	}
@@ -937,7 +906,7 @@ func TestDeleteTag_Success(t *testing.T) {
 	cookie, csrf := authCookieAndCSRF(t, handler)
 
 	body, _ := json.Marshal(map[string]string{"name": "some-tag"})
-	rec := doWriteRequest(t, handler, http.MethodPost, "/studio/api/tags/delete", cookie, csrf, body)
+	rec := testutil.DoWriteRequest(t, handler, http.MethodPost, "/studio/api/tags/delete", cookie, csrf, body)
 	if rec.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
 	}
@@ -948,7 +917,7 @@ func TestDeleteTag_EmptyName(t *testing.T) {
 	cookie, csrf := authCookieAndCSRF(t, handler)
 
 	body, _ := json.Marshal(map[string]string{"name": ""})
-	rec := doWriteRequest(t, handler, http.MethodPost, "/studio/api/tags/delete", cookie, csrf, body)
+	rec := testutil.DoWriteRequest(t, handler, http.MethodPost, "/studio/api/tags/delete", cookie, csrf, body)
 	if rec.Code != http.StatusBadRequest {
 		t.Fatalf("expected 400, got %d: %s", rec.Code, rec.Body.String())
 	}
@@ -960,7 +929,7 @@ func TestExportPosts_Success(t *testing.T) {
 	handler, _ := newTestServer(t)
 	cookie, _ := authCookieAndCSRF(t, handler)
 
-	rec := doRequest(t, handler, http.MethodGet, "/studio/api/posts/export", cookie)
+	rec := testutil.DoRequest(t, handler, http.MethodGet, "/studio/api/posts/export", cookie)
 	if rec.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
 	}
@@ -974,7 +943,7 @@ func TestExportPosts_Success(t *testing.T) {
 func TestHealthFull_RequiresAuth(t *testing.T) {
 	handler, _ := newTestServer(t)
 
-	rec := doRequest(t, handler, http.MethodGet, "/studio/api/health/full", nil)
+	rec := testutil.DoRequest(t, handler, http.MethodGet, "/studio/api/health/full", nil)
 	if rec.Code != http.StatusUnauthorized {
 		t.Fatalf("expected 401, got %d: %s", rec.Code, rec.Body.String())
 	}
@@ -984,7 +953,7 @@ func TestHealthFull_Success(t *testing.T) {
 	handler, _ := newTestServer(t)
 	cookie, _ := authCookieAndCSRF(t, handler)
 
-	rec := doRequest(t, handler, http.MethodGet, "/studio/api/health/full", cookie)
+	rec := testutil.DoRequest(t, handler, http.MethodGet, "/studio/api/health/full", cookie)
 	if rec.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
 	}
@@ -1023,7 +992,7 @@ func TestBulkTrash_EmptySlugs(t *testing.T) {
 	cookie, csrf := authCookieAndCSRF(t, handler)
 
 	body, _ := json.Marshal(map[string][]string{"slugs": {}})
-	rec := doWriteRequest(t, handler, http.MethodPost, "/studio/api/posts/bulk/trash", cookie, csrf, body)
+	rec := testutil.DoWriteRequest(t, handler, http.MethodPost, "/studio/api/posts/bulk/trash", cookie, csrf, body)
 	if rec.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
 	}
@@ -1033,7 +1002,7 @@ func TestBulkTrash_InvalidJSON(t *testing.T) {
 	handler, _ := newTestServer(t)
 	cookie, csrf := authCookieAndCSRF(t, handler)
 
-	rec := doWriteRequest(t, handler, http.MethodPost, "/studio/api/posts/bulk/trash", cookie, csrf, []byte("{bad"))
+	rec := testutil.DoWriteRequest(t, handler, http.MethodPost, "/studio/api/posts/bulk/trash", cookie, csrf, []byte("{bad"))
 	if rec.Code != http.StatusBadRequest {
 		t.Fatalf("expected 400, got %d: %s", rec.Code, rec.Body.String())
 	}
@@ -1044,7 +1013,7 @@ func TestBulkPublish_EmptySlugs(t *testing.T) {
 	cookie, csrf := authCookieAndCSRF(t, handler)
 
 	body, _ := json.Marshal(map[string][]string{"slugs": {}})
-	rec := doWriteRequest(t, handler, http.MethodPost, "/studio/api/posts/bulk/publish", cookie, csrf, body)
+	rec := testutil.DoWriteRequest(t, handler, http.MethodPost, "/studio/api/posts/bulk/publish", cookie, csrf, body)
 	if rec.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
 	}
@@ -1057,7 +1026,7 @@ func TestUploadAsset_MissingFile(t *testing.T) {
 	cookie, csrf := authCookieAndCSRF(t, handler)
 
 	// Send a POST with JSON content-type instead of multipart (which will fail to parse).
-	rec := doWriteRequest(t, handler, http.MethodPost, "/studio/api/posts/test/assets", cookie, csrf, []byte("{}"))
+	rec := testutil.DoWriteRequest(t, handler, http.MethodPost, "/studio/api/posts/test/assets", cookie, csrf, []byte("{}"))
 	if rec.Code != http.StatusBadRequest {
 		t.Fatalf("expected 400, got %d: %s", rec.Code, rec.Body.String())
 	}
@@ -1068,7 +1037,7 @@ func TestUploadAsset_MissingFile(t *testing.T) {
 func TestMetrics_RequiresAuth(t *testing.T) {
 	handler, _ := newTestServer(t)
 
-	rec := doRequest(t, handler, http.MethodGet, "/studio/api/metrics", nil)
+	rec := testutil.DoRequest(t, handler, http.MethodGet, "/studio/api/metrics", nil)
 	if rec.Code != http.StatusUnauthorized {
 		t.Fatalf("expected 401, got %d: %s", rec.Code, rec.Body.String())
 	}
@@ -1078,7 +1047,7 @@ func TestMetrics_Success(t *testing.T) {
 	handler, _ := newTestServer(t)
 	cookie, _ := authCookieAndCSRF(t, handler)
 
-	rec := doRequest(t, handler, http.MethodGet, "/studio/api/metrics", cookie)
+	rec := testutil.DoRequest(t, handler, http.MethodGet, "/studio/api/metrics", cookie)
 	if rec.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
 	}
@@ -1089,7 +1058,7 @@ func TestMetrics_Success(t *testing.T) {
 func TestSPAHandler_ServesIndex(t *testing.T) {
 	handler, _ := newTestServer(t)
 
-	rec := doRequest(t, handler, http.MethodGet, "/studio/", nil)
+	rec := testutil.DoRequest(t, handler, http.MethodGet, "/studio/", nil)
 	// SPA handler should serve the index.html (200) or redirect.
 	if rec.Code != http.StatusOK && rec.Code != http.StatusMovedPermanently {
 		t.Fatalf("expected 200 or 301, got %d", rec.Code)
@@ -1102,7 +1071,7 @@ func TestPostRouter_EmptySlug(t *testing.T) {
 	handler, _ := newTestServer(t)
 	cookie, _ := authCookieAndCSRF(t, handler)
 
-	rec := doRequest(t, handler, http.MethodGet, "/studio/api/posts/", cookie)
+	rec := testutil.DoRequest(t, handler, http.MethodGet, "/studio/api/posts/", cookie)
 	if rec.Code != http.StatusNotFound {
 		t.Fatalf("expected 404, got %d: %s", rec.Code, rec.Body.String())
 	}
@@ -1112,7 +1081,7 @@ func TestPostRouter_UnknownSubResource(t *testing.T) {
 	handler, _ := newTestServer(t)
 	cookie, _ := authCookieAndCSRF(t, handler)
 
-	rec := doRequest(t, handler, http.MethodGet, "/studio/api/posts/test-post/unknown", cookie)
+	rec := testutil.DoRequest(t, handler, http.MethodGet, "/studio/api/posts/test-post/unknown", cookie)
 	if rec.Code != http.StatusNotFound {
 		t.Fatalf("expected 404, got %d: %s", rec.Code, rec.Body.String())
 	}
@@ -1122,8 +1091,8 @@ func TestPublishBlog_UnknownTarget(t *testing.T) {
 	handler, _ := newTestServer(t)
 	cookie, csrf := authCookieAndCSRF(t, handler)
 
-	body, _ := json.Marshal(map[string]interface{}{"slug": "x", "draft": map[string]interface{}{}, "confirmOverwrite": false})
-	rec := doWriteRequest(t, handler, http.MethodPost, "/studio/api/posts/x/publish/twitter", cookie, csrf, body)
+	body, _ := json.Marshal(map[string]any{"slug": "x", "draft": map[string]any{}, "confirmOverwrite": false})
+	rec := testutil.DoWriteRequest(t, handler, http.MethodPost, "/studio/api/posts/x/publish/twitter", cookie, csrf, body)
 	if rec.Code != http.StatusNotFound {
 		t.Fatalf("expected 404, got %d: %s", rec.Code, rec.Body.String())
 	}
@@ -1356,7 +1325,7 @@ func TestAuditRecent_WithLimit(t *testing.T) {
 	handler, _ := newTestServer(t)
 	cookie, _ := authCookieAndCSRF(t, handler)
 
-	rec := doRequest(t, handler, http.MethodGet, "/studio/api/audit?limit=5", cookie)
+	rec := testutil.DoRequest(t, handler, http.MethodGet, "/studio/api/audit?limit=5", cookie)
 	if rec.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
 	}
@@ -1366,7 +1335,7 @@ func TestAuditRecent_WithSearch(t *testing.T) {
 	handler, _ := newTestServer(t)
 	cookie, _ := authCookieAndCSRF(t, handler)
 
-	rec := doRequest(t, handler, http.MethodGet, "/studio/api/audit?search=test", cookie)
+	rec := testutil.DoRequest(t, handler, http.MethodGet, "/studio/api/audit?search=test", cookie)
 	if rec.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
 	}
@@ -1376,7 +1345,7 @@ func TestAuditRecent_WithOperationFilter(t *testing.T) {
 	handler, _ := newTestServer(t)
 	cookie, _ := authCookieAndCSRF(t, handler)
 
-	rec := doRequest(t, handler, http.MethodGet, "/studio/api/audit?operation=publish", cookie)
+	rec := testutil.DoRequest(t, handler, http.MethodGet, "/studio/api/audit?operation=publish", cookie)
 	if rec.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
 	}
@@ -1388,7 +1357,7 @@ func TestGetPostStats_NotFound(t *testing.T) {
 	handler, _ := newTestServer(t)
 	cookie, _ := authCookieAndCSRF(t, handler)
 
-	rec := doRequest(t, handler, http.MethodGet, "/studio/api/posts/nonexistent/stats", cookie)
+	rec := testutil.DoRequest(t, handler, http.MethodGet, "/studio/api/posts/nonexistent/stats", cookie)
 	if rec.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
 	}
@@ -1423,20 +1392,20 @@ func TestUploadAsset_ValidPNG(t *testing.T) {
 	cookie, csrf := authCookieAndCSRF(t, handler)
 
 	// First create a draft so the post directory exists.
-	draft := map[string]interface{}{
+	draft := map[string]any{
 		"slug":        "upload-test",
-		"frontMatter": map[string]interface{}{"title": "Upload", "date": "2025-01-01T00:00:00Z", "draft": true},
+		"frontMatter": map[string]any{"title": "Upload", "date": "2025-01-01T00:00:00Z", "draft": true},
 		"body":        "content",
 	}
 	draftBody, _ := json.Marshal(draft)
-	draftRec := doWriteRequest(t, handler, http.MethodPost, "/studio/api/posts/upload-test/draft", cookie, csrf, draftBody)
+	draftRec := testutil.DoWriteRequest(t, handler, http.MethodPost, "/studio/api/posts/upload-test/draft", cookie, csrf, draftBody)
 	if draftRec.Code != http.StatusOK {
 		t.Fatalf("save draft: expected 200, got %d", draftRec.Code)
 	}
 
 	// Publish the draft so the post directory exists in the actual blog root.
-	pubBody, _ := json.Marshal(map[string]interface{}{"slug": "upload-test", "draft": draft, "confirmOverwrite": true})
-	pubRec := doWriteRequest(t, handler, http.MethodPost, "/studio/api/posts/upload-test/publish/blog", cookie, csrf, pubBody)
+	pubBody, _ := json.Marshal(map[string]any{"slug": "upload-test", "draft": draft, "confirmOverwrite": true})
+	pubRec := testutil.DoWriteRequest(t, handler, http.MethodPost, "/studio/api/posts/upload-test/publish/blog", cookie, csrf, pubBody)
 	if pubRec.Code != http.StatusOK {
 		t.Fatalf("publish: expected 200, got %d: %s", pubRec.Code, pubRec.Body.String())
 	}
@@ -1542,24 +1511,24 @@ func TestLoadPost_Success(t *testing.T) {
 	handler, _ := newTestServer(t)
 	cookie, csrf := authCookieAndCSRF(t, handler)
 
-	draft := map[string]interface{}{
+	draft := map[string]any{
 		"slug":        "load-me",
-		"frontMatter": map[string]interface{}{"title": "Load Me", "date": "2025-01-01T00:00:00Z", "draft": false},
+		"frontMatter": map[string]any{"title": "Load Me", "date": "2025-01-01T00:00:00Z", "draft": false},
 		"body":        "Some body content here",
 	}
 	draftBody, _ := json.Marshal(draft)
-	draftRec := doWriteRequest(t, handler, http.MethodPost, "/studio/api/posts/load-me/draft", cookie, csrf, draftBody)
+	draftRec := testutil.DoWriteRequest(t, handler, http.MethodPost, "/studio/api/posts/load-me/draft", cookie, csrf, draftBody)
 	if draftRec.Code != http.StatusOK {
 		t.Fatalf("save draft: expected 200, got %d", draftRec.Code)
 	}
 
-	pubBody, _ := json.Marshal(map[string]interface{}{"slug": "load-me", "draft": draft, "confirmOverwrite": true})
-	pubRec := doWriteRequest(t, handler, http.MethodPost, "/studio/api/posts/load-me/publish/blog", cookie, csrf, pubBody)
+	pubBody, _ := json.Marshal(map[string]any{"slug": "load-me", "draft": draft, "confirmOverwrite": true})
+	pubRec := testutil.DoWriteRequest(t, handler, http.MethodPost, "/studio/api/posts/load-me/publish/blog", cookie, csrf, pubBody)
 	if pubRec.Code != http.StatusOK {
 		t.Fatalf("publish: expected 200, got %d: %s", pubRec.Code, pubRec.Body.String())
 	}
 
-	rec := doRequest(t, handler, http.MethodGet, "/studio/api/posts/load-me", cookie)
+	rec := testutil.DoRequest(t, handler, http.MethodGet, "/studio/api/posts/load-me", cookie)
 	if rec.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
 	}
@@ -1579,26 +1548,26 @@ func TestRollback_WithPost(t *testing.T) {
 	handler, _ := newTestServer(t)
 	cookie, csrf := authCookieAndCSRF(t, handler)
 
-	draft := map[string]interface{}{
+	draft := map[string]any{
 		"slug":        "rollback-test",
-		"frontMatter": map[string]interface{}{"title": "Rollback", "date": "2025-01-01T00:00:00Z", "draft": false},
+		"frontMatter": map[string]any{"title": "Rollback", "date": "2025-01-01T00:00:00Z", "draft": false},
 		"body":        "Original content",
 	}
 	draftBody, _ := json.Marshal(draft)
-	draftRec := doWriteRequest(t, handler, http.MethodPost, "/studio/api/posts/rollback-test/draft", cookie, csrf, draftBody)
+	draftRec := testutil.DoWriteRequest(t, handler, http.MethodPost, "/studio/api/posts/rollback-test/draft", cookie, csrf, draftBody)
 	if draftRec.Code != http.StatusOK {
 		t.Fatalf("save draft: expected 200, got %d", draftRec.Code)
 	}
 
 	// Publish to create a backup.
-	pubBody, _ := json.Marshal(map[string]interface{}{"slug": "rollback-test", "draft": draft, "confirmOverwrite": true})
-	pubRec := doWriteRequest(t, handler, http.MethodPost, "/studio/api/posts/rollback-test/publish/blog", cookie, csrf, pubBody)
+	pubBody, _ := json.Marshal(map[string]any{"slug": "rollback-test", "draft": draft, "confirmOverwrite": true})
+	pubRec := testutil.DoWriteRequest(t, handler, http.MethodPost, "/studio/api/posts/rollback-test/publish/blog", cookie, csrf, pubBody)
 	if pubRec.Code != http.StatusOK {
 		t.Fatalf("publish: expected 200, got %d: %s", pubRec.Code, pubRec.Body.String())
 	}
 
 	// Rollback should succeed since there's a backup.
-	rec := doWriteRequest(t, handler, http.MethodPost, "/studio/api/posts/rollback-test/rollback", cookie, csrf, nil)
+	rec := testutil.DoWriteRequest(t, handler, http.MethodPost, "/studio/api/posts/rollback-test/rollback", cookie, csrf, nil)
 	if rec.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
 	}
@@ -1610,19 +1579,19 @@ func TestPublishAndListPosts(t *testing.T) {
 	handler, _ := newTestServer(t)
 	cookie, csrf := authCookieAndCSRF(t, handler)
 
-	draft := map[string]interface{}{
+	draft := map[string]any{
 		"slug":        "list-test",
-		"frontMatter": map[string]interface{}{"title": "List Test", "date": "2025-01-01T00:00:00Z", "draft": false, "tags": []string{"go"}},
+		"frontMatter": map[string]any{"title": "List Test", "date": "2025-01-01T00:00:00Z", "draft": false, "tags": []string{"go"}},
 		"body":        "Body",
 	}
 	draftBody, _ := json.Marshal(draft)
-	doWriteRequest(t, handler, http.MethodPost, "/studio/api/posts/list-test/draft", cookie, csrf, draftBody)
+	testutil.DoWriteRequest(t, handler, http.MethodPost, "/studio/api/posts/list-test/draft", cookie, csrf, draftBody)
 
-	pubBody, _ := json.Marshal(map[string]interface{}{"slug": "list-test", "draft": draft, "confirmOverwrite": true})
-	doWriteRequest(t, handler, http.MethodPost, "/studio/api/posts/list-test/publish/blog", cookie, csrf, pubBody)
+	pubBody, _ := json.Marshal(map[string]any{"slug": "list-test", "draft": draft, "confirmOverwrite": true})
+	testutil.DoWriteRequest(t, handler, http.MethodPost, "/studio/api/posts/list-test/publish/blog", cookie, csrf, pubBody)
 
 	// Now list posts should include our published post.
-	rec := doRequest(t, handler, http.MethodGet, "/studio/api/posts", cookie)
+	rec := testutil.DoRequest(t, handler, http.MethodGet, "/studio/api/posts", cookie)
 	if rec.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
 	}
@@ -1634,22 +1603,22 @@ func TestDeleteAndListTrash(t *testing.T) {
 	handler, _ := newTestServer(t)
 	cookie, csrf := authCookieAndCSRF(t, handler)
 
-	draft := map[string]interface{}{
+	draft := map[string]any{
 		"slug":        "trash-list",
-		"frontMatter": map[string]interface{}{"title": "Trash List", "date": "2025-01-01T00:00:00Z", "draft": false},
+		"frontMatter": map[string]any{"title": "Trash List", "date": "2025-01-01T00:00:00Z", "draft": false},
 		"body":        "Will be trashed",
 	}
 	draftBody, _ := json.Marshal(draft)
-	doWriteRequest(t, handler, http.MethodPost, "/studio/api/posts/trash-list/draft", cookie, csrf, draftBody)
+	testutil.DoWriteRequest(t, handler, http.MethodPost, "/studio/api/posts/trash-list/draft", cookie, csrf, draftBody)
 
-	pubBody, _ := json.Marshal(map[string]interface{}{"slug": "trash-list", "draft": draft, "confirmOverwrite": true})
-	doWriteRequest(t, handler, http.MethodPost, "/studio/api/posts/trash-list/publish/blog", cookie, csrf, pubBody)
+	pubBody, _ := json.Marshal(map[string]any{"slug": "trash-list", "draft": draft, "confirmOverwrite": true})
+	testutil.DoWriteRequest(t, handler, http.MethodPost, "/studio/api/posts/trash-list/publish/blog", cookie, csrf, pubBody)
 
 	// Delete
-	doWriteRequest(t, handler, http.MethodDelete, "/studio/api/posts/trash-list", cookie, csrf, nil)
+	testutil.DoWriteRequest(t, handler, http.MethodDelete, "/studio/api/posts/trash-list", cookie, csrf, nil)
 
 	// List trash should show the deleted post.
-	rec := doRequest(t, handler, http.MethodGet, "/studio/api/trash", cookie)
+	rec := testutil.DoRequest(t, handler, http.MethodGet, "/studio/api/trash", cookie)
 	if rec.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
 	}
@@ -1668,24 +1637,24 @@ func TestTrashPurge(t *testing.T) {
 	handler, _ := newTestServer(t)
 	cookie, csrf := authCookieAndCSRF(t, handler)
 
-	draft := map[string]interface{}{
+	draft := map[string]any{
 		"slug":        "purge-me",
-		"frontMatter": map[string]interface{}{"title": "Purge", "date": "2025-01-01T00:00:00Z", "draft": false},
+		"frontMatter": map[string]any{"title": "Purge", "date": "2025-01-01T00:00:00Z", "draft": false},
 		"body":        "To be purged",
 	}
 	draftBody, _ := json.Marshal(draft)
-	doWriteRequest(t, handler, http.MethodPost, "/studio/api/posts/purge-me/draft", cookie, csrf, draftBody)
-	pubBody, _ := json.Marshal(map[string]interface{}{"slug": "purge-me", "draft": draft, "confirmOverwrite": true})
-	doWriteRequest(t, handler, http.MethodPost, "/studio/api/posts/purge-me/publish/blog", cookie, csrf, pubBody)
+	testutil.DoWriteRequest(t, handler, http.MethodPost, "/studio/api/posts/purge-me/draft", cookie, csrf, draftBody)
+	pubBody, _ := json.Marshal(map[string]any{"slug": "purge-me", "draft": draft, "confirmOverwrite": true})
+	testutil.DoWriteRequest(t, handler, http.MethodPost, "/studio/api/posts/purge-me/publish/blog", cookie, csrf, pubBody)
 
 	// Delete
-	deleteRec := doWriteRequest(t, handler, http.MethodDelete, "/studio/api/posts/purge-me", cookie, csrf, nil)
+	deleteRec := testutil.DoWriteRequest(t, handler, http.MethodDelete, "/studio/api/posts/purge-me", cookie, csrf, nil)
 	var deleteResp APIResponse
 	json.Unmarshal(deleteRec.Body.Bytes(), &deleteResp)
-	trashID := deleteResp.Data.(map[string]interface{})["trashId"].(string)
+	trashID := deleteResp.Data.(map[string]any)["trashId"].(string)
 
 	// Purge from trash.
-	rec := doWriteRequest(t, handler, http.MethodDelete, "/studio/api/trash/"+trashID, cookie, csrf, nil)
+	rec := testutil.DoWriteRequest(t, handler, http.MethodDelete, "/studio/api/trash/"+trashID, cookie, csrf, nil)
 	if rec.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
 	}
@@ -1697,25 +1666,25 @@ func TestTrashRestore(t *testing.T) {
 	handler, _ := newTestServer(t)
 	cookie, csrf := authCookieAndCSRF(t, handler)
 
-	draft := map[string]interface{}{
+	draft := map[string]any{
 		"slug":        "restore-me",
-		"frontMatter": map[string]interface{}{"title": "Restore", "date": "2025-01-01T00:00:00Z", "draft": false},
+		"frontMatter": map[string]any{"title": "Restore", "date": "2025-01-01T00:00:00Z", "draft": false},
 		"body":        "To be restored",
 	}
 	draftBody, _ := json.Marshal(draft)
-	doWriteRequest(t, handler, http.MethodPost, "/studio/api/posts/restore-me/draft", cookie, csrf, draftBody)
-	pubBody, _ := json.Marshal(map[string]interface{}{"slug": "restore-me", "draft": draft, "confirmOverwrite": true})
-	doWriteRequest(t, handler, http.MethodPost, "/studio/api/posts/restore-me/publish/blog", cookie, csrf, pubBody)
+	testutil.DoWriteRequest(t, handler, http.MethodPost, "/studio/api/posts/restore-me/draft", cookie, csrf, draftBody)
+	pubBody, _ := json.Marshal(map[string]any{"slug": "restore-me", "draft": draft, "confirmOverwrite": true})
+	testutil.DoWriteRequest(t, handler, http.MethodPost, "/studio/api/posts/restore-me/publish/blog", cookie, csrf, pubBody)
 
 	// Delete
-	deleteRec := doWriteRequest(t, handler, http.MethodDelete, "/studio/api/posts/restore-me", cookie, csrf, nil)
+	deleteRec := testutil.DoWriteRequest(t, handler, http.MethodDelete, "/studio/api/posts/restore-me", cookie, csrf, nil)
 	var deleteResp APIResponse
 	json.Unmarshal(deleteRec.Body.Bytes(), &deleteResp)
-	trashID := deleteResp.Data.(map[string]interface{})["trashId"].(string)
+	trashID := deleteResp.Data.(map[string]any)["trashId"].(string)
 
 	// Restore from trash.
 	restoreBody, _ := json.Marshal(map[string]bool{})
-	rec := doWriteRequest(t, handler, http.MethodPost, "/studio/api/trash/"+trashID+"/restore", cookie, csrf, restoreBody)
+	rec := testutil.DoWriteRequest(t, handler, http.MethodPost, "/studio/api/trash/"+trashID+"/restore", cookie, csrf, restoreBody)
 	if rec.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
 	}
@@ -1728,7 +1697,7 @@ func TestTrashRouter_NotFound(t *testing.T) {
 	cookie, csrf := authCookieAndCSRF(t, handler)
 
 	// POST to trash with no action should 404.
-	rec := doWriteRequest(t, handler, http.MethodPost, "/studio/api/trash/some-id", cookie, csrf, nil)
+	rec := testutil.DoWriteRequest(t, handler, http.MethodPost, "/studio/api/trash/some-id", cookie, csrf, nil)
 	if rec.Code != http.StatusNotFound {
 		t.Fatalf("expected 404, got %d: %s", rec.Code, rec.Body.String())
 	}
@@ -1740,7 +1709,7 @@ func TestChangePassword_InvalidJSON(t *testing.T) {
 	handler, _ := newTestServer(t)
 	cookie, csrf := authCookieAndCSRF(t, handler)
 
-	rec := doWriteRequest(t, handler, http.MethodPost, "/studio/api/auth/password", cookie, csrf, []byte("{bad"))
+	rec := testutil.DoWriteRequest(t, handler, http.MethodPost, "/studio/api/auth/password", cookie, csrf, []byte("{bad"))
 	if rec.Code != http.StatusBadRequest {
 		t.Fatalf("expected 400, got %d: %s", rec.Code, rec.Body.String())
 	}
@@ -1753,7 +1722,7 @@ func TestBulkPublish_Nonexistent(t *testing.T) {
 	cookie, csrf := authCookieAndCSRF(t, handler)
 
 	body, _ := json.Marshal(map[string][]string{"slugs": {"nonexistent-1", "nonexistent-2"}})
-	rec := doWriteRequest(t, handler, http.MethodPost, "/studio/api/posts/bulk/publish", cookie, csrf, body)
+	rec := testutil.DoWriteRequest(t, handler, http.MethodPost, "/studio/api/posts/bulk/publish", cookie, csrf, body)
 	if rec.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
 	}
@@ -1766,7 +1735,7 @@ func TestBulkTrash_Nonexistent(t *testing.T) {
 	cookie, csrf := authCookieAndCSRF(t, handler)
 
 	body, _ := json.Marshal(map[string][]string{"slugs": {"ghost-post"}})
-	rec := doWriteRequest(t, handler, http.MethodPost, "/studio/api/posts/bulk/trash", cookie, csrf, body)
+	rec := testutil.DoWriteRequest(t, handler, http.MethodPost, "/studio/api/posts/bulk/trash", cookie, csrf, body)
 	if rec.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
 	}
@@ -1779,17 +1748,17 @@ func TestRenameTag_WithPosts(t *testing.T) {
 	cookie, csrf := authCookieAndCSRF(t, handler)
 
 	// Create a post with a tag.
-	draft := map[string]interface{}{
+	draft := map[string]any{
 		"slug":        "tag-test",
-		"frontMatter": map[string]interface{}{"title": "Tag Test", "date": "2025-01-01T00:00:00Z", "draft": true, "tags": []string{"old-tag"}},
+		"frontMatter": map[string]any{"title": "Tag Test", "date": "2025-01-01T00:00:00Z", "draft": true, "tags": []string{"old-tag"}},
 		"body":        "content",
 	}
 	draftBody, _ := json.Marshal(draft)
-	doWriteRequest(t, handler, http.MethodPost, "/studio/api/posts/tag-test/draft", cookie, csrf, draftBody)
+	testutil.DoWriteRequest(t, handler, http.MethodPost, "/studio/api/posts/tag-test/draft", cookie, csrf, draftBody)
 
 	// Rename the tag.
 	body, _ := json.Marshal(map[string]string{"oldName": "old-tag", "newName": "new-tag"})
-	rec := doWriteRequest(t, handler, http.MethodPost, "/studio/api/tags/rename", cookie, csrf, body)
+	rec := testutil.DoWriteRequest(t, handler, http.MethodPost, "/studio/api/tags/rename", cookie, csrf, body)
 	if rec.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
 	}
@@ -1801,16 +1770,16 @@ func TestDeleteTag_WithPosts(t *testing.T) {
 	handler, _ := newTestServer(t)
 	cookie, csrf := authCookieAndCSRF(t, handler)
 
-	draft := map[string]interface{}{
+	draft := map[string]any{
 		"slug":        "del-tag-test",
-		"frontMatter": map[string]interface{}{"title": "Del Tag", "date": "2025-01-01T00:00:00Z", "draft": true, "tags": []string{"remove-me", "keep-me"}},
+		"frontMatter": map[string]any{"title": "Del Tag", "date": "2025-01-01T00:00:00Z", "draft": true, "tags": []string{"remove-me", "keep-me"}},
 		"body":        "content",
 	}
 	draftBody, _ := json.Marshal(draft)
-	doWriteRequest(t, handler, http.MethodPost, "/studio/api/posts/del-tag-test/draft", cookie, csrf, draftBody)
+	testutil.DoWriteRequest(t, handler, http.MethodPost, "/studio/api/posts/del-tag-test/draft", cookie, csrf, draftBody)
 
 	body, _ := json.Marshal(map[string]string{"name": "remove-me"})
-	rec := doWriteRequest(t, handler, http.MethodPost, "/studio/api/tags/delete", cookie, csrf, body)
+	rec := testutil.DoWriteRequest(t, handler, http.MethodPost, "/studio/api/tags/delete", cookie, csrf, body)
 	if rec.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
 	}
@@ -1928,7 +1897,7 @@ func TestPutPosts_NotFound(t *testing.T) {
 	cookie, csrf := authCookieAndCSRF(t, handler)
 
 	body, _ := json.Marshal(map[string]string{"title": "test"})
-	rec := doWriteRequest(t, handler, http.MethodPut, "/studio/api/posts/nonexistent-slug", cookie, csrf, body)
+	rec := testutil.DoWriteRequest(t, handler, http.MethodPut, "/studio/api/posts/nonexistent-slug", cookie, csrf, body)
 
 	if rec.Code != http.StatusNotFound {
 		t.Fatalf("expected 404, got %d: %s", rec.Code, rec.Body.String())
@@ -1938,7 +1907,7 @@ func TestPutPosts_NotFound(t *testing.T) {
 func TestDeletePost_WithoutAuth(t *testing.T) {
 	handler, _ := newTestServer(t)
 
-	rec := doRequest(t, handler, http.MethodDelete, "/studio/api/posts/test-slug", nil)
+	rec := testutil.DoRequest(t, handler, http.MethodDelete, "/studio/api/posts/test-slug", nil)
 
 	if rec.Code != http.StatusUnauthorized {
 		t.Fatalf("expected 401, got %d: %s", rec.Code, rec.Body.String())
@@ -1962,7 +1931,7 @@ func TestHealthFull_ResponseStructure(t *testing.T) {
 	handler, _ := newTestServer(t)
 	cookie, _ := authCookieAndCSRF(t, handler)
 
-	rec := doRequest(t, handler, http.MethodGet, "/studio/api/health/full", cookie)
+	rec := testutil.DoRequest(t, handler, http.MethodGet, "/studio/api/health/full", cookie)
 	if rec.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
 	}
@@ -1975,7 +1944,7 @@ func TestHealthFull_ResponseStructure(t *testing.T) {
 		t.Fatalf("expected ok=true")
 	}
 
-	data, ok := resp.Data.(map[string]interface{})
+	data, ok := resp.Data.(map[string]any)
 	if !ok {
 		t.Fatalf("expected data to be a map, got %T", resp.Data)
 	}
@@ -1992,7 +1961,7 @@ func TestHealthFull_ResponseStructure(t *testing.T) {
 	if !hasChecks {
 		t.Fatal("expected 'checks' field in health/full response")
 	}
-	checksArr, ok := checksVal.([]interface{})
+	checksArr, ok := checksVal.([]any)
 	if !ok {
 		t.Fatalf("expected checks to be an array, got %T", checksVal)
 	}
@@ -2049,5 +2018,267 @@ func TestMaxBytes_WriteEndpoint413(t *testing.T) {
 	// Accept either 400 or 413 since behavior depends on Go version and timing.
 	if rec.Code != http.StatusBadRequest && rec.Code != http.StatusRequestEntityTooLarge {
 		t.Fatalf("expected 400 or 413 for oversized body, got %d: %s", rec.Code, rec.Body.String())
+	}
+}
+
+// --- Avatar upload ---
+
+func TestUploadAvatar_Success(t *testing.T) {
+	handler, _ := newTestServer(t)
+	cookie, csrf := authCookieAndCSRF(t, handler)
+
+	// Minimal valid 1x1 PNG.
+	pngData := []byte{0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44, 0x52, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x08, 0x02, 0x00, 0x00, 0x00, 0x90, 0x77, 0x53, 0xde, 0x00, 0x00, 0x00, 0x0c, 0x49, 0x44, 0x41, 0x54, 0x08, 0xd7, 0x63, 0xf8, 0xcf, 0xc0, 0x00, 0x00, 0x00, 0x02, 0x00, 0x01, 0xe2, 0x21, 0xbc, 0x33, 0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4e, 0x44, 0xae, 0x42, 0x60, 0x82}
+
+	var body bytes.Buffer
+	mw := multipart.NewWriter(&body)
+	part, _ := mw.CreateFormFile("file", "avatar.png")
+	part.Write(pngData)
+	mw.Close()
+
+	req := httptest.NewRequest(http.MethodPost, "/studio/api/site/avatar", &body)
+	req.Header.Set("Content-Type", mw.FormDataContentType())
+	req.Header.Set("X-CSRF-Token", csrf)
+	req.AddCookie(cookie)
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
+	}
+
+	var resp APIResponse
+	if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if !resp.OK {
+		t.Fatalf("expected ok=true")
+	}
+	data, ok := resp.Data.(map[string]any)
+	if !ok {
+		t.Fatalf("expected data map, got %T", resp.Data)
+	}
+	if data["path"] == nil {
+		t.Fatal("expected 'path' field in avatar upload response")
+	}
+}
+
+func TestUploadAvatar_WithoutAuth(t *testing.T) {
+	handler, _ := newTestServer(t)
+
+	req := httptest.NewRequest(http.MethodPost, "/studio/api/site/avatar", nil)
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusUnauthorized {
+		t.Fatalf("expected 401, got %d: %s", rec.Code, rec.Body.String())
+	}
+
+	var resp APIResponse
+	if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if resp.OK {
+		t.Fatalf("expected ok=false")
+	}
+	if resp.Error == nil || resp.Error.Code != "UNAUTHORIZED" {
+		t.Fatalf("expected UNAUTHORIZED error, got %v", resp.Error)
+	}
+}
+
+func TestUploadAvatar_InvalidFileType(t *testing.T) {
+	handler, _ := newTestServer(t)
+	cookie, csrf := authCookieAndCSRF(t, handler)
+
+	var body bytes.Buffer
+	mw := multipart.NewWriter(&body)
+	part, _ := mw.CreateFormFile("file", "avatar.exe")
+	part.Write([]byte("MZ"))
+	mw.Close()
+
+	req := httptest.NewRequest(http.MethodPost, "/studio/api/site/avatar", &body)
+	req.Header.Set("Content-Type", mw.FormDataContentType())
+	req.Header.Set("X-CSRF-Token", csrf)
+	req.AddCookie(cookie)
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d: %s", rec.Code, rec.Body.String())
+	}
+
+	var resp APIResponse
+	if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if resp.OK {
+		t.Fatalf("expected ok=false")
+	}
+}
+
+// --- Preview ---
+
+func TestCreatePreview_WithoutAuth(t *testing.T) {
+	handler, _ := newTestServer(t)
+
+	req := httptest.NewRequest(http.MethodPost, "/studio/api/posts/test-slug/preview", bytes.NewReader([]byte("{}")))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusUnauthorized {
+		t.Fatalf("expected 401, got %d: %s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestCreatePreview_InvalidJSON(t *testing.T) {
+	handler, _ := newTestServer(t)
+	cookie, csrf := authCookieAndCSRF(t, handler)
+
+	rec := testutil.DoWriteRequest(t, handler, http.MethodPost, "/studio/api/posts/test-slug/preview", cookie, csrf, []byte("{invalid"))
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d: %s", rec.Code, rec.Body.String())
+	}
+}
+
+// --- WeChat draft ---
+
+func TestPublishWechatDraft_WithoutAuth(t *testing.T) {
+	handler, _ := newTestServer(t)
+
+	req := httptest.NewRequest(http.MethodPost, "/studio/api/posts/test-slug/publish/wechat-draft", bytes.NewReader([]byte("{}")))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusUnauthorized {
+		t.Fatalf("expected 401, got %d: %s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestPublishWechatDraft_InvalidJSON(t *testing.T) {
+	handler, _ := newTestServer(t)
+	cookie, csrf := authCookieAndCSRF(t, handler)
+
+	rec := testutil.DoWriteRequest(t, handler, http.MethodPost, "/studio/api/posts/test-slug/publish/wechat-draft", cookie, csrf, []byte("{bad"))
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d: %s", rec.Code, rec.Body.String())
+	}
+}
+
+// --- Post stats method validation ---
+
+func TestGetPostStats_MethodNotAllowed(t *testing.T) {
+	handler, _ := newTestServer(t)
+	cookie, csrf := authCookieAndCSRF(t, handler)
+
+	// stats only allows GET; a write method should return 405.
+	rec := testutil.DoWriteRequest(t, handler, http.MethodPost, "/studio/api/posts/test-slug/stats", cookie, csrf, []byte("{}"))
+	if rec.Code != http.StatusMethodNotAllowed {
+		t.Fatalf("expected 405, got %d: %s", rec.Code, rec.Body.String())
+	}
+}
+
+// --- Config without authentication ---
+
+func TestGetConfig_WithoutAuth(t *testing.T) {
+	handler, _ := newTestServer(t)
+
+	rec := testutil.DoRequest(t, handler, http.MethodGet, "/studio/api/config", nil)
+	if rec.Code != http.StatusUnauthorized {
+		t.Fatalf("expected 401, got %d: %s", rec.Code, rec.Body.String())
+	}
+
+	var resp APIResponse
+	if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if resp.OK {
+		t.Fatalf("expected ok=false")
+	}
+	if resp.Error == nil || resp.Error.Code != "UNAUTHORIZED" {
+		t.Fatalf("expected UNAUTHORIZED error, got %v", resp.Error)
+	}
+}
+
+// --- Trash edge cases ---
+
+func TestTrashPurge_NonExistent(t *testing.T) {
+	handler, _ := newTestServer(t)
+	cookie, csrf := authCookieAndCSRF(t, handler)
+
+	// os.RemoveAll returns nil for non-existent paths, so Purge succeeds.
+	rec := testutil.DoWriteRequest(t, handler, http.MethodDelete, "/studio/api/trash/nonexistent-id", cookie, csrf, nil)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
+	}
+
+	var resp APIResponse
+	if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if !resp.OK {
+		t.Fatalf("expected ok=true: %s", rec.Body.String())
+	}
+	data, ok := resp.Data.(map[string]any)
+	if !ok {
+		t.Fatalf("expected data map, got %T", resp.Data)
+	}
+	if data["purged"] != true {
+		t.Fatalf("expected purged=true, got %v", data["purged"])
+	}
+}
+
+func TestTrashRestore_NonExistent(t *testing.T) {
+	handler, _ := newTestServer(t)
+	cookie, csrf := authCookieAndCSRF(t, handler)
+
+	body, _ := json.Marshal(map[string]bool{})
+	rec := testutil.DoWriteRequest(t, handler, http.MethodPost, "/studio/api/trash/nonexistent-id/restore", cookie, csrf, body)
+	// Restoring a non-existent trash item should fail with 409 Conflict.
+	if rec.Code != http.StatusConflict {
+		t.Fatalf("expected 409, got %d: %s", rec.Code, rec.Body.String())
+	}
+
+	var resp APIResponse
+	if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if resp.OK {
+		t.Fatalf("expected ok=false")
+	}
+}
+
+// --- Bulk publish invalid JSON (counterpart to TestBulkTrash_InvalidJSON) ---
+
+func TestBulkPublish_InvalidJSON(t *testing.T) {
+	handler, _ := newTestServer(t)
+	cookie, csrf := authCookieAndCSRF(t, handler)
+
+	rec := testutil.DoWriteRequest(t, handler, http.MethodPost, "/studio/api/posts/bulk/publish", cookie, csrf, []byte("{bad"))
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d: %s", rec.Code, rec.Body.String())
+	}
+}
+
+// --- Export without authentication ---
+
+func TestExportPosts_WithoutAuth(t *testing.T) {
+	handler, _ := newTestServer(t)
+
+	rec := testutil.DoRequest(t, handler, http.MethodGet, "/studio/api/posts/export", nil)
+	if rec.Code != http.StatusUnauthorized {
+		t.Fatalf("expected 401, got %d: %s", rec.Code, rec.Body.String())
+	}
+
+	var resp APIResponse
+	if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if resp.OK {
+		t.Fatalf("expected ok=false")
+	}
+	if resp.Error == nil || resp.Error.Code != "UNAUTHORIZED" {
+		t.Fatalf("expected UNAUTHORIZED error, got %v", resp.Error)
 	}
 }

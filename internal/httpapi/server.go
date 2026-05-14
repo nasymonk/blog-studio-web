@@ -35,7 +35,7 @@ import (
 
 type APIResponse struct {
 	OK    bool               `json:"ok"`
-	Data  interface{}        `json:"data,omitempty"`
+	Data  any                `json:"data,omitempty"`
 	Error *apperror.AppError `json:"error,omitempty"`
 }
 
@@ -143,39 +143,38 @@ func (s *Server) PublishScheduledPosts() {
 	}
 }
 
-
 func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
 	api := http.NewServeMux()
-	api.HandleFunc("POST /auth/login", s.withLoginLimit(s.login))
-	api.HandleFunc("POST /auth/logout", s.withAuth(s.logout))
-	api.HandleFunc("POST /auth/password", s.withWriteAuth(s.changePassword))
-	api.HandleFunc("GET /session", s.session)
-	api.HandleFunc("GET /posts", s.withAuth(s.listPosts))
-	api.HandleFunc("GET /posts/", s.withAuth(s.postRouter))
-	api.HandleFunc("PUT /posts/", s.withWriteAuth(s.postRouter))
-	api.HandleFunc("POST /posts/", s.withWriteAuth(s.postRouter))
-	api.HandleFunc("DELETE /posts/", s.withWriteAuth(s.postRouter))
-	api.HandleFunc("POST /posts/bulk/trash", s.withWriteAuth(s.bulkTrash))
-	api.HandleFunc("POST /posts/bulk/publish", s.withWriteAuth(s.bulkPublish))
-	api.HandleFunc("GET /posts/export", s.withAuth(s.exportPosts))
-	api.HandleFunc("POST /posts/import", s.withWriteAuth(s.importPosts))
-	api.HandleFunc("POST /tags/rename", s.withWriteAuth(s.renameTag))
-	api.HandleFunc("POST /tags/delete", s.withWriteAuth(s.deleteTag))
-	api.HandleFunc("GET /site", s.withAuth(s.getSite))
-	api.HandleFunc("PUT /site", s.withWriteAuth(s.putSite))
-	api.HandleFunc("POST /site/avatar", s.withWriteAuth(s.uploadAvatar))
-	api.HandleFunc("GET /pages/now", s.withAuth(s.getNowPage))
-	api.HandleFunc("PUT /pages/now", s.withWriteAuth(s.putNowPage))
-	api.HandleFunc("GET /health", s.healthPublic)
-	api.HandleFunc("GET /health/full", s.withAuth(s.health))
-	api.HandleFunc("GET /audit", s.withAuth(s.auditRecent))
-	api.HandleFunc("GET /config", s.withAuth(s.getConfig))
-	api.HandleFunc("PUT /config", s.withWriteAuth(s.putConfig))
-	api.HandleFunc("GET /trash", s.withAuth(s.listTrash))
-	api.HandleFunc("POST /trash/", s.withWriteAuth(s.trashRouter))
-	api.HandleFunc("DELETE /trash/", s.withWriteAuth(s.trashRouter))
-	api.Handle("GET /metrics", s.withAuth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	api.HandleFunc(RouteAuthLogin, s.withLoginLimit(s.login))
+	api.HandleFunc(RouteAuthLogout, s.withAuth(s.logout))
+	api.HandleFunc(RouteAuthPassword, s.withWriteAuth(s.changePassword))
+	api.HandleFunc(RouteSession, s.session)
+	api.HandleFunc(RouteListPosts, s.withAuth(s.listPosts))
+	api.HandleFunc(RoutePostsGet, s.withAuth(s.postRouter))
+	api.HandleFunc(RoutePostsPut, s.withWriteAuth(s.postRouter))
+	api.HandleFunc(RoutePostsPost, s.withWriteAuth(s.postRouter))
+	api.HandleFunc(RoutePostsDelete, s.withWriteAuth(s.postRouter))
+	api.HandleFunc(RouteBulkTrash, s.withWriteAuth(s.bulkTrash))
+	api.HandleFunc(RouteBulkPublish, s.withWriteAuth(s.bulkPublish))
+	api.HandleFunc(RouteExportPosts, s.withAuth(s.exportPosts))
+	api.HandleFunc(RouteImportPosts, s.withWriteAuth(s.importPosts))
+	api.HandleFunc(RouteRenameTag, s.withWriteAuth(s.renameTag))
+	api.HandleFunc(RouteDeleteTag, s.withWriteAuth(s.deleteTag))
+	api.HandleFunc(RouteGetSite, s.withAuth(s.getSite))
+	api.HandleFunc(RoutePutSite, s.withWriteAuth(s.putSite))
+	api.HandleFunc(RouteUploadAvatar, s.withWriteAuth(s.uploadAvatar))
+	api.HandleFunc(RouteGetNowPage, s.withAuth(s.getNowPage))
+	api.HandleFunc(RoutePutNowPage, s.withWriteAuth(s.putNowPage))
+	api.HandleFunc(RouteHealth, s.healthPublic)
+	api.HandleFunc(RouteHealthFull, s.withAuth(s.health))
+	api.HandleFunc(RouteAudit, s.withAuth(s.auditRecent))
+	api.HandleFunc(RouteGetConfig, s.withAuth(s.getConfig))
+	api.HandleFunc(RoutePutConfig, s.withWriteAuth(s.putConfig))
+	api.HandleFunc(RouteListTrash, s.withAuth(s.listTrash))
+	api.HandleFunc(RouteTrashPost, s.withWriteAuth(s.trashRouter))
+	api.HandleFunc(RouteTrashDelete, s.withWriteAuth(s.trashRouter))
+	api.Handle(RouteMetrics, s.withAuth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		metrics.Handler().ServeHTTP(w, r)
 	})))
 
@@ -219,7 +218,7 @@ func (s *Server) login(w http.ResponseWriter, r *http.Request) {
 	}
 	metrics.LoginAttempts.WithLabelValues("ok").Inc()
 	session := s.sessions.Create(w)
-	writeOK(w, map[string]interface{}{"authenticated": true, "csrfToken": session.CSRF})
+	writeOK(w, map[string]any{"authenticated": true, "csrfToken": session.CSRF})
 }
 
 func (s *Server) logout(w http.ResponseWriter, r *http.Request) {
@@ -257,7 +256,7 @@ func (s *Server) changePassword(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) session(w http.ResponseWriter, r *http.Request) {
 	if session, ok := s.sessions.FromRequest(r); ok {
-		writeOK(w, map[string]interface{}{"authenticated": true, "csrfToken": session.CSRF})
+		writeOK(w, map[string]any{"authenticated": true, "csrfToken": session.CSRF})
 		return
 	}
 	writeOK(w, map[string]bool{"authenticated": false})
@@ -671,7 +670,7 @@ func (s *Server) renameTag(w http.ResponseWriter, r *http.Request) {
 		updated++
 	}
 	pub.InvalidateCache()
-	writeOK(w, map[string]interface{}{"updated": updated})
+	writeOK(w, map[string]any{"updated": updated})
 }
 
 func (s *Server) deleteTag(w http.ResponseWriter, r *http.Request) {
@@ -717,7 +716,7 @@ func (s *Server) deleteTag(w http.ResponseWriter, r *http.Request) {
 		updated++
 	}
 	pub.InvalidateCache()
-	writeOK(w, map[string]interface{}{"updated": updated})
+	writeOK(w, map[string]any{"updated": updated})
 }
 
 func (s *Server) listTrash(w http.ResponseWriter, r *http.Request) {
@@ -1053,7 +1052,7 @@ func (s *Server) health(w http.ResponseWriter, r *http.Request) {
 			status = "warn"
 		}
 	}
-	writeOK(w, map[string]interface{}{"status": status, "checks": checks})
+	writeOK(w, map[string]any{"status": status, "checks": checks})
 }
 
 func (s *Server) auditRecent(w http.ResponseWriter, r *http.Request) {
@@ -1203,7 +1202,7 @@ func (s *Server) withWriteAuth(fn http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
-func writeOK(w http.ResponseWriter, data interface{}) {
+func writeOK(w http.ResponseWriter, data any) {
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(APIResponse{OK: true, Data: data})
 }

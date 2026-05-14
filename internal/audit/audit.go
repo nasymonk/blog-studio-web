@@ -26,8 +26,8 @@ type Entry struct {
 	Result        string      `json:"result"`
 	BackupID      string      `json:"backupId,omitempty"`
 	DiffPath      string      `json:"diffPath,omitempty"`
-	BuildResult   interface{} `json:"buildResult,omitempty"`
-	ChannelResult interface{} `json:"channelResult,omitempty"`
+	BuildResult   any `json:"buildResult,omitempty"`
+	ChannelResult any `json:"channelResult,omitempty"`
 	ErrorCode     string      `json:"errorCode,omitempty"`
 	ErrorBrief    string      `json:"errorBrief,omitempty"`
 }

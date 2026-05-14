@@ -1,0 +1,35 @@
+package httpapi
+
+// API route constants used with the internal api mux.
+// These are the route patterns registered in Handler().
+const (
+	RouteAuthLogin    = "POST /auth/login"
+	RouteAuthLogout   = "POST /auth/logout"
+	RouteAuthPassword = "POST /auth/password"
+	RouteSession      = "GET /session"
+	RouteListPosts    = "GET /posts"
+	RoutePostsGet     = "GET /posts/"
+	RoutePostsPut     = "PUT /posts/"
+	RoutePostsPost    = "POST /posts/"
+	RoutePostsDelete  = "DELETE /posts/"
+	RouteBulkTrash    = "POST /posts/bulk/trash"
+	RouteBulkPublish  = "POST /posts/bulk/publish"
+	RouteExportPosts  = "GET /posts/export"
+	RouteImportPosts  = "POST /posts/import"
+	RouteRenameTag    = "POST /tags/rename"
+	RouteDeleteTag    = "POST /tags/delete"
+	RouteGetSite      = "GET /site"
+	RoutePutSite      = "PUT /site"
+	RouteUploadAvatar = "POST /site/avatar"
+	RouteGetNowPage   = "GET /pages/now"
+	RoutePutNowPage   = "PUT /pages/now"
+	RouteHealth       = "GET /health"
+	RouteHealthFull   = "GET /health/full"
+	RouteAudit        = "GET /audit"
+	RouteGetConfig    = "GET /config"
+	RoutePutConfig    = "PUT /config"
+	RouteListTrash    = "GET /trash"
+	RouteTrashPost    = "POST /trash/"
+	RouteTrashDelete  = "DELETE /trash/"
+	RouteMetrics      = "GET /metrics"
+)
